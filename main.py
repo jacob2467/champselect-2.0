@@ -2,19 +2,23 @@ import configparser
 from lcu_driver import Connector
 
 config = configparser.ConfigParser()
-config_dict = {}
 config.read("config.ini")
 
 
-def update_config_dict(section, dict):
+def cfg_to_dict():
+    dict = {}
     options = config.options(section)
     for option in options:
-        dict[option] = config.get(section, option)
+        dict[option] = config.get(option)
+
+    return dict
 
 
-def update_config_dict(
+def update_config_dict():
+    return
 
-searchx = int(add_dict("SearchBar")['searchx'])
+
+config_dict = cfg_to_dict()
 
 client = Connector()
 
