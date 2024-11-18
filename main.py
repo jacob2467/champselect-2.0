@@ -37,16 +37,37 @@ class Connection:
                  "accept_match": "/lol-matchmaking/v1/ready-check/accept",
                  "champselect_session": "/lol-champ-select/v1/session",
                  "champselect_action": "/lol-champ-select/v1/session/actions/",
-                 "owned_champs": "/lol-champions/v1/owned-champions-minimal"
+                 "owned_champs": "/lol-champions/v1/owned-champions-minimal",
+                 "current_summoner": "/lol-summoner/v1/current-summoner",
                  }
     has_picked = False
     has_banned = False
     placeholder_pick = 103
     placeholder_ban = 104
+    champions = {}
 
 
     def __init__(self):
         self.parse_lockfile()
+        # TODO: Add champs to dict here
+
+
+    def cleanup_name(self, name):
+        """
+        Method to remove whitespace and special characters from a champion's name. Example output:
+        Aurelion Sol -> aurelionsol
+        Bel'Veth -> belveth
+        """
+        new_name = ""
+        for char in name:
+            if char != " " and char != "'":
+                new_name += char
+
+        return new_name.lower()
+
+
+    def populate_champions(self):
+        return
 
 
     def parse_lockfile(self):
@@ -80,6 +101,9 @@ class Connection:
     def find_champ(self):
         return self.placeholder_pick  # TODO: replace dummy value
 
+
+    def get_champ_id(self, champ):
+         return self.champions[self.cleanup_name(champ)]
 
     def find_ban(self):
         return self.placeholder_ban  # TODO: replace dummy value
@@ -130,8 +154,8 @@ class Connection:
     def api_call(self, endpoint, method, data=None, actionid=None):
         """ Make an API call with the specified endpoint and method.
         """
-        # Set up endpoint
-        endpoint = self.endpoints.get(endpoint)
+        # Check if endpoint alias from parameter is in dictionary; if not, use endpoint parameter as the full endpoint
+        endpoint = self.endpoints.get(endpoint, endpoint)
 
         # Append actionid to endpoint if it was specified, otherwise no action is being taken
         if actionid is not None:
@@ -167,6 +191,10 @@ class Connection:
         return url, headers
 
 
+    def get_summoner_id(self):
+        return c.api_get("current_summoner")["accountId"]
+
+
 
 c = Connection()
 in_game = False
@@ -176,6 +204,16 @@ last_gamestate = None
 while not in_game:
     time.sleep(1)
     gamestate = c.api_get("gamestate")
+    unsorted_champs = c.api_get(f"/lol-champions/v1/inventories/{c.get_summoner_id()}/champions")
+    # owned_champs = (c.api_get("owned_champs"))
+    sorted_champs = []
+    for champ in unsorted_champs:
+        sorted_champs.append(champ["alias"], champ[")
+    sorted_champs.sort()
+    for champ in sorted_champs:
+        print(champ)
+    break
+    # print(c.api_get(" TODO: find endpoint for all champs
 
     match gamestate:
         case "Lobby":
