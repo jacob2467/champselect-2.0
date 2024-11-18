@@ -1,38 +1,72 @@
+import os
 import configparser
-from lcu_driver import Connector
+import requests
+from dataclasses import dataclass
+from base64 import b64encode
 
-config = configparser.ConfigParser()
-config.read("config.ini")
-
-
-def cfg_to_dict():
-    dict = {}
-    options = config.options(section)
-    for option in options:
-        dict[option] = config.get(option)
-
-    return dict
+DEFAULT_LOCKFILE_PATH = "C:/Riot Games/League of Legends/lockfile"
 
 
-def update_config_dict():
-    return
+@dataclass
+class Lockfile:
+    pid: str = ""
+    port: str = ""
+    password: str = ""
+    protocol: str = "https"
 
 
-config_dict = cfg_to_dict()
+class Connection:
+    l: Lockfile = Lockfile()
+    endpoints = {"gamestate": "/lol-gameflow/v1/gameflow-phase",
+                 "start_queue": "/lol-lobby/v2/matchmaking/search",
+                 "match_found": "/lol-matchmaking/v1/ready-check",
+                 "accept_match": "/lol-matchmaking/v1/ready-check/accept",
+                 "champselect_session": "/lol-champ-select/v1/session",
+                 "champselect_action": "/lol-champ-select/v1/session/actions/",
+                 "owned_champs": "/lol-champions/v1/owned-champions-minimal"}
 
-client = Connector()
+    def parse_lockfile(self):
+        l = self.l
+        # Find the lockfile, and parse its contents into a dictionary
+        try:
+            with open(DEFAULT_LOCKFILE_PATH) as f:
+                contents = f.read()
+                contents = contents.split(":")
+                l.pid = contents[1]
+                l.port = contents[2]
+                l.password = contents[3]
+                l.protocol = contents[4]
 
-@client.ready
-async def lcu_ready(connection):
-    summoner = await connection.request("get", "/lol-summoner/v1/current-summoner")
-    print(await summoner.json())
+        # Can't find file error
+        except FileNotFoundError:
+            raise FileNotFoundError("Lockfile couldn't be found, did you install league to a non-default directory?")
+            # TODO: Get user input for game directory here
 
+        # Handle other exceptions
+        except Exception as e:
+            raise Exception(f"Failed to parse lockfile: {str(e)}")
 
-@client.ws.register("/lol-matchmaking/v1/ready-check", event_types=("UPDATE",))
-async def accept_match(connection, event):
-    if event.data["playerResponse"] == "None":
-        await connection.request("post", "/lol-matchmaking/v1/ready-check/accept")
-        print("Match has been accepted!")
+    # TODO: Implement these
+    def get_gamestate(self):
+        return 0
 
+    def accept_match(self):
+        return
 
-client.start()
+    def pick_champ(self):
+        return
+
+    def ban_champ(self):
+        return
+
+    def api_call(self, endpoint):
+        l = self.l
+        endpoint = self.endpoints.get(endpoint)
+        https_auth = f"Basic {b64encode(f"riot:{l.password}".encode()).decode()}"
+        headers = {
+            "Authorization": https_auth,
+            "Accept": "application/json"
+        }
+        url = f"{l.protocol}://127.0.0.1:{l.port}" + endpoint
+
+    print(l)
