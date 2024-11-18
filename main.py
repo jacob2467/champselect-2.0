@@ -20,21 +20,21 @@ endpoints = {
     "pickable_champs": "/lol-champ-select/v1/pickable-champions"  # GET
 }
 
-def find_action(actions, local_cellid):
-    for action in actions:
-        if action["actorCellId"] == local_cellid:
-            return action
-    return None
 
+def save_to_file(header, text):
+    with open("C:/Users/jamo0/Desktop/text.txt", "w") as file:
+        string = f"{header}: \n{text}\n"
+        file.write(string)
+        print(string)
 
 
 while not in_game:
     time.sleep(1)
     gamestate = c.api_get("gamestate")
 
-    # Print current gamestate, only if it's different from the last one
+    # Print current gamestate if it's different from the last one
     if gamestate != last_gamestate:
-        print(f"Current gamestate: {gamestate}")
+        save_to_file("Current gamestate", gamestate)
         last_gamestate = gamestate
 
 
@@ -47,21 +47,21 @@ while not in_game:
             c.accept_match()
 
         case "ChampSelect":
-            session = c.api_get("champselect_session")
+            session = c.get_session()
 
-            my_cellid = session["localPlayerCellId"]
-            action = find_action(session["actions"][0], my_cellid)
+            my_cellid = c.get_localcellid()
+            action = c.find_action()
             action_type = action["type"]
-            current_cellid = action["actorCellId"]
 
             # Print current action if it's different from the last one
             if action_type != last_action:
-                print(f"Current champselect phase: {action_type}")
+                save_to_file(f"Current champselect phase", action_type)
             last_action = action_type
+            save_to_file("Action type: ", action_type)
 
             match action_type:
                 case "pick":
-                    if c.can_pick(my_cellid, action):
+                    if c.can_pick(action):
                         c.lock_champ()
                 case "ban":
                     if not c.has_banned:
