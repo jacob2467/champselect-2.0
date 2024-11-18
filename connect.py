@@ -19,6 +19,7 @@ class Lockfile:
 
 
 def get_lockfile_path():
+    """ Get the path to the user's lockfile. """
     # Default path for Windows
     if os.name == "nt":
         return "C:/Riot Games/League of Legends/lockfile"
@@ -37,7 +38,7 @@ class Connection:
     owned_champions = {}
     pick_choice = ""
     ban_choice = ""
-
+    role_choice = ""
 
     def __init__(self):
         self.parse_lockfile()
@@ -45,57 +46,11 @@ class Connection:
         self.populate_champ_table()
         self.get_first_choices()
 
-
-    def setup_endpoints(self):
-        self.endpoints = {
-            "gamestate": "/lol-gameflow/v1/gameflow-phase",  # GET
-            "start_queue": "/lol-lobby/v2/lobby/matchmaking/search",  # POST
-            "match_found": "/lol-matchmaking/v1/ready-check",  # GET
-            "accept_match": "/lol-matchmaking/v1/ready-check/accept",  # POST
-            "champselect_session": "/lol-champ-select/v1/session",  # GET
-            "champselect_action": "/lol-champ-select/v1/session/actions/",  # PATCH
-            "owned_champs": "/lol-champions/v1/owned-champions-minimal",  # GET
-            "current_summoner": "/lol-summoner/v1/current-summoner",  # GET
-            "all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions",  # GET
-            "pickable_champs": "/lol-champ-select/v1/pickable-champions"  # GET
-        }
-
-
-    def populate_champ_table(self):
-        all_champs = self.api_get("all_champs")
-        for champ in all_champs:
-            alias, id = self.cleanup_name(champ["alias"]), champ["id"]
-            self.champions[alias] = id
-
-        owned_champs = self.api_get("owned_champs")
-        for champ in owned_champs:
-            alias, id = self.cleanup_name(champ["alias"]), champ["id"]
-            self.owned_champions[alias] = id
-
-
-    @staticmethod
-    def cleanup_name(name):
-        """
-        Method to remove whitespace and special characters from a champion's name. Example output:
-        Aurelion Sol -> aurelionsol
-        Bel'Veth -> belveth
-        """
-        # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
-        if "nunu" in name.lower():
-            return "nunu"
-        elif name.lower() == "wukong":
-            return "monkeyking"
-
-        # Trim illegal characters & whitespace
-        illegal = [" ", "'", "."]
-        new_name = ""
-        for char in name:
-            if char not in illegal:
-                new_name += char
-
-        return new_name.lower()
-
+    # ----------------
+    # Connection Setup
+    # ----------------
     def parse_lockfile(self):
+        """ Find the user's lockfile, and parse it into a dictionary. """
         l = self.l
         # Find the lockfile, and parse its contents into a dictionary
         path = get_lockfile_path()
@@ -118,90 +73,168 @@ class Connection:
             raise Exception(f"Failed to parse lockfile: {str(e)}")
 
 
-    def get_first_choices(self):
-        """ Get the user's first choice for picks and bans, as well as the role they're playing
+    def setup_endpoints(self):
+        """ Set up a dictionary containing varius endpoints for the API. """
+        self.endpoints = {
+            "gamestate": "/lol-gameflow/v1/gameflow-phase",  # GET
+            "start_queue": "/lol-lobby/v2/lobby/matchmaking/search",  # POST
+            "match_found": "/lol-matchmaking/v1/ready-check",  # GET
+            "accept_match": "/lol-matchmaking/v1/ready-check/accept",  # POST
+            "champselect_session": "/lol-champ-select/v1/session",  # GET
+            "champselect_action": "/lol-champ-select/v1/session/actions/",  # PATCH
+            "owned_champs": "/lol-champions/v1/owned-champions-minimal",  # GET
+            "current_summoner": "/lol-summoner/v1/current-summoner",  # GET
+            "all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions",  # GET
+            "pickable_champs": "/lol-champ-select/v1/pickable-champions"  # GET
+        }
+
+
+    def populate_champ_table(self):
+        """ Get a list of all champions in the game and another of all that the player owns, and store them
+        in a dictionary along with their id numbers.
         """
-        # TODO: Check for autofill and if the user owns the champ
+        all_champs = self.api_get("all_champs")
+        for champ in all_champs:
+            alias, id = self.clean_name(champ["alias"]), champ["id"]
+            self.champions[alias] = id
+
+        owned_champs = self.api_get("owned_champs")
+        for champ in owned_champs:
+            alias, id = self.clean_name(champ["alias"]), champ["id"]
+            self.owned_champions[alias] = id
+
+    def get_first_choices(self):
+        """ Get the user's first choice for picks and bans, as well as the role they're playing"""
+        # TODO:
+        #  - Check for autofill
+        #  - Check if user owns champ
+        #  - Get role from API rather than user input
         self.pick_choice = "kled"
         self.ban_choice = "fiora"
+        self.role_choice = "top"
         # self.pick_choice = self.cleanup_name(input("Who would you like to play?  "))
         # self.ban_choice = self.cleanup_name(input("Who would you like to ban?  "))
 
-
+    # --------------
+    # Helper methods
+    # --------------
     def reset_after_dodge(self):
+        """ Reset has_picked and has_banned to False after someone dodges a lobby. """
         self.has_picked = False
         self.has_banned = False
 
 
-    def get_assigned_role(self):
-        # TODO: Implement this
-        return
-
-
-    def find_champ(self):
+    def decide_champ(self):
+        """ Decide what champ the user should play. """
         # TODO: Ensure user can pick the champ (is owned, and is not banned or taken)
         pick = self.pick_choice
         if pick not in self.owned_champions:
             # TODO: Parse config here
             pick = "jinx"
-        champid = self.get_champ_id(pick)
+        champid = self.get_champid(pick)
         return champid
 
 
-    def find_ban(self):
+    def decide_ban(self):
+        """ Decide what champ the user should ban. """
         # TODO: finish
         ban = self.ban_choice
-        champid = self.get_champ_id(ban)
+        champid = self.get_champid(ban)
         return champid
 
+    def find_action(self):
+        """ Find the champselect action corresponding to the local player, and return it. """
+        session = self.get_session()
+        actions = session["actions"][0]
+        local_cellid = self.get_localcellid()
 
-    def get_champ_id(self, champ):
-        return self.champions[self.cleanup_name(champ)]
+        # Look at each action, and return the one with the corresponding cellid
+        for action in actions:
+            if action["actorCellId"] == local_cellid:
+                return action
+        return None
+
+    def can_pick(self, action):
+        if self.get_localcellid() != action["actorCellId"]:
+            return False
+        if not action["isInProgress"]:
+            return False
+        return not self.has_picked
+
+    @staticmethod
+    def clean_name(name):
+        """ Remove whitespace and special characters from a champion's name. Example output:
+        Aurelion Sol -> aurelionsol
+        Bel'Veth -> belveth
+        """
+        # Trim illegal characters & whitespace
+        illegal = [" ", "'", "."]
+        new_name = ""
+        for char in name:
+            if char not in illegal:
+                new_name += char.lower()
+
+        # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
+        if "nunu" in new_name:
+            return "nunu"
+        elif new_name == "wukong":
+            return "monkeyking"
+
+        return new_name
 
 
-    def get_gamestate(self):
-        return self.api_get("gamestate")
-
-
+    # ----------------
+    # API Call Methods
+    # ----------------
     def accept_match(self):
+        """ Accept a match"""
         self.api_post("accept_match")
 
 
+    def ban_champ(self, champid=None):
+        self.do_champ(banning=True, champid=champid)
+
+
+    def lock_champ(self, champid=None):
+        self.do_champ(banning=False, champid=champid)
+
+
     def do_champ(self, **kwargs):
+        """ Pick or ban a champ in champselect. """
         champid = kwargs.get("champid")
         banning = kwargs.get("banning")
 
         # If champid wasn't specified in method call, find out what champ to pick
         if champid is None:
             if banning:
-                champid = self.find_ban()
+                champid = self.decide_ban()
                 self.has_banned = True
             else:
-                champid = self.find_champ()
+                champid = self.decide_champ()
                 self.has_picked = True
-
 
         # Set up http request
         data = {"championId": champid, "completed": True}
-        id = self.api_get("champselect_session")["actions"][0][0]["id"]
+        actionid = self.find_action()["id"]
+
+        # Debug print
+        print(f"champid: {champid}, actionid: {actionid}")
 
         # Lock in the champ and print info
-        print(f"Champ lock in info: {self.api_patch("champselect_action", data=data, actionid=id)}")
+        print(f"Champ lock in info: {self.api_patch("champselect_action", data=data, actionid=actionid)}")
 
-    def ban_champ(self, champid=None):
-        self.do_champ(banning=True, champid=champid)
-
-    def lock_champ(self, champid=None):
-        self.do_champ(banning=False, champid=champid)
 
     def api_get(self, endpoint):
         return self.api_call(endpoint, "get")
 
+
     def api_post(self, endpoint, data=None, actionid=None):
         return self.api_call(endpoint, "post", data, actionid)
 
+
     def api_patch(self, endpoint, data=None, actionid=None):
         return self.api_call(endpoint, "patch", data, actionid)
+
 
     def api_call(self, endpoint, method, data=None, actionid=None):
         """ Make an API call with the specified endpoint and method.
@@ -232,6 +265,29 @@ class Connection:
             return None
 
 
+    # --------------
+    # Getter methods
+    # --------------
+    def get_session(self):
+        return self.api_get("champselect_session")
+
+
+    def get_assigned_role(self):
+        # TODO: Implement this
+        return
+
+
+    def get_champid(self, champ):
+        return self.champions[self.clean_name(champ)]
+
+    def get_gamestate(self):
+        return self.api_get("gamestate")
+
+
+    def get_localcellid(self):
+        return self.api_get("champselect_session")["localPlayerCellId"]
+
+
     def get_request_url(self, endpoint):
         l = self.l
         https_auth = f"Basic {b64encode(f"riot:{l.password}".encode()).decode()}"
@@ -242,14 +298,5 @@ class Connection:
         url = f"{l.protocol}://127.0.0.1:{l.port}" + endpoint
         return url, headers
 
-
     def get_summoner_id(self):
         return self.api_get("/lol-summoner/v1/current-summoner")["accountId"]
-
-
-    def can_pick(self, local_cellid, action):
-        if local_cellid != action["actorCellId"]:
-            return False
-        if not action["isInProgress"]:
-            return False
-        return not self.has_picked
