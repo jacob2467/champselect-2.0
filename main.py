@@ -20,6 +20,14 @@ endpoints = {
     "pickable_champs": "/lol-champ-select/v1/pickable-champions"  # GET
 }
 
+def find_action(actions, local_cellid):
+    for action in actions:
+        if action["actorCellId"] == local_cellid:
+            return action
+    return None
+
+
+
 while not in_game:
     time.sleep(1)
     gamestate = c.api_get("gamestate")
@@ -40,22 +48,20 @@ while not in_game:
 
         case "ChampSelect":
             session = c.api_get("champselect_session")
-            action = session["actions"][0][0]
+
             my_cellid = session["localPlayerCellId"]
-            current_cellid = action["actorCellId"]
-            print(my_cellid, current_cellid)
+            action = find_action(session["actions"][0], my_cellid)
             action_type = action["type"]
-            print(session)
-            print("\n\naction: ", action)
-            break
-            # Print current action, only if it's different from the last one
+            current_cellid = action["actorCellId"]
+
+            # Print current action if it's different from the last one
             if action_type != last_action:
                 print(f"Current champselect phase: {action_type}")
             last_action = action_type
 
             match action_type:
                 case "pick":
-                    if not c.has_picked and my_cellid == current_cellid:
+                    if c.can_pick(my_cellid, action):
                         c.lock_champ()
                 case "ban":
                     if not c.has_banned:
