@@ -122,8 +122,8 @@ class Connection:
         """ Get the user's first choice for picks and bans, as well as the role they're playing
         """
         # TODO: Check for autofill and if the user owns the champ
-        self.pick_choice = "janna"
-        self.ban_choice = "pyke"
+        self.pick_choice = "kled"
+        self.ban_choice = "fiora"
         # self.pick_choice = self.cleanup_name(input("Who would you like to play?  "))
         # self.ban_choice = self.cleanup_name(input("Who would you like to ban?  "))
 
@@ -133,8 +133,9 @@ class Connection:
         self.has_banned = False
 
 
-    # def get_assigned_role(self):
-
+    def get_assigned_role(self):
+        # TODO: Implement this
+        return
 
 
     def find_champ(self):
@@ -244,3 +245,11 @@ class Connection:
 
     def get_summoner_id(self):
         return self.api_get("/lol-summoner/v1/current-summoner")["accountId"]
+
+
+    def can_pick(self, local_cellid, action):
+        if local_cellid != action["actorCellId"]:
+            return False
+        if not action["isInProgress"]:
+            return False
+        return not self.has_picked
