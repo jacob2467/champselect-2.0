@@ -111,9 +111,9 @@ class Connection:
         #  - Check for autofill
         #  - Check if user owns champ
         #  - Get role from API rather than user input
-        self.pick_choice = "kled"
-        self.ban_choice = "fiora"
-        self.role_choice = "top"
+        self.pick_choice = "senna"
+        self.ban_choice = "pyke"
+        self.role_choice = "bottom"
         # self.pick_choice = self.cleanup_name(input("Who would you like to play?  "))
         # self.ban_choice = self.cleanup_name(input("Who would you like to ban?  "))
 
