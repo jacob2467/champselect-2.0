@@ -22,7 +22,7 @@ with open(output_filepath, "w") as file:
     file.write("Champ select data: \n")
 
 while not in_game:
-    time.sleep(1)
+    time.sleep(2)
     gamestate = c.api_get("gamestate")
 
     # Print current gamestate if it's different from the last one
@@ -61,14 +61,14 @@ while not in_game:
             # Handle each champ select phase
 
             match action_type:
-                # case "ban":
-                #     if not c.has_hovered:
-                #         c.hover_champ()
-                #     elif not c.has_banned:
-                #         c.ban_champ()
-                # case "pick":
-                #     if c.can_pick(action):
-                #         c.lock_champ()
+                case "ban":
+                    if not c.has_hovered:
+                        c.hover_champ()
+                    if not c.has_banned:
+                        c.ban_champ()
+                case "pick":
+                    if c.can_pick(action):
+                        c.lock_champ()
                 case default:
                     pass
         # End loop if a game starts
