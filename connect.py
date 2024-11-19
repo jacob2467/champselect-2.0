@@ -33,6 +33,7 @@ class Connection:
     l: Lockfile = Lockfile()
     has_picked = False
     has_banned = False
+    has_hovered = False
     endpoints = {}
     champions = {}
     owned_champions = {}
@@ -82,6 +83,7 @@ class Connection:
             "accept_match": "/lol-matchmaking/v1/ready-check/accept",  # POST
             "champselect_session": "/lol-champ-select/v1/session",  # GET
             "champselect_action": "/lol-champ-select/v1/session/actions/",  # PATCH
+            "champselect_action2": "/lol-lobby-team-builder/champ-select/v1/session/actions/",  # PATCH
             "owned_champs": "/lol-champions/v1/owned-champions-minimal",  # GET
             "current_summoner": "/lol-summoner/v1/current-summoner",  # GET
             "all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions",  # GET
@@ -122,6 +124,7 @@ class Connection:
         """ Reset has_picked and has_banned to False after someone dodges a lobby. """
         self.has_picked = False
         self.has_banned = False
+        self.has_hovered = False
 
 
     def decide_champ(self):
@@ -200,16 +203,21 @@ class Connection:
         """ Lock in a champion. """
         self.do_champ(banning=False, champid=champid)
 
+    def hover_champ(self, champid=None):
+        """ Hover in a champion. """
+        self.do_champ(banning=False, hovering=True, champid=champid)
 
     def do_champ(self, **kwargs):
         """ Pick or ban a champ in champselect.
 
         Keyword arguments:
         champid -- the champ to pick/ban (optional)
+        hovering -- whether to hover the champ or actually lock it in
         banning -- whether to pick or ban the champ
         """
         champid = kwargs.get("champid")
-        banning = kwargs.get("banning")
+        hovering = kwargs.get("hovering", False)
+        banning = kwargs.get("banning", False)
 
         # If champid wasn't specified in method call, find out what champ to pick
         if champid is None:
@@ -221,14 +229,15 @@ class Connection:
                 self.has_picked = True
 
         # Set up http request
-        data = {"championId": champid, "completed": True}
+        data = {"championId": champid, "completed": not hovering}
         actionid = self.find_action()["id"]
 
         # Debug print
         print(f"champid: {champid}, actionid: {actionid}")
 
         # Lock in the champ and print info
-        print(f"Champ lock in info: {self.api_patch("champselect_action", data=data, actionid=actionid)}")
+        self.api_patch("champselect_action", data=data, actionid=actionid)
+        print(f"Champ lock in info 2: {self.api_patch("champselect_action2", data=data, actionid=actionid)}")
 
 
     def api_get(self, endpoint):
