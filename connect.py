@@ -32,16 +32,20 @@ def get_lockfile_path():
 
 
 class Connection:
-    l = Lockfile()
-    has_picked = False
-    has_banned = False
-    has_hovered = False
-    endpoints = {}
-    champions = {}
-    owned_champions = {}
-    pick_choice = ""
-    ban_choice = ""
-    role_choice = ""
+    l: Lockfile = Lockfile()
+    has_picked: bool = False
+    has_banned: bool = False
+    has_hovered: bool = False
+    endpoints: dict = {}
+    all_champs: dict = {}
+    owned_champs: dict = {}
+    bannable_champids: list = []
+    ban_action: dict = {}
+    pick_action: dict = {}
+    pick_choice: str = ""
+    ban_choice: str = ""
+    role_choice: str = ""
+
 
     def __init__(self):
         self.parse_lockfile()
@@ -90,7 +94,7 @@ class Connection:
             "current_summoner": "/lol-summoner/v1/current-summoner",  # GET
             "all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions",  # GET
             "pickable_champs": "/lol-champ-select/v1/pickable-champions",  # GET
-            "bannable_champs": "lol-champ-select/v1/bannable-champion-ids" # GET
+            "bannable_champs": "/lol-champ-select/v1/bannable-champion-ids"  # GET
         }
 
 
@@ -103,7 +107,7 @@ class Connection:
         for champ in all_champs.json():
             try:
                 alias, id = self.clean_name(champ["alias"]), champ["id"]
-                self.champions[alias] = id
+                self.all_champs[alias] = id
             except Exception:
                 print("Champ data couldn't be retrieved, falling back to only using data for owned champs...")
                 error = True
@@ -114,14 +118,14 @@ class Connection:
             for champ in all_champs.json():
                 try:
                     alias, id = self.clean_name(champ["alias"]), champ["id"]
-                    self.champions[alias] = id
+                    self.all_champs[alias] = id
                 except Exception:
                     raise Exception("Champion data has not yet been received.")
 
         owned_champs = self.api_get("owned_champs").json()
         for champ in owned_champs:
             alias, id = self.clean_name(champ["alias"]), champ["id"]
-            self.owned_champions[alias] = id
+            self.owned_champs[alias] = id
 
     def get_first_choices(self):
         """ Get the user's first choice for picks and bans, as well as the role they're playing"""
@@ -139,7 +143,7 @@ class Connection:
     # Helper methods
     # --------------
     def reset_after_dodge(self):
-        """ Reset has_picked and has_banned to False after someone dodges a lobby. """
+        """ Reset has_picked, has_banned, and has_hovered to False after someone dodges a lobby. """
         self.has_picked = False
         self.has_banned = False
         self.has_hovered = False
@@ -149,7 +153,7 @@ class Connection:
         """ Decide what champ the user should play. """
         # TODO: Ensure user can pick the champ (is owned, and is not banned or taken)
         pick = self.pick_choice
-        if pick not in self.owned_champions:
+        if pick not in self.owned_champs:
             # TODO: Parse config here
             pick = "jinx"
         champid = self.get_champid(pick)
@@ -162,22 +166,6 @@ class Connection:
         ban = self.ban_choice
         champid = self.get_champid(ban)
         return champid
-
-
-    def is_client_turn(self):
-        """ Return true if it is the client's turn to hover/pick, false otherwise """
-        action = self.get_action()
-        return self.get_localcellid() == action["actorCellId"]
-
-
-    def can_pick(self):
-        action = self.get_action()
-        return self.is_client_turn() and action["isInProgress"] and not self.has_picked
-
-
-    def can_ban(self):
-        action_type = self.get_action()["type"]
-        return action_type == "ban" and not self.has_banned
 
     @staticmethod
     def clean_name(name):
@@ -204,6 +192,8 @@ class Connection:
     # ----------------
     # API Call Methods
     # ----------------
+
+
     def accept_match(self):
         """ Accept a match. """
         self.api_post("accept_match")
@@ -211,20 +201,26 @@ class Connection:
 
     def ban_or_pick(self):
         """ Handle logic of whether to pick or ban, and then call the corresponding method. """
-        if self.can_ban():
-            self.ban_champ()
-        elif self.can_pick():
+        if self.pick_action.get("isInProgress", False):
+            print("pick action:", self.pick_action, "\n")
             self.lock_champ()
+        elif self.ban_action.get("isInProgress", False):
+            print("ban action:", self.ban_action, "\n")
+            self.ban_champ()
+
 
 
     def ban_champ(self, champid=None):
         """ Ban a champion. """
-        self.do_champ(mode="ban", champid=champid)
+        if not self.has_banned:
+            self.do_champ(mode="ban", champid=champid)
 
 
     def lock_champ(self, champid=None):
         """ Lock in a champion. """
-        self.do_champ(mode="pick", champid=champid)
+        self.hover_champ()
+        if not self.has_picked:
+            self.do_champ(mode="pick", champid=champid)
 
 
     def hover_champ(self, champid=None):
@@ -251,18 +247,31 @@ class Connection:
                 champid = self.decide_champ()
 
         # Set up http request
-        data = {"championId": champid, "completed": mode != "hover"}
-        actionid = self.get_action()["id"]
+        data = {"championId": champid}  # , "completed": mode != "hover"}
+        if mode == "ban":
+            actionid = self.ban_action["id"]
+        else:
+            actionid = self.pick_action["id"]
         endpoint = self.endpoints["champselect_action"] + str(actionid)
+        if mode != "hover":
+            api_method = self.api_post
+            self.api_patch(endpoint, data=data)
+            endpoint += "/complete"
+        else:
+            api_method = self.api_patch
 
         # Debug print
-        print(f"champid: {champid}, actionid: {actionid}")
+        # print(f"champid: {champid}, actionid: {actionid}")
 
         # Lock in the champ and print info
-        print(f"api_patch: {endpoint}")
-        response = self.api_patch(endpoint, data=data)
-        print(response.json())
-        print(response)
+        print(f"endpoint: {endpoint}")
+        response = api_method(endpoint, data=data)
+        print(response, "\n")
+        try:
+            print(response.json())
+        except:
+            print("Failed to parse response as json, the response is empty.")
+        print(type(response.status_code))
         if 200 <= response.status_code <= 299:
             match mode:
                 case "hover":
@@ -271,7 +280,7 @@ class Connection:
                     self.has_banned = True
                 case "pick":
                     self.has_picked = True
-
+        # self.has_banned = False
 
 
     def api_get(self, endpoint):
@@ -323,7 +332,7 @@ class Connection:
 
 
     def get_champid(self, champ):
-        return self.champions[self.clean_name(champ)]
+        return self.all_champs[self.clean_name(champ)]
 
     def get_gamestate(self):
         return self.api_get("gamestate")
@@ -346,14 +355,18 @@ class Connection:
     def get_summoner_id(self):
         return self.api_get("/lol-summoner/v1/current-summoner").json()["accountId"]
 
-    def get_action(self):
+    def update_actions(self):
         """ Get the champselect action corresponding to the local player, and return it. """
         session = self.get_session()
-        actions = session["actions"][0]
+        actions = session["actions"]
+        # print("actions:", actions, "\n")
         local_cellid = self.get_localcellid()
 
         # Look at each action, and return the one with the corresponding cellid
-        for action in actions:
-            if action["actorCellId"] == local_cellid:
-                return action
-        return None
+        for action_group in actions:
+            for action in action_group:
+                if action["actorCellId"] == local_cellid:
+                    if action["type"] == "ban":
+                        self.ban_action = action
+                    elif action["type"] == "pick":
+                        self.pick_action = action
