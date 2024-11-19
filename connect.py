@@ -1,5 +1,7 @@
 import os
 import configparser
+import time
+
 import requests
 from dataclasses import dataclass
 from base64 import b64encode
@@ -30,7 +32,7 @@ def get_lockfile_path():
 
 
 class Connection:
-    l: Lockfile = Lockfile()
+    l = Lockfile()
     has_picked = False
     has_banned = False
     has_hovered = False
@@ -83,11 +85,12 @@ class Connection:
             "accept_match": "/lol-matchmaking/v1/ready-check/accept",  # POST
             "champselect_session": "/lol-champ-select/v1/session",  # GET
             "champselect_action": "/lol-champ-select/v1/session/actions/",  # PATCH
-            "champselect_action2": "/lol-lobby-team-builder/champ-select/v1/session/actions/",  # PATCH
+            # "champselect_action2": "/lol-lobby-team-builder/champ-select/v1/session/actions/",  # PATCH
             "owned_champs": "/lol-champions/v1/owned-champions-minimal",  # GET
             "current_summoner": "/lol-summoner/v1/current-summoner",  # GET
             "all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions",  # GET
-            "pickable_champs": "/lol-champ-select/v1/pickable-champions"  # GET
+            "pickable_champs": "/lol-champ-select/v1/pickable-champions",  # GET
+            "bannable_champs": "lol-champ-select/v1/bannable-champion-ids" # GET
         }
 
 
@@ -96,11 +99,26 @@ class Connection:
         in a dictionary along with their id numbers.
         """
         all_champs = self.api_get("all_champs")
-        for champ in all_champs:
-            alias, id = self.clean_name(champ["alias"]), champ["id"]
-            self.champions[alias] = id
+        error = False
+        for champ in all_champs.json():
+            try:
+                alias, id = self.clean_name(champ["alias"]), champ["id"]
+                self.champions[alias] = id
+            except Exception:
+                print("Champ data couldn't be retrieved, falling back to only using data for owned champs...")
+                error = True
+                break
 
-        owned_champs = self.api_get("owned_champs")
+        if error:
+            all_champs = self.api_get("owned_champs")
+            for champ in all_champs.json():
+                try:
+                    alias, id = self.clean_name(champ["alias"]), champ["id"]
+                    self.champions[alias] = id
+                except Exception:
+                    raise Exception("Champion data has not yet been received.")
+
+        owned_champs = self.api_get("owned_champs").json()
         for champ in owned_champs:
             alias, id = self.clean_name(champ["alias"]), champ["id"]
             self.owned_champions[alias] = id
@@ -140,29 +158,26 @@ class Connection:
 
     def decide_ban(self):
         """ Decide what champ the user should ban. """
-        # TODO: finish
+        # TODO: Make sure teammates aren't hovering the champ
         ban = self.ban_choice
         champid = self.get_champid(ban)
         return champid
 
-    def find_action(self):
-        """ Find the champselect action corresponding to the local player, and return it. """
-        session = self.get_session()
-        actions = session["actions"][0]
-        local_cellid = self.get_localcellid()
 
-        # Look at each action, and return the one with the corresponding cellid
-        for action in actions:
-            if action["actorCellId"] == local_cellid:
-                return action
-        return None
+    def is_client_turn(self):
+        """ Return true if it is the client's turn to hover/pick, false otherwise """
+        action = self.get_action()
+        return self.get_localcellid() == action["actorCellId"]
 
-    def can_pick(self, action):
-        if self.get_localcellid() != action["actorCellId"]:
-            return False
-        if not action["isInProgress"]:
-            return False
-        return not self.has_picked
+
+    def can_pick(self):
+        action = self.get_action()
+        return self.is_client_turn() and action["isInProgress"] and not self.has_picked
+
+
+    def can_ban(self):
+        action_type = self.get_action()["type"]
+        return action_type == "ban" and not self.has_banned
 
     @staticmethod
     def clean_name(name):
@@ -194,50 +209,69 @@ class Connection:
         self.api_post("accept_match")
 
 
+    def ban_or_pick(self):
+        """ Handle logic of whether to pick or ban, and then call the corresponding method. """
+        if self.can_ban():
+            self.ban_champ()
+        elif self.can_pick():
+            self.lock_champ()
+
+
     def ban_champ(self, champid=None):
         """ Ban a champion. """
-        self.do_champ(banning=True, champid=champid)
+        self.do_champ(mode="ban", champid=champid)
 
 
     def lock_champ(self, champid=None):
         """ Lock in a champion. """
-        self.do_champ(banning=False, champid=champid)
+        self.do_champ(mode="pick", champid=champid)
+
 
     def hover_champ(self, champid=None):
         """ Hover in a champion. """
-        self.do_champ(banning=False, hovering=True, champid=champid)
+        if not self.has_hovered:
+            self.do_champ(mode="hover", champid=champid)
+
 
     def do_champ(self, **kwargs):
         """ Pick or ban a champ in champselect.
 
         Keyword arguments:
         champid -- the champ to pick/ban (optional)
-        hovering -- whether to hover the champ or actually lock it in
-        banning -- whether to pick or ban the champ
+        mode -- options are hover, ban, and pick
         """
         champid = kwargs.get("champid")
-        hovering = kwargs.get("hovering", False)
-        banning = kwargs.get("banning", False)
+        mode = kwargs.get("mode")
 
         # If champid wasn't specified in method call, find out what champ to pick
         if champid is None:
-            if banning:
+            if mode == "ban":
                 champid = self.decide_ban()
-                self.has_banned = True
             else:
                 champid = self.decide_champ()
-                self.has_picked = True
 
         # Set up http request
-        data = {"championId": champid, "completed": not hovering}
-        actionid = self.find_action()["id"]
+        data = {"championId": champid, "completed": mode != "hover"}
+        actionid = self.get_action()["id"]
+        endpoint = self.endpoints["champselect_action"] + str(actionid)
 
         # Debug print
         print(f"champid: {champid}, actionid: {actionid}")
 
         # Lock in the champ and print info
-        self.api_patch("champselect_action", data=data, actionid=actionid)
-        print(f"Champ lock in info 2: {self.api_patch("champselect_action2", data=data, actionid=actionid)}")
+        print(f"api_patch: {endpoint}")
+        response = self.api_patch(endpoint, data=data)
+        print(response.json())
+        print(response)
+        if 200 <= response.status_code <= 299:
+            match mode:
+                case "hover":
+                    self.has_hovered = True
+                case "ban":
+                    self.has_banned = True
+                case "pick":
+                    self.has_picked = True
+
 
 
     def api_get(self, endpoint):
@@ -245,26 +279,22 @@ class Connection:
         return self.api_call(endpoint, "get")
 
 
-    def api_post(self, endpoint, data=None, actionid=None):
+    def api_post(self, endpoint, data=None):
         """ Send an API POST request. """
-        return self.api_call(endpoint, "post", data, actionid)
+        return self.api_call(endpoint, "post", data)
 
 
-    def api_patch(self, endpoint, data=None, actionid=None):
+    def api_patch(self, endpoint, data=None):
         """ Send an API PATCH request. """
-        return self.api_call(endpoint, "patch", data, actionid)
+        return self.api_call(endpoint, "patch", data)
 
 
-    def api_call(self, endpoint, method, data=None, actionid=None):
+    def api_call(self, endpoint, method, data=None):
         """ Make an API call with the specified endpoint and method. """
         # Check if endpoint alias from parameter is in dictionary; if not, use endpoint parameter as the full endpoint
         endpoint = self.endpoints.get(endpoint, endpoint)
 
-        # Append actionid to endpoint if it was specified, otherwise no action is being taken
-        if actionid is not None:
-            actionid = str(actionid)
-            endpoint += actionid
-
+        # Set up request URL
         url, headers = self.get_request_url(endpoint)
 
         # Choose proper http method
@@ -277,17 +307,14 @@ class Connection:
                 request = requests.patch
 
         # Send the request
-        try:
-            return request(url, headers=headers, json=data, verify=False).json()
-        except requests.exceptions.JSONDecodeError:
-            return None
+        return request(url, headers=headers, json=data, verify=False)
 
 
     # --------------
     # Getter methods
     # --------------
     def get_session(self):
-        return self.api_get("champselect_session")
+        return self.api_get("champselect_session").json()
 
 
     def get_assigned_role(self):
@@ -303,7 +330,7 @@ class Connection:
 
 
     def get_localcellid(self):
-        return self.api_get("champselect_session")["localPlayerCellId"]
+        return self.get_session()["localPlayerCellId"]
 
 
     def get_request_url(self, endpoint):
@@ -317,4 +344,16 @@ class Connection:
         return url, headers
 
     def get_summoner_id(self):
-        return self.api_get("/lol-summoner/v1/current-summoner")["accountId"]
+        return self.api_get("/lol-summoner/v1/current-summoner").json()["accountId"]
+
+    def get_action(self):
+        """ Get the champselect action corresponding to the local player, and return it. """
+        session = self.get_session()
+        actions = session["actions"][0]
+        local_cellid = self.get_localcellid()
+
+        # Look at each action, and return the one with the corresponding cellid
+        for action in actions:
+            if action["actorCellId"] == local_cellid:
+                return action
+        return None
