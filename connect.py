@@ -187,20 +187,27 @@ class Connection:
     # API Call Methods
     # ----------------
     def accept_match(self):
-        """ Accept a match"""
+        """ Accept a match. """
         self.api_post("accept_match")
 
 
     def ban_champ(self, champid=None):
+        """ Ban a champion. """
         self.do_champ(banning=True, champid=champid)
 
 
     def lock_champ(self, champid=None):
+        """ Lock in a champion. """
         self.do_champ(banning=False, champid=champid)
 
 
     def do_champ(self, **kwargs):
-        """ Pick or ban a champ in champselect. """
+        """ Pick or ban a champ in champselect.
+
+        Keyword arguments:
+        champid -- the champ to pick/ban (optional)
+        banning -- whether to pick or ban the champ
+        """
         champid = kwargs.get("champid")
         banning = kwargs.get("banning")
 
@@ -225,20 +232,22 @@ class Connection:
 
 
     def api_get(self, endpoint):
+        """ Send an API GET request. """
         return self.api_call(endpoint, "get")
 
 
     def api_post(self, endpoint, data=None, actionid=None):
+        """ Send an API POST request. """
         return self.api_call(endpoint, "post", data, actionid)
 
 
     def api_patch(self, endpoint, data=None, actionid=None):
+        """ Send an API PATCH request. """
         return self.api_call(endpoint, "patch", data, actionid)
 
 
     def api_call(self, endpoint, method, data=None, actionid=None):
-        """ Make an API call with the specified endpoint and method.
-        """
+        """ Make an API call with the specified endpoint and method. """
         # Check if endpoint alias from parameter is in dictionary; if not, use endpoint parameter as the full endpoint
         endpoint = self.endpoints.get(endpoint, endpoint)
 
