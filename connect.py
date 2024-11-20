@@ -78,7 +78,6 @@ class Connection:
     def parse_lockfile(self):
         """ Parse the user's lockfile into a dictionary. """
         l = self.l
-        # Find the lockfile, and parse its contents into a dictionary
         path = get_lockfile_path()
         try:
             with open(path) as f:
@@ -167,12 +166,6 @@ class Connection:
     def decide_champ(self):
         """ Decide what champ the user should play. """
         pick = self.pick_choice
-<<<<<<< Updated upstream
-        pick = self.clean_name(pick)
-        if pick not in self.owned_champs:
-            # TODO: Parse config here
-            pick = "jinx"
-=======
         options = parse_config(self.role_choice)
         i = 0
         is_valid = False
@@ -181,7 +174,6 @@ class Connection:
             is_valid = self.is_valid_pick(pick)
             i += 1
 
->>>>>>> Stashed changes
         champid = self.get_champid(pick)
         return champid
 
