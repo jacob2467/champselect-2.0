@@ -187,7 +187,7 @@ class Connection:
         cleaned_name = self.clean_name(champname)
         if cleaned_name not in self.owned_champs:
             return False
-        if self.all_champs[cleaned_name] in self.get_banned_champids():
+        if self.get_champid(cleaned_name) in self.get_banned_champids():
             return False
         # TODO: Complete this method
         #  - If taken, return False
