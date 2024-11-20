@@ -33,6 +33,8 @@ while not in_game:
             phase = session["timer"]["phase"]
             c.update_actions()
 
+            c.get_banned_champs()
+
             # Handle each champ select phase
             match phase:
                 case "PLANNING":
