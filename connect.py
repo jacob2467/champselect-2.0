@@ -57,7 +57,7 @@ class Connection:
     # Connection Setup
     # ----------------
     def parse_lockfile(self):
-        """ Find the user's lockfile, and parse it into a dictionary. """
+        """ Parse the user's lockfile into a dictionary. """
         l = self.l
         # Find the lockfile, and parse its contents into a dictionary
         path = get_lockfile_path()
@@ -65,10 +65,7 @@ class Connection:
             with open(path) as f:
                 contents = f.read()
                 contents = contents.split(":")
-                l.pid = contents[1]
-                l.port = contents[2]
-                l.password = contents[3]
-                l.protocol = contents[4]
+                l.pid, l.port, l.password, l.protocol = contents[1:5]
 
         # Can't find file error
         except FileNotFoundError:
@@ -153,6 +150,7 @@ class Connection:
         """ Decide what champ the user should play. """
         # TODO: Ensure user can pick the champ (is owned, and is not banned or taken)
         pick = self.pick_choice
+        pick = self.clean_name(pick)
         if pick not in self.owned_champs:
             # TODO: Parse config here
             pick = "jinx"
