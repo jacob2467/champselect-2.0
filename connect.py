@@ -106,7 +106,6 @@ class Connection:
             "accept_match": "/lol-matchmaking/v1/ready-check/accept",  # POST
             "champselect_session": "/lol-champ-select/v1/session",  # GET
             "champselect_action": "/lol-champ-select/v1/session/actions/",  # PATCH
-            # "champselect_action2": "/lol-lobby-team-builder/champ-select/v1/session/actions/",  # PATCH
             "owned_champs": "/lol-champions/v1/owned-champions-minimal",  # GET
             "current_summoner": "/lol-summoner/v1/current-summoner",  # GET
             "all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions",  # GET
@@ -193,6 +192,16 @@ class Connection:
         # TODO: Complete this method
         #  - If taken, return False
         return True
+
+
+    def send_runes(self):
+        # TODO: Implement this
+        return
+
+
+    def send_sums(self):
+        # TODO: Implement this (or enable option in config)
+        return
 
 
     def decide_ban(self):
