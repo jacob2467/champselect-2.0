@@ -61,8 +61,10 @@ class Connection:
     bannable_champids: list = []
     ban_action: dict = {}
     pick_action: dict = {}
-    pick_choice: str = ""
-    ban_choice: str = ""
+    user_pick: str = ""
+    user_ban: str = ""
+    pick_intent: str = ""
+    ban_intent: str = ""
     role_choice: str = ""
 
 
@@ -149,9 +151,11 @@ class Connection:
         #  - Check for autofill
         #  - Check if user owns champ
         #  - Get role from API rather than user input
-        self.pick_choice = self.clean_name(input("Who would you like to play?  "))
-        self.ban_choice = self.clean_name(input("Who would you like to ban?  "))
-        # self.role_choice = input("What role would you like to play?  ")
+        self.user_pick = self.clean_name(input("Who would you like to play?  "))
+        self.user_ban = self.clean_name(input("Who would you like to ban?  "))
+        self.pick_intent = self.user_pick
+        self.ban_intent = self.user_ban
+        self.role_choice = input("What role would you like to play?  ")
 
     # --------------
     # Helper methods
@@ -165,8 +169,11 @@ class Connection:
 
     def decide_champ(self):
         """ Decide what champ the user should play. """
-        pick = self.pick_choice
-        options = parse_config(self.role_choice)
+        pick = self.pick_intent
+        if self.is_valid_pick(pick):
+            return self.get_champid(pick)
+        else:
+            options = parse_config(self.role_choice)
         i = 0
         is_valid = False
         while not is_valid and i < len(options):
@@ -174,15 +181,16 @@ class Connection:
             is_valid = self.is_valid_pick(pick)
             i += 1
 
-        champid = self.get_champid(pick)
-        return champid
+        return self.get_champid(pick)
 
 
     def is_valid_pick(self, champname):
-        if champname not in self.owned_champs:
+        cleaned_name = self.clean_name(champname)
+        if cleaned_name not in self.owned_champs:
+            return False
+        if self.all_champs[cleaned_name] in self.get_banned_champids():
             return False
         # TODO: Complete this method
-        #  - If banned, return False
         #  - If taken, return False
         return True
 
@@ -190,20 +198,19 @@ class Connection:
     def decide_ban(self):
         """ Decide what champ the user should ban. """
         # TODO: Make sure teammates aren't hovering the champ
-        ban = self.ban_choice
+        ban = self.user_ban
         champid = self.get_champid(ban)
         return champid
 
 
-    def get_banned_champs(self):
+    def get_banned_champids(self):
         session = self.get_session()
         bans = session["bans"]["myTeamBans"] + session["bans"]["theirTeamBans"]
-        print(bans)
         return bans
 
 
     def is_banned(self, champname):
-        return self.all_champs[champname] in self.get_banned_champs()
+        return self.all_champs[champname] in self.get_banned_champids()
 
 
     def check_role(self):
@@ -281,14 +288,13 @@ class Connection:
 
 
     def hover_champ(self, champid=None):
-        """ Hover in a champion. """
+        """ Hover a champion. """
         if not self.has_hovered:
             self.do_champ(mode="hover", champid=champid)
 
 
     def do_champ(self, **kwargs):
         """ Pick or ban a champ in champselect.
-
         Keyword arguments:
         champid -- the champ to pick/ban (optional)
         mode -- options are hover, ban, and pick
@@ -304,7 +310,7 @@ class Connection:
                 champid = self.decide_champ()
 
         # Set up http request
-        data = {"championId": champid}  # , "completed": mode != "hover"}
+        data = {"championId": champid}
         if mode == "ban":
             actionid = self.ban_action["id"]
         else:
@@ -316,9 +322,6 @@ class Connection:
             endpoint += "/complete"
         else:
             api_method = self.api_patch
-
-        # Debug print
-        # print(f"champid: {champid}, actionid: {actionid}")
 
         # Lock in the champ and print info
         # print(f"endpoint: {endpoint}")
