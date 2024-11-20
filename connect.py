@@ -31,6 +31,25 @@ def get_lockfile_path():
         return "/Applications/League of Legends.app/Contents/LoL/lockfile"
 
 
+config = configparser.ConfigParser()
+config.read("config.ini")
+
+
+def parse_config(role: str, picking: bool = True):
+    champs = []
+    config_section = ""
+    if picking:
+        config_section += "pick"
+    else:
+        config_section += "ban"
+
+    config_section += "_" + role
+    for i in range(5):
+        champs.append(config.get(config_section, str(i + 1)))
+    return champs
+
+
+
 class Connection:
     l: Lockfile = Lockfile()
     has_picked: bool = False
@@ -124,6 +143,7 @@ class Connection:
             alias, id = self.clean_name(champ["alias"]), champ["id"]
             self.owned_champs[alias] = id
 
+
     def get_first_choices(self):
         """ Get the user's first choice for picks and bans, as well as the role they're playing"""
         # TODO:
@@ -146,14 +166,33 @@ class Connection:
 
     def decide_champ(self):
         """ Decide what champ the user should play. """
-        # TODO: Ensure user can pick the champ (is owned, and is not banned or taken)
         pick = self.pick_choice
+<<<<<<< Updated upstream
         pick = self.clean_name(pick)
         if pick not in self.owned_champs:
             # TODO: Parse config here
             pick = "jinx"
+=======
+        options = parse_config(self.role_choice)
+        i = 0
+        is_valid = False
+        while not is_valid and i < len(options):
+            pick = options[i]
+            is_valid = self.is_valid_pick(pick)
+            i += 1
+
+>>>>>>> Stashed changes
         champid = self.get_champid(pick)
         return champid
+
+
+    def is_valid_pick(self, champname):
+        if champname not in self.owned_champs:
+            return False
+        # TODO: Complete this method
+        #  - If banned, return False
+        #  - If taken, return False
+        return True
 
 
     def decide_ban(self):
@@ -162,6 +201,36 @@ class Connection:
         ban = self.ban_choice
         champid = self.get_champid(ban)
         return champid
+
+
+    def get_banned_champs(self):
+        session = self.get_session()
+        bans = session["bans"]["myTeamBans"] + session["bans"]["theirTeamBans"]
+        print(bans)
+        return bans
+
+
+    def is_banned(self, champname):
+        return self.all_champs[champname] in self.get_banned_champs()
+
+
+    def check_role(self):
+        # TODO: Implement this
+        a = self
+        return "top"
+
+
+    def teammate_hovering(self, champname):
+        # TODO: Implement this
+        a = self
+        return False
+
+
+    def get_teammate_hovers(self):
+        # TODO: Implement this
+        champs = []
+        return champs
+
 
     @staticmethod
     def clean_name(name):
@@ -198,10 +267,10 @@ class Connection:
     def ban_or_pick(self):
         """ Handle logic of whether to pick or ban, and then call the corresponding method. """
         if self.pick_action.get("isInProgress", False):
-            print("pick action:", self.pick_action, "\n")
+            # print("pick action:", self.pick_action, "\n")
             self.lock_champ()
         elif self.ban_action.get("isInProgress", False):
-            print("ban action:", self.ban_action, "\n")
+            # print("ban action:", self.ban_action, "\n")
             self.ban_champ()
 
 
@@ -260,14 +329,13 @@ class Connection:
         # print(f"champid: {champid}, actionid: {actionid}")
 
         # Lock in the champ and print info
-        print(f"endpoint: {endpoint}")
+        # print(f"endpoint: {endpoint}")
         response = api_method(endpoint, data=data)
-        print(response, "\n")
+        # print(response, "\n")
         try:
             print(response.json())
         except:
             print("Failed to parse response as json, the response is empty.")
-        print(type(response.status_code))
         if 200 <= response.status_code <= 299:
             match mode:
                 case "hover":
