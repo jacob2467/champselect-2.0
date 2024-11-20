@@ -42,7 +42,7 @@ while not in_game:
                 case "BAN_PICK":
                     c.ban_or_pick()
                 case "FINALIZATION":
-                    pass
+                    c.send_runes()
 
         # End loop if a game starts
         case "InProgress":
