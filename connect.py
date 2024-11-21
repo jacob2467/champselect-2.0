@@ -1,11 +1,17 @@
+# These libraries are included with Python or are part of this project, and therefore don't require installation
 import os
 import configparser
-import time
-
-import requests
 from dataclasses import dataclass
 from base64 import b64encode
 import warnings
+import dependencies as d
+
+# These libraries need to be installed, but urllib3 is a dependency of requests, so we only need to install requests
+try:
+    import requests
+except ModuleNotFoundError:
+    d.install("requests")
+    import requests
 from urllib3.exceptions import InsecureRequestWarning
 
 # Disable warning for insecure http requests
@@ -22,13 +28,22 @@ class Lockfile:
 
 def get_lockfile_path():
     """ Get the path to the user's lockfile. """
-    # Default path for Windows
-    if os.name == "nt":
-        return "C:/Riot Games/League of Legends/lockfile"
+    config_dir = config.get("league_directory", "directory")
 
-    # Default path for OSX
-    elif os.name == "posix":
-        return "/Applications/League of Legends.app/Contents/LoL/lockfile"
+    # Use directory specified in config if it exists
+    if config_dir != "":
+        dir = config_dir
+    else:  # Use default filepaths
+        osx = "/Applications/League of Legends.app/Contents/LoL/lockfile"
+        windows = "C:/Riot Games/League of Legends/lockfile"
+
+        match os.name:
+            case "nt":
+                dir = windows
+            case "posix":
+                dir = osx
+
+    return dir
 
 
 config = configparser.ConfigParser()
@@ -36,6 +51,7 @@ config.read("config.ini")
 
 
 def parse_config(role: str, picking: bool = True):
+    """ Parse the user's config for backup champs and return it as a dictionary"""
     champs = []
     config_section = ""
     if picking:
@@ -44,9 +60,18 @@ def parse_config(role: str, picking: bool = True):
         config_section += "ban"
 
     config_section += "_" + role
+
     for i in range(5):
         champs.append(config.get(config_section, str(i + 1)))
     return champs
+
+def trim(string: str):
+    illegal = [" ", "'", "."]
+    new_string = ""
+    for char in string:
+        if char not in illegal:
+            new_string += char.lower()
+    return new_string
 
 
 
@@ -61,6 +86,7 @@ class Connection:
     bannable_champids: list = []
     ban_action: dict = {}
     pick_action: dict = {}
+    all_actions: dict = {}
     user_pick: str = ""
     user_ban: str = ""
     pick_intent: str = ""
@@ -89,8 +115,8 @@ class Connection:
 
         # Can't find file error
         except FileNotFoundError:
-            raise FileNotFoundError("Lockfile not found; open league, or specify your installation directory")
-            # TODO: Get user input for game directory here
+            raise FileNotFoundError("Lockfile not found; open league, or specify your installation"
+                                    "directory in your config")
 
         # Handle other exceptions
         except Exception as e:
@@ -118,20 +144,20 @@ class Connection:
         """ Get a list of all champions in the game and another of all that the player owns, and store them
         in a dictionary along with their id numbers.
         """
-        all_champs = self.api_get("all_champs")
+        all_champs = self.api_get("all_champs").json()
         error = False
-        for champ in all_champs.json():
+        for champ in all_champs:
             try:
                 alias, id = self.clean_name(champ["alias"]), champ["id"]
                 self.all_champs[alias] = id
             except Exception:
-                print("Champ data couldn't be retrieved, falling back to only using data for owned champs...")
+                warnings.warn("Champ data couldn't be retrieved, falling back to only"
+                              "using data for owned champs...", RuntimeWarning)
                 error = True
-                break
 
         if error:
             all_champs = self.api_get("owned_champs")
-            for champ in all_champs.json():
+            for champ in all_champs:
                 try:
                     alias, id = self.clean_name(champ["alias"]), champ["id"]
                     self.all_champs[alias] = id
@@ -146,15 +172,12 @@ class Connection:
 
     def get_first_choices(self):
         """ Get the user's first choice for picks and bans, as well as the role they're playing"""
-        # TODO:
-        #  - Check for autofill
-        #  - Check if user owns champ
-        #  - Get role from API rather than user input
         self.user_pick = self.clean_name(input("Who would you like to play?  "))
         self.user_ban = self.clean_name(input("Who would you like to ban?  "))
+        # Set intent to userinput (intent can change later if first choice is banned, etc.)
         self.pick_intent = self.user_pick
         self.ban_intent = self.user_ban
-        self.role_choice = input("What role would you like to play?  ")
+        self.role_choice = self.clean_role_name(input("What role would you like to play?  "))
 
     # --------------
     # Helper methods
@@ -166,32 +189,104 @@ class Connection:
         self.has_hovered = False
 
 
-    def decide_champ(self):
+    def decide_pick(self):
         """ Decide what champ the user should play. """
         pick = self.pick_intent
         if self.is_valid_pick(pick):
             return self.get_champid(pick)
         else:
             options = parse_config(self.role_choice)
+
         i = 0
         is_valid = False
         while not is_valid and i < len(options):
             pick = options[i]
             is_valid = self.is_valid_pick(pick)
             i += 1
-
+        self.pick_intent = pick
         return self.get_champid(pick)
 
 
-    def is_valid_pick(self, champname):
-        cleaned_name = self.clean_name(champname)
-        if cleaned_name not in self.owned_champs:
+    def decide_ban(self):
+        """ Decide what champ the user should ban. """
+        ban = self.ban_intent
+        if self.is_valid_ban(ban):
+            return self.get_champid(ban)
+        else:
+            options = parse_config(self.role_choice, False)
+
+        i = 0
+        is_valid = False
+        while not is_valid and i < len(options):
+            ban = options[i]
+            is_valid = self.is_valid_ban(ban)
+            i += 1
+        self.ban_intent = ban
+        return self.get_champid(ban)
+
+
+    def is_valid_pick(self, champ: str):
+        champ = self.clean_name(champ)
+        id = self.get_champid(champ)
+
+        # If user doesn't own the champ
+        if champ not in self.owned_champs:
             return False
-        if self.get_champid(cleaned_name) in self.get_banned_champids():
+
+        # If champ is banned
+        if id in self.get_banned_champids():
             return False
-        # TODO: Complete this method
-        #  - If taken, return False
+
+        # If a teammate has already PICKED the champ (hovers ok, stealing champs is based)
+        if id in self.get_teammate_picks():
+            return False
+
+        # # If the user got assigned a role other than the one they queued for
+        # if self.role_choice != self.get_assigned_role():
+        #     print(f"Role choice: {self.role_choice}, assigned role: {self.get_assigned_role()}")
+        #     return False
         return True
+
+
+    def is_valid_ban(self, champ: str):
+        champ = self.clean_name(champ)
+        id = self.get_champid(champ)
+        # If champ is banned already
+        if id in self.get_banned_champids():
+            return False
+
+        # If a teammate is hovering the champ
+        if id in self.get_teammate_hovers():
+            return False
+
+        return True
+
+
+    def get_teammate_champs(self):
+        champs = []
+        hovering = False
+        for action in self.all_actions:
+            id = action["championId"]
+            if action["isAllyAction"] and action["type"] == "pick" and id != 0:
+                if action["isInProgress"]:
+                    hovering = True
+                champs.append((id, hovering))
+        return champs
+
+    def get_teammate_picks(self):
+        champs = []
+        for pick, is_hovering in self.get_teammate_champs():
+            if not is_hovering:
+                champs.append(pick)
+        return champs
+
+
+    def get_teammate_hovers(self):
+        champs = []
+        for pick, is_hovering in self.get_teammate_champs():
+            if is_hovering:
+                champs.append(pick)
+        return champs
 
 
     def send_runes(self):
@@ -199,17 +294,9 @@ class Connection:
         return
 
 
-    def send_sums(self):
-        # TODO: Implement this (or enable option in config)
+    def send_summs(self):
+        # TODO: Implement this (or enable auto summ import on rune import in config)
         return
-
-
-    def decide_ban(self):
-        """ Decide what champ the user should ban. """
-        # TODO: Make sure teammates aren't hovering the champ
-        ban = self.user_ban
-        champid = self.get_champid(ban)
-        return champid
 
 
     def get_banned_champids(self):
@@ -223,7 +310,7 @@ class Connection:
 
 
     def check_role(self):
-        # TODO: Implement this
+        # TODO: Get primary role the user is queueing for instead of getting it as user input
         a = self
         return "top"
 
@@ -234,24 +321,14 @@ class Connection:
         return False
 
 
-    def get_teammate_hovers(self):
-        # TODO: Implement this
-        champs = []
-        return champs
-
-
     @staticmethod
-    def clean_name(name):
+    def clean_name(name: str):
         """ Remove whitespace and special characters from a champion's name. Example output:
         Aurelion Sol -> aurelionsol
         Bel'Veth -> belveth
         """
-        # Trim illegal characters & whitespace
-        illegal = [" ", "'", "."]
-        new_name = ""
-        for char in name:
-            if char not in illegal:
-                new_name += char.lower()
+        # Remove all illegal characters and whitespace
+        new_name = trim(name)
 
         # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
         if "nunu" in new_name:
@@ -260,6 +337,19 @@ class Connection:
             return "monkeyking"
 
         return new_name
+
+
+    @staticmethod
+    def clean_role_name(name: str):
+        # Remove all illegal characters and whitespace
+        new_name = trim(name)
+
+        roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"], ["bottom", "bot", "adc", "adcarry", "b"], ["support", "supp", "faggot", "fag"]]
+        for role in roles:
+            if new_name in role:
+                return role[0]
+
+        raise Exception("Invalid role selection. Please try again")
 
 
     # ----------------
@@ -282,7 +372,6 @@ class Connection:
             self.ban_champ()
 
 
-
     def ban_champ(self, champid=None):
         """ Ban a champion. """
         if not self.has_banned:
@@ -298,7 +387,7 @@ class Connection:
 
     def hover_champ(self, champid=None):
         """ Hover a champion. """
-        if not self.has_hovered:
+        if not self.is_hovering() and not self.has_hovered:
             self.do_champ(mode="hover", champid=champid)
 
 
@@ -316,7 +405,7 @@ class Connection:
             if mode == "ban":
                 champid = self.decide_ban()
             else:
-                champid = self.decide_champ()
+                champid = self.decide_pick()
 
         # Set up http request
         data = {"championId": champid}
@@ -349,6 +438,11 @@ class Connection:
                 case "pick":
                     self.has_picked = True
         # self.has_banned = False
+
+
+    def is_hovering(self):
+        """ Return a bool indicating whether or not the player is currently hovering a champ. """
+        return self.pick_action["id"] != 0
 
 
     def api_get(self, endpoint):
@@ -390,13 +484,20 @@ class Connection:
     # --------------
     # Getter methods
     # --------------
+
+
     def get_session(self):
         return self.api_get("champselect_session").json()
 
 
     def get_assigned_role(self):
-        # TODO: Implement this
-        return
+        my_team = self.get_session()["myTeam"]
+        my_id = self.get_summoner_id()
+        for player in my_team:
+            if player["summonerId"] == id:
+                return player["assignedPosition"]
+        # TODO: Error handling (?)
+        return None
 
 
     def get_champid(self, champ):
@@ -427,6 +528,7 @@ class Connection:
         """ Get the champselect action corresponding to the local player, and return it. """
         session = self.get_session()
         actions = session["actions"]
+        # self.all_actions = actions
         # print("actions:", actions, "\n")
         local_cellid = self.get_localcellid()
 
