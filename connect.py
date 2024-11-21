@@ -241,10 +241,10 @@ class Connection:
         if id in self.get_teammate_picks():
             return False
 
-        # # If the user got assigned a role other than the one they queued for
-        # if self.role_choice != self.get_assigned_role():
-        #     print(f"Role choice: {self.role_choice}, assigned role: {self.get_assigned_role()}")
-        #     return False
+        # If the user got assigned a role other than the one they queued for
+        if self.get_assigned_role() == "" or self.role_choice != self.get_assigned_role():
+            print(f"Role choice: {self.role_choice}, assigned role: {self.get_assigned_role()}")
+            return False
         return True
 
 
@@ -256,37 +256,37 @@ class Connection:
             return False
 
         # If a teammate is hovering the champ
-        if id in self.get_teammate_hovers():
+        if self.teammate_hovering(id):
             return False
 
         return True
 
 
-    def get_teammate_champs(self):
-        champs = []
+    def get_teammate_champids(self):
+        champids = []
         hovering = False
         for action in self.all_actions:
             id = action["championId"]
             if action["isAllyAction"] and action["type"] == "pick" and id != 0:
                 if action["isInProgress"]:
                     hovering = True
-                champs.append((id, hovering))
-        return champs
+                champids.append((id, hovering))
+        return champids
 
     def get_teammate_picks(self):
         champs = []
-        for pick, is_hovering in self.get_teammate_champs():
+        for pick, is_hovering in self.get_teammate_champids():
             if not is_hovering:
                 champs.append(pick)
         return champs
 
 
     def get_teammate_hovers(self):
-        champs = []
-        for pick, is_hovering in self.get_teammate_champs():
+        champids = []
+        for pick, is_hovering in self.get_teammate_champids():
             if is_hovering:
-                champs.append(pick)
-        return champs
+                champids.append(pick)
+        return champids
 
 
     def send_runes(self):
@@ -295,7 +295,7 @@ class Connection:
 
 
     def send_summs(self):
-        # TODO: Implement this (or enable auto summ import on rune import in config)
+        # TODO: Implement this
         return
 
 
@@ -315,10 +315,8 @@ class Connection:
         return "top"
 
 
-    def teammate_hovering(self, champname):
-        # TODO: Implement this
-        a = self
-        return False
+    def teammate_hovering(self, champid: int):
+        return champid in self.get_teammate_hovers()
 
 
     @staticmethod
@@ -494,7 +492,7 @@ class Connection:
         my_team = self.get_session()["myTeam"]
         my_id = self.get_summoner_id()
         for player in my_team:
-            if player["summonerId"] == id:
+            if player["summonerId"] == my_id:
                 return player["assignedPosition"]
         # TODO: Error handling (?)
         return None
