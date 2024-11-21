@@ -7,8 +7,6 @@ last_gamestate = None
 last_phase = None
 last_session = None
 
-output_filepath = "C:/Users/jamo0/Desktop/text2.json"
-
 while not in_game:
     time.sleep(1)
     gamestate = c.api_get("gamestate").json()
@@ -43,6 +41,7 @@ while not in_game:
                     c.ban_or_pick()
                 case "FINALIZATION":
                     c.send_runes()
+                    c.send_summs()
 
         # End loop if a game starts
         case "InProgress":
