@@ -241,10 +241,11 @@ class Connection:
         if id in self.get_teammate_picks():
             return False
 
-        # If the user got assigned a role other than the one they queued for
-        if self.get_assigned_role() == "" or self.role_choice != self.get_assigned_role():
-            print(f"Role choice: {self.role_choice}, assigned role: {self.get_assigned_role()}")
-            return False
+        # If the user got assigned a role other than the one they queued for, disregard the champ they picked
+        print(f"Role choice: {self.role_choice}, assigned role: {len(self.get_assigned_role())}")
+        if champ == self.user_pick:
+            if len(self.get_assigned_role()) < 3 or self.role_choice != self.get_assigned_role():
+                return False
         return True
 
 
@@ -342,7 +343,7 @@ class Connection:
         # Remove all illegal characters and whitespace
         new_name = trim(name)
 
-        roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"], ["bottom", "bot", "adc", "adcarry", "b"], ["support", "supp", "faggot", "fag"]]
+        roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"], ["bottom", "bot", "adc", "adcarry", "b"], ["utility", "support", "supp", "faggot", "fag"]]
         for role in roles:
             if new_name in role:
                 return role[0]
