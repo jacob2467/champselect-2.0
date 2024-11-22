@@ -1,6 +1,7 @@
 # These libraries are included with Python, and therefore don't require installation
 from base64 import b64encode
 import warnings
+import copy
 
 # These files are part of this project, and also don't require installation
 import dependencies as d
@@ -99,29 +100,25 @@ class Connection:
                               "using data for owned champs...", RuntimeWarning)
                 error = True
 
-        if error:
-            all_champs = self.api_get("owned_champs")
-            for champ in all_champs:
-                try:
-                    alias, id = self.clean_name(champ["alias"]), champ["id"]
-                    self.all_champs[alias] = id
-                except Exception:
-                    raise Exception("Champion data has not yet been received.")
-
         owned_champs = self.api_get("owned_champs").json()
         for champ in owned_champs:
             alias, id = self.clean_name(champ["alias"]), champ["id"]
             self.owned_champs[alias] = id
+
+        # If there was a problem getting the list of all champs, just use the ones owned by the user
+        if error:
+            self.all_champs = copy.deepcopy(owned_champs)
 
 
     def get_first_choices(self):
         """ Get the user's first choice for picks and bans, as well as the role they're playing"""
         self.user_pick = self.clean_name(input("Who would you like to play?  "))
         self.user_ban = self.clean_name(input("Who would you like to ban?  "))
+        self.role_choice = self.clean_role_name(input("What role would you like to play?  "))
+
         # Set intent to userinput (intent can change later if first choice is banned, etc.)
         self.pick_intent = self.user_pick
         self.ban_intent = self.user_ban
-        self.role_choice = self.clean_role_name(input("What role would you like to play?  "))
 
     # --------------
     # Helper methods
@@ -169,7 +166,8 @@ class Connection:
         return self.get_champid(ban)
 
 
-    def is_valid_pick(self, champ: str):
+    def is_valid_pick(self, champ: str) -> bool:
+        """ Check if the given champion can be picked """
         champ = self.clean_name(champ)
         id = self.get_champid(champ)
         error_msg = "Invalid pick champion:"
@@ -185,7 +183,7 @@ class Connection:
             return False
 
         # If a teammate has already PICKED the champ (hovers ok, stealing champs is based)
-        if id in self.get_teammate_picks():
+        if id in self.get_teammate_pickids():
             print(error_msg, "teammate picked")
             return False
 
@@ -195,10 +193,12 @@ class Connection:
             if len(self.get_assigned_role()) == 0 or self.role_choice != self.get_assigned_role():
                 print(error_msg, "autofilled")
                 return False
+
         return True
 
 
     def is_valid_ban(self, champ: str):
+        """ Check if the given champion can be banned """
         champ = self.clean_name(champ)
         id = self.get_champid(champ)
         error_msg = "Invalid ban champion:"
@@ -217,6 +217,9 @@ class Connection:
 
 
     def get_teammate_champids(self):
+        """ Return a list of tuples. Each tuple contains a teammate's champion id and a boolean indicating whether they
+        are hovering (True) or have already picked (False) the champion with the specified ID.
+        """
         champids = []
         hovering = False
         for action_group in self.all_actions:
@@ -228,7 +231,8 @@ class Connection:
                     champids.append((id, hovering))
         return champids
 
-    def get_teammate_picks(self):
+    def get_teammate_pickids(self):
+        """ Return a list of champion ids that teammates have locked in. """
         champs = []
         for pick, is_hovering in self.get_teammate_champids():
             if not is_hovering:
@@ -237,6 +241,7 @@ class Connection:
 
 
     def get_teammate_hovers(self):
+        """ Return a list of champion ids that teammates are hovering. """
         champids = []
         for pick, is_hovering in self.get_teammate_champids():
             if is_hovering:
@@ -305,12 +310,9 @@ class Connection:
 
         raise Exception("Invalid role selection. Please try again")
 
-
     # ----------------
     # API Call Methods
     # ----------------
-
-
     def accept_match(self):
         """ Accept a match. """
         self.api_post("accept_match")
@@ -442,12 +444,9 @@ class Connection:
         # Send the request
         return request(url, headers=headers, json=data, verify=False)
 
-
     # --------------
     # Getter methods
     # --------------
-
-
     def get_session(self):
         return self.api_get("champselect_session").json()
 
@@ -488,17 +487,16 @@ class Connection:
 
     def update_actions(self):
         """ Get the champselect action corresponding to the local player, and return it. """
-        session = self.get_session()
-        actions = session["actions"]
-        self.all_actions = actions
+        self.all_actions = self.get_session()["actions"]
         # print("actions:", actions, "\n")
         local_cellid = self.get_localcellid()
 
         # Look at each action, and return the one with the corresponding cellid
-        for action_group in actions:
+        for action_group in self.all_actions:
             for action in action_group:
                 if action["actorCellId"] == local_cellid:
                     if action["type"] == "ban":
                         self.ban_action = action
+
                     elif action["type"] == "pick":
                         self.pick_action = action
