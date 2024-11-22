@@ -47,7 +47,7 @@ class Connection:
     # ----------------
     # Connection Setup
     # ----------------
-    def parse_lockfile(self):
+    def parse_lockfile(self) -> None:
         """ Parse the user's lockfile into a dictionary. """
         l = self.l
         path = get_lockfile_path()
@@ -67,7 +67,7 @@ class Connection:
             raise Exception(f"Failed to parse lockfile: {str(e)}")
 
 
-    def setup_endpoints(self):
+    def setup_endpoints(self) -> None:
         """ Set up a dictionary containing varius endpoints for the API. """
         self.endpoints = {
             "gamestate": "/lol-gameflow/v1/gameflow-phase",  # GET
@@ -85,7 +85,7 @@ class Connection:
         }
 
 
-    def populate_champ_table(self):
+    def populate_champ_table(self) -> None:
         """ Get a list of all champions in the game and another of all that the player owns, and store them
         in a dictionary along with their id numbers.
         """
@@ -110,7 +110,7 @@ class Connection:
             self.all_champs = copy.deepcopy(owned_champs)
 
 
-    def get_first_choices(self):
+    def get_first_choices(self) -> None:
         """ Get the user's first choice for picks and bans, as well as the role they're playing"""
         self.user_pick = self.clean_name(input("Who would you like to play?  "))
         self.user_ban = self.clean_name(input("Who would you like to ban?  "))
@@ -123,14 +123,14 @@ class Connection:
     # --------------
     # Helper methods
     # --------------
-    def reset_after_dodge(self):
+    def reset_after_dodge(self) -> None:
         """ Reset has_picked, has_banned, and has_hovered to False after someone dodges a lobby. """
         self.has_picked = False
         self.has_banned = False
         self.has_hovered = False
 
 
-    def decide_pick(self):
+    def decide_pick(self) -> int:
         """ Decide what champ the user should play. """
         pick = self.pick_intent
         if self.is_valid_pick(pick):
@@ -148,7 +148,7 @@ class Connection:
         return self.get_champid(pick)
 
 
-    def decide_ban(self):
+    def decide_ban(self) -> int:
         """ Decide what champ the user should ban. """
         ban = self.ban_intent
         if self.is_valid_ban(ban):
@@ -216,7 +216,7 @@ class Connection:
         return True
 
 
-    def get_teammate_champids(self):
+    def get_teammate_champids(self) -> list[tuple[int, bool]]:
         """ Return a list of tuples. Each tuple contains a teammate's champion id and a boolean indicating whether they
         are hovering (True) or have already picked (False) the champion with the specified ID.
         """
@@ -224,14 +224,14 @@ class Connection:
         hovering = False
         for action_group in self.all_actions:
             for action in action_group:
-                id = action["championId"]
+                id: int = action["championId"]
                 if action["isAllyAction"] and action["type"] == "pick" and id != 0:
                     if action["isInProgress"]:
                         hovering = True
                     champids.append((id, hovering))
         return champids
 
-    def get_teammate_pickids(self):
+    def get_teammate_pickids(self) -> list[int]:
         """ Return a list of champion ids that teammates have locked in. """
         champs = []
         for pick, is_hovering in self.get_teammate_champids():
@@ -240,7 +240,7 @@ class Connection:
         return champs
 
 
-    def get_teammate_hovers(self):
+    def get_teammate_hovers(self) -> list[int]:
         """ Return a list of champion ids that teammates are hovering. """
         champids = []
         for pick, is_hovering in self.get_teammate_champids():
@@ -249,39 +249,41 @@ class Connection:
         return champids
 
 
-    def send_runes(self):
+    def send_runes(self) -> None:
         # TODO: Implement this
         return
 
 
-    def send_summs(self):
+    def send_summs(self) -> None:
         # TODO: Implement this
         return
 
 
-    def get_banned_champids(self):
+    def get_banned_champids(self) -> list[int]:
+        """ Get a list of all champion ids that have been banned. """
         session = self.get_session()
-        bans = session["bans"]["myTeamBans"] + session["bans"]["theirTeamBans"]
-        return bans
+        return session["bans"]["myTeamBans"] + session["bans"]["theirTeamBans"]
 
 
-    def is_banned(self, champname):
-        return self.all_champs[champname] in self.get_banned_champids()
+    def is_banned(self, champid: int) -> bool:
+        """ Check if the given champion is banned. """
+        return champid in self.get_banned_champids()
 
 
     def check_role(self):
         # TODO: Get primary role the user is queueing for instead of getting it as user input
-        a = self
-        return "top"
+        a = self  # so pycharm doesn't yell at me and say this method is static
+        return "top"  # dummy value
 
 
-    def teammate_hovering(self, champid: int):
+    def teammate_hovering(self, champid: int) -> bool:
+        """ Check if the given champion is being hovered by a teammate. """
         print("teammates hovering id#", champid, ":", champid in self.get_teammate_hovers())
         return champid in self.get_teammate_hovers()
 
 
     @staticmethod
-    def clean_name(name: str):
+    def clean_name(name: str) -> str:
         """ Remove whitespace and special characters from a champion's name. Example output:
         Aurelion Sol -> aurelionsol
         Bel'Veth -> belveth
@@ -299,7 +301,12 @@ class Connection:
 
 
     @staticmethod
-    def clean_role_name(name: str):
+    def clean_role_name(name: str) -> str:
+        """ Convert various role naming conventions to the format used by the game. Example output:
+        mid -> middle
+        supp -> utility
+        jg -> jungle
+        """
         # Remove all illegal characters and whitespace
         new_name = trim(name)
 
@@ -313,12 +320,12 @@ class Connection:
     # ----------------
     # API Call Methods
     # ----------------
-    def accept_match(self):
+    def accept_match(self) -> None:
         """ Accept a match. """
         self.api_post("accept_match")
 
 
-    def ban_or_pick(self):
+    def ban_or_pick(self) -> None:
         """ Handle logic of whether to pick or ban, and then call the corresponding method. """
         # If it's my turn to pick (set False as default value)
         print("ban_or_pick():", "self.pick_action.get('isInProgress', False)", self.pick_action.get("isInProgress", False), "self.ban_action.get('isInProgress', False)", self.ban_action.get("isInProgress", False))
@@ -333,28 +340,28 @@ class Connection:
             self.ban_champ()
 
 
-    def ban_champ(self, champid=None):
+    def ban_champ(self, champid: int = None) -> None:
         """ Ban a champion. """
         print("ban_champ(): self.has_banned = ", self.has_banned)
         if not self.has_banned:
             self.do_champ(mode="ban", champid=champid)
 
 
-    def lock_champ(self, champid=None):
+    def lock_champ(self, champid: int = None) -> None:
         """ Lock in a champion. """
         print("lock_champ(): self.has_picked = ", self.has_picked)
         if not self.has_picked:
             self.do_champ(mode="pick", champid=champid)
 
 
-    def hover_champ(self, champid=None):
+    def hover_champ(self, champid: int = None):
         """ Hover a champion. """
         print("hover_champ(): self.is_hovering() = ", self.is_hovering(), "self.has_hovered:", self.has_hovered)
         if not self.is_hovering() and not self.has_hovered:
             self.do_champ(mode="hover", champid=champid)
 
 
-    def do_champ(self, **kwargs):
+    def do_champ(self, **kwargs) -> None:
         """ Pick or ban a champ in champselect.
         Keyword arguments:
         champid -- the champ to pick/ban (optional)
@@ -400,31 +407,30 @@ class Connection:
                     self.has_banned = True
                 case "pick":
                     self.has_picked = True
-        # self.has_banned = False
 
 
-    def is_hovering(self):
+    def is_hovering(self) -> bool:
         """ Return a bool indicating whether or not the player is currently hovering a champ. """
         print("is_hovering():", "self.pick_action['championId']", self.pick_action["championId"])
         return self.pick_action["championId"] != 0
 
 
-    def api_get(self, endpoint):
+    def api_get(self, endpoint) -> requests.Response:
         """ Send an API GET request. """
         return self.api_call(endpoint, "get")
 
 
-    def api_post(self, endpoint, data=None):
+    def api_post(self, endpoint, data=None) -> requests.Response:
         """ Send an API POST request. """
         return self.api_call(endpoint, "post", data)
 
 
-    def api_patch(self, endpoint, data=None):
+    def api_patch(self, endpoint, data=None) -> requests.Response:
         """ Send an API PATCH request. """
         return self.api_call(endpoint, "patch", data)
 
 
-    def api_call(self, endpoint, method, data=None):
+    def api_call(self, endpoint, method, data=None) -> requests.Response:
         """ Make an API call with the specified endpoint and method. """
         # Check if endpoint alias from parameter is in dictionary; if not, use endpoint parameter as the full endpoint
         endpoint = self.endpoints.get(endpoint, endpoint)
@@ -447,11 +453,13 @@ class Connection:
     # --------------
     # Getter methods
     # --------------
-    def get_session(self):
+    def get_session(self) -> dict:
+        """ Get the current champselect session info. """
         return self.api_get("champselect_session").json()
 
 
-    def get_assigned_role(self):
+    def get_assigned_role(self) -> str:
+        """ Get the name of the role the user was assigned to. """
         my_team = self.get_session()["myTeam"]
         my_id = self.get_summoner_id()
         for player in my_team:
@@ -460,18 +468,22 @@ class Connection:
         return None
 
 
-    def get_champid(self, champ):
+    def get_champid(self, champ) -> int:
+        """ Get the id of the champion with the given name. """
         return self.all_champs[self.clean_name(champ)]
 
-    def get_gamestate(self):
+    def get_gamestate(self) -> requests.Response:
+        """ Get the current state of the game (Lobby, ChampSelect, etc.) """
         return self.api_get("gamestate")
 
 
-    def get_localcellid(self):
+    def get_localcellid(self) -> int:
+        """ Get the cell id of the user. """
         return self.get_session()["localPlayerCellId"]
 
 
-    def get_request_url(self, endpoint):
+    def get_request_url(self, endpoint) -> tuple[str, dict[str, str]]:
+        """ Get the url to send http reqeusts to, and header data to send with it. """
         l = self.l
         https_auth = f"Basic {b64encode(f"riot:{l.password}".encode()).decode()}"
         headers = {
@@ -481,11 +493,13 @@ class Connection:
         url = f"{l.protocol}://127.0.0.1:{l.port}" + endpoint
         return url, headers
 
-    def get_summoner_id(self):
+
+    def get_summoner_id(self) -> int:
+        """ Get the id number of the user. """
         return self.api_get("/lol-summoner/v1/current-summoner").json()["accountId"]
 
 
-    def update_actions(self):
+    def update_actions(self) -> None:
         """ Get the champselect action corresponding to the local player, and return it. """
         self.all_actions = self.get_session()["actions"]
         # print("actions:", actions, "\n")
