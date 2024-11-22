@@ -23,13 +23,18 @@ while not in_game:
             # TODO: Start queue
 
         case "ReadyCheck":
-            c.accept_match()
+            pass
+            # c.accept_match()
 
         case "ChampSelect":
             # Stop error that can happen if this block of code is run immediately after someone dodges
-            session = c.get_session()
-            phase = session["timer"]["phase"]
-            c.update_actions()
+            try:
+                session = c.get_session()
+                phase = session["timer"]["phase"]
+                c.update_actions()
+                print(phase)
+            except:
+                phase = "skip"
 
 
             # Handle each champ select phase
@@ -42,6 +47,8 @@ while not in_game:
                 case "FINALIZATION":
                     c.send_runes()
                     c.send_summs()
+                case "skip":
+                    pass
 
         # End loop if a game starts
         case "InProgress":
