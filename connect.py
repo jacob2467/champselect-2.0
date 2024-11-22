@@ -136,7 +136,8 @@ class Connection:
             "current_summoner": "/lol-summoner/v1/current-summoner",  # GET
             "all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions",  # GET
             "pickable_champs": "/lol-champ-select/v1/pickable-champions",  # GET
-            "bannable_champs": "/lol-champ-select/v1/bannable-champion-ids"  # GET
+            "bannable_champs": "/lol-champ-select/v1/bannable-champion-ids",  # GET
+            "summoner_info_byid": "/lol-summoner/v1/summoners/" # GET
         }
 
 
@@ -228,23 +229,28 @@ class Connection:
     def is_valid_pick(self, champ: str):
         champ = self.clean_name(champ)
         id = self.get_champid(champ)
+        error_msg = "Invalid pick champion:"
 
         # If user doesn't own the champ
         if champ not in self.owned_champs:
+            print(error_msg, "unowned")
             return False
 
         # If champ is banned
         if id in self.get_banned_champids():
+            print(error_msg, "banned")
             return False
 
         # If a teammate has already PICKED the champ (hovers ok, stealing champs is based)
         if id in self.get_teammate_picks():
+            print(error_msg, "teammate picked")
             return False
 
         # If the user got assigned a role other than the one they queued for, disregard the champ they picked
-        print(f"Role choice: {self.role_choice}, assigned role: {len(self.get_assigned_role())}")
+        print(f"Role choice: {self.role_choice}, assigned role: {self.get_assigned_role()}")
         if champ == self.user_pick:
-            if len(self.get_assigned_role()) < 3 or self.role_choice != self.get_assigned_role():
+            if len(self.get_assigned_role()) == 0 or self.role_choice != self.get_assigned_role():
+                print(error_msg, "autofilled")
                 return False
         return True
 
@@ -252,12 +258,16 @@ class Connection:
     def is_valid_ban(self, champ: str):
         champ = self.clean_name(champ)
         id = self.get_champid(champ)
+        error_msg = "Invalid ban champion:"
+
         # If champ is banned already
         if id in self.get_banned_champids():
+            print(error_msg, "banned already")
             return False
 
         # If a teammate is hovering the champ
         if self.teammate_hovering(id):
+            print(error_msg, "teammate hovering")
             return False
 
         return True
@@ -266,12 +276,13 @@ class Connection:
     def get_teammate_champids(self):
         champids = []
         hovering = False
-        for action in self.all_actions:
-            id = action["championId"]
-            if action["isAllyAction"] and action["type"] == "pick" and id != 0:
-                if action["isInProgress"]:
-                    hovering = True
-                champids.append((id, hovering))
+        for action_group in self.all_actions:
+            for action in action_group:
+                id = action["championId"]
+                if action["isAllyAction"] and action["type"] == "pick" and id != 0:
+                    if action["isInProgress"]:
+                        hovering = True
+                    champids.append((id, hovering))
         return champids
 
     def get_teammate_picks(self):
@@ -317,6 +328,7 @@ class Connection:
 
 
     def teammate_hovering(self, champid: int):
+        print("teammates hovering id#", champid, ":", champid in self.get_teammate_hovers())
         return champid in self.get_teammate_hovers()
 
 
@@ -363,9 +375,14 @@ class Connection:
 
     def ban_or_pick(self):
         """ Handle logic of whether to pick or ban, and then call the corresponding method. """
+        # If it's my turn to pick (set False as default value)
+        print("ban_or_pick():", "self.pick_action.get('isInProgress', False)", self.pick_action.get("isInProgress", False), "self.ban_action.get('isInProgress', False)", self.ban_action.get("isInProgress", False))
         if self.pick_action.get("isInProgress", False):
             # print("pick action:", self.pick_action, "\n")
+            self.hover_champ()
             self.lock_champ()
+
+        # If it's my turn to ban (set False as default value)
         elif self.ban_action.get("isInProgress", False):
             # print("ban action:", self.ban_action, "\n")
             self.ban_champ()
@@ -373,19 +390,21 @@ class Connection:
 
     def ban_champ(self, champid=None):
         """ Ban a champion. """
+        print("ban_champ(): self.has_banned = ", self.has_banned)
         if not self.has_banned:
             self.do_champ(mode="ban", champid=champid)
 
 
     def lock_champ(self, champid=None):
         """ Lock in a champion. """
-        self.hover_champ()
+        print("lock_champ(): self.has_picked = ", self.has_picked)
         if not self.has_picked:
             self.do_champ(mode="pick", champid=champid)
 
 
     def hover_champ(self, champid=None):
         """ Hover a champion. """
+        print("hover_champ(): self.is_hovering() = ", self.is_hovering(), "self.has_hovered:", self.has_hovered)
         if not self.is_hovering() and not self.has_hovered:
             self.do_champ(mode="hover", champid=champid)
 
@@ -441,7 +460,8 @@ class Connection:
 
     def is_hovering(self):
         """ Return a bool indicating whether or not the player is currently hovering a champ. """
-        return self.pick_action["id"] != 0
+        print("is_hovering():", "self.pick_action['championId']", self.pick_action["championId"])
+        return self.pick_action["championId"] != 0
 
 
     def api_get(self, endpoint):
@@ -495,7 +515,6 @@ class Connection:
         for player in my_team:
             if player["summonerId"] == my_id:
                 return player["assignedPosition"]
-        # TODO: Error handling (?)
         return None
 
 
@@ -527,7 +546,7 @@ class Connection:
         """ Get the champselect action corresponding to the local player, and return it. """
         session = self.get_session()
         actions = session["actions"]
-        # self.all_actions = actions
+        self.all_actions = actions
         # print("actions:", actions, "\n")
         local_cellid = self.get_localcellid()
 
