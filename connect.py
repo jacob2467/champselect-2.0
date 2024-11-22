@@ -57,12 +57,10 @@ class Connection:
                 contents = contents.split(":")
                 l.pid, l.port, l.password, l.protocol = contents[1:5]
 
-        # Can't find file error
         except FileNotFoundError:
             raise FileNotFoundError("Lockfile not found; open league, or specify your installation"
                                     "directory in your config")
 
-        # Handle other exceptions
         except Exception as e:
             raise Exception(f"Failed to parse lockfile: {str(e)}")
 
@@ -78,10 +76,10 @@ class Connection:
             "champselect_action": "/lol-champ-select/v1/session/actions/",  # PATCH
             "owned_champs": "/lol-champions/v1/owned-champions-minimal",  # GET
             "current_summoner": "/lol-summoner/v1/current-summoner",  # GET
-            "all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions",  # GET
+            "all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions-minimal",  # GET
             "pickable_champs": "/lol-champ-select/v1/pickable-champions",  # GET
             "bannable_champs": "/lol-champ-select/v1/bannable-champion-ids",  # GET
-            "summoner_info_byid": "/lol-summoner/v1/summoners/" # GET
+            "summoner_info_byid": "/lol-summoner/v1/summoners/"  # GET
         }
 
 
@@ -497,6 +495,15 @@ class Connection:
     def get_summoner_id(self) -> int:
         """ Get the id number of the user. """
         return self.api_get("/lol-summoner/v1/current-summoner").json()["accountId"]
+
+
+    def get_champselect_phase(self) -> str:
+        """ Get the name of the current champselect phase. """
+        phase = self.get_session()["timer"]["phase"]
+        if phase is None:
+            print("phase is None")
+            return "skip"
+        return phase
 
 
     def update_actions(self) -> None:
