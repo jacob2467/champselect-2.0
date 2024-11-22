@@ -1,10 +1,10 @@
-# These libraries are included with Python or are part of this project, and therefore don't require installation
-import os
-import configparser
-from dataclasses import dataclass
+# These libraries are included with Python, and therefore don't require installation
 from base64 import b64encode
 import warnings
+
+# These files are part of this project, and also don't require installation
 import dependencies as d
+from utility import *
 
 # These libraries need to be installed, but urllib3 is a dependency of requests, so we only need to install requests
 try:
@@ -16,63 +16,6 @@ from urllib3.exceptions import InsecureRequestWarning
 
 # Disable warning for insecure http requests
 warnings.simplefilter('ignore', InsecureRequestWarning)
-
-
-@dataclass
-class Lockfile:
-    pid: str = ""
-    port: str = ""
-    password: str = ""
-    protocol: str = "https"
-
-
-def get_lockfile_path():
-    """ Get the path to the user's lockfile. """
-    config_dir = config.get("league_directory", "directory")
-
-    # Use directory specified in config if it exists
-    if config_dir != "":
-        dir = config_dir
-    else:  # Use default filepaths
-        osx = "/Applications/League of Legends.app/Contents/LoL/lockfile"
-        windows = "C:/Riot Games/League of Legends/lockfile"
-
-        match os.name:
-            case "nt":
-                dir = windows
-            case "posix":
-                dir = osx
-
-    return dir
-
-
-config = configparser.ConfigParser()
-config.read("config.ini")
-
-
-def parse_config(role: str, picking: bool = True):
-    """ Parse the user's config for backup champs and return it as a dictionary"""
-    champs = []
-    config_section = ""
-    if picking:
-        config_section += "pick"
-    else:
-        config_section += "ban"
-
-    config_section += "_" + role
-
-    for i in range(5):
-        champs.append(config.get(config_section, str(i + 1)))
-    return champs
-
-def trim(string: str):
-    illegal = [" ", "'", "."]
-    new_string = ""
-    for char in string:
-        if char not in illegal:
-            new_string += char.lower()
-    return new_string
-
 
 
 class Connection:
@@ -541,6 +484,7 @@ class Connection:
 
     def get_summoner_id(self):
         return self.api_get("/lol-summoner/v1/current-summoner").json()["accountId"]
+
 
     def update_actions(self):
         """ Get the champselect action corresponding to the local player, and return it. """
