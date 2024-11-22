@@ -29,8 +29,7 @@ while not in_game:
         case "ChampSelect":
             # Stop error that can happen if this block of code is run immediately after someone dodges
             try:
-                session = c.get_session()
-                phase = session["timer"]["phase"]
+                phase = c.get_champselect_phase()
                 c.update_actions()
                 print(phase)
             except:
@@ -40,7 +39,6 @@ while not in_game:
             # Handle each champ select phase
             match phase:
                 case "PLANNING":
-                    # TODO: Check if already hovering a champ (NOT if hovered previously, in case of bans)
                     c.hover_champ()
                 case "BAN_PICK":
                     c.ban_or_pick()
