@@ -50,15 +50,15 @@ class Connection:
     def parse_lockfile(self) -> None:
         """ Parse the user's lockfile into a dictionary. """
         l = self.l
-        path = get_lockfile_path()
+        path: str = get_lockfile_path()
         try:
             with open(path) as f:
-                contents = f.read()
-                contents = contents.split(":")
+                contents: str = f.read()
+                contents: list[str] = contents.split(":")
                 l.pid, l.port, l.password, l.protocol = contents[1:5]
 
         except FileNotFoundError:
-            raise FileNotFoundError("Lockfile not found; open league, or specify your installation"
+            raise FileNotFoundError("Lockfile not found; open league, or specify your installation "
                                     "directory in your config")
 
         except Exception as e:
@@ -494,6 +494,8 @@ class Connection:
 
     def get_summoner_id(self) -> int:
         """ Get the id number of the user. """
+        # Note: This method can't use self.endpoints["current_summoner"] because
+        # this method is called during the dictionary's initialization.
         return self.api_get("/lol-summoner/v1/current-summoner").json()["accountId"]
 
 
