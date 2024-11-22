@@ -14,7 +14,7 @@ class Lockfile:
     protocol: str = "https"
 
 
-def get_lockfile_path():
+def get_lockfile_path() -> str:
     """ Get the path to the user's lockfile. """
     config_dir = config.get("league_directory", "directory")
 
@@ -34,14 +34,13 @@ def get_lockfile_path():
     return dir
 
 
-def parse_config(role: str, picking: bool = True):
+def parse_config(role: str, picking: bool = True) -> list[str]:
     """ Parse the user's config for backup champs and return it as a dictionary"""
     champs = []
-    config_section = ""
     if picking:
-        config_section += "pick"
+        config_section = "pick"
     else:
-        config_section += "ban"
+        config_section = "ban"
 
     config_section += "_" + role
 
@@ -49,7 +48,8 @@ def parse_config(role: str, picking: bool = True):
         champs.append(config.get(config_section, str(i + 1)))
     return champs
 
-def trim(string: str):
+def trim(string: str) -> str:
+    """ Remove whitespace and illegal characters from a string. """
     illegal = [" ", "'", "."]
     new_string = ""
     for char in string:
