@@ -24,6 +24,7 @@ class Connection:
     has_picked: bool = False
     has_banned: bool = False
     has_hovered: bool = False
+    runes_chosen: bool = False
     endpoints: dict = {}
     all_champs: dict = {}
     owned_champs: dict = {}
@@ -132,6 +133,7 @@ class Connection:
         self.has_picked = False
         self.has_banned = False
         self.has_hovered = False
+        self.runes_chosen = False
 
 
     def decide_pick(self) -> int:
@@ -174,7 +176,7 @@ class Connection:
         """ Check if the given champion can be picked """
         champ = self.clean_name(champ)
         id = self.get_champid(champ)
-        error_msg = "Invalid pick champion:"
+        error_msg = "Invalid pick:"
 
         # If user doesn't own the champ
         if champ not in self.owned_champs:
@@ -192,9 +194,8 @@ class Connection:
             return False
 
         # If the user got assigned a role other than the one they queued for, disregard the champ they picked
-        print(f"Role choice: {self.role_choice}, assigned role: {self.get_assigned_role()}")
-        if champ == self.user_pick:
-            if len(self.get_assigned_role()) == 0 or self.role_choice != self.get_assigned_role():
+        # print(f"Role choice: {self.role_choice}, assigned role: {self.get_assigned_role()}")
+        if len(self.get_assigned_role()) != 0 and self.role_choice != self.get_assigned_role():
                 print(error_msg, "autofilled")
                 return False
 
@@ -205,7 +206,7 @@ class Connection:
         """ Check if the given champion can be banned """
         champ = self.clean_name(champ)
         id = self.get_champid(champ)
-        error_msg = "Invalid ban champion:"
+        error_msg = "Invalid ban:"
 
         # If champ is banned already
         if id in self.get_banned_champids():
@@ -254,8 +255,11 @@ class Connection:
 
 
     def send_runes(self) -> None:
-        # TODO: Implement this
-        return
+        """ Get the recommended rune page and send it to the client. """
+        # Can't send runes if playing a mode that doesn't have assigned roles
+        if len(self.get_assigned_role()) == 0:
+            return
+        # TODO: Actually send the runes
 
 
     def send_summs(self) -> None:
@@ -332,7 +336,7 @@ class Connection:
     def ban_or_pick(self) -> None:
         """ Handle logic of whether to pick or ban, and then call the corresponding method. """
         # If it's my turn to pick (set False as default value)
-        print("ban_or_pick():", "self.pick_action.get('isInProgress', False)", self.pick_action.get("isInProgress", False), "self.ban_action.get('isInProgress', False)", self.ban_action.get("isInProgress", False))
+        # print("ban_or_pick():", "self.pick_action.get('isInProgress', False)", self.pick_action.get("isInProgress", False), "self.ban_action.get('isInProgress', False)", self.ban_action.get("isInProgress", False))
         if self.pick_action.get("isInProgress", False):
             # print("pick action:", self.pick_action, "\n")
             self.hover_champ()
@@ -346,21 +350,21 @@ class Connection:
 
     def ban_champ(self, champid: int = None) -> None:
         """ Ban a champion. """
-        print("ban_champ(): self.has_banned = ", self.has_banned)
+        # print("ban_champ(): self.has_banned = ", self.has_banned)
         if not self.has_banned:
             self.do_champ(mode="ban", champid=champid)
 
 
     def lock_champ(self, champid: int = None) -> None:
         """ Lock in a champion. """
-        print("lock_champ(): self.has_picked = ", self.has_picked)
+        # print("lock_champ(): self.has_picked = ", self.has_picked)
         if not self.has_picked:
             self.do_champ(mode="pick", champid=champid)
 
 
     def hover_champ(self, champid: int = None):
         """ Hover a champion. """
-        print("hover_champ(): self.is_hovering() = ", self.is_hovering(), "self.has_hovered:", self.has_hovered)
+        # print("hover_champ(): self.is_hovering() = ", self.is_hovering(), "self.has_hovered:", self.has_hovered)
         if not self.is_hovering() and not self.has_hovered:
             self.do_champ(mode="hover", champid=champid)
 
@@ -399,10 +403,10 @@ class Connection:
         # print(f"endpoint: {endpoint}")
         response = api_method(endpoint, data=data)
         # print(response, "\n")
-        try:
-            print(response.json())
-        except:
-            print("Failed to parse response as json, the response is empty.")
+        # try:
+        #     print(response.json())
+        # except:
+        #     print("Failed to parse response as json, the response is empty.")
         if 200 <= response.status_code <= 299:
             match mode:
                 case "hover":
@@ -415,7 +419,7 @@ class Connection:
 
     def is_hovering(self) -> bool:
         """ Return a bool indicating whether or not the player is currently hovering a champ. """
-        print("is_hovering():", "self.pick_action['championId']", self.pick_action["championId"])
+        # print("is_hovering():", "self.pick_action['championId']", self.pick_action["championId"])
         return self.pick_action["championId"] != 0
 
 
@@ -494,7 +498,7 @@ class Connection:
             "Authorization": https_auth,
             "Accept": "application/json"
         }
-        print(type(endpoint))
+
         url = f"{l.protocol}://127.0.0.1:{l.port}" + endpoint
         return url, headers
 
@@ -513,7 +517,7 @@ class Connection:
 
 
     def get_recommended_runepage(self):
-        return self.api_get("recommended_runes").json()
+        return self.api_get(self.get_rune_endpoint()).json()
 
 
     def get_champselect_phase(self) -> str:
