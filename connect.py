@@ -229,29 +229,37 @@ class Connection:
         """ Return a list of tuples. Each tuple contains a teammate's champion id and a boolean indicating whether they
         are hovering (True) or have already picked (False) the champion with the specified ID.
         """
-        champids = []
-        hovering = False
+        champids: list[tuple[int, bool]] = []
+
+        # Actions are grouped by type (pick, ban, etc), so we iterate over each group
         for action_group in self.all_actions:
             for action in action_group:
-                id: int = action["championId"]
-                if action["isAllyAction"] and action["type"] == "pick" and id != 0:
-                    if action["isInProgress"]:
-                        hovering = True
-                    champids.append((id, hovering))
+                # Only look at pick actions, and only on user's team
+                if action["type"] == "pick" and action["isAllyAction"]:
+                    hovering: bool = False
+                    champid: int = action["championId"]
+
+                    # If champid is 0, the player isn't hovering a champ
+                    if champid != 0 and action:
+                        # If the action isn't in progress, they already locked in
+                        if action["isInProgress"]:
+                            hovering = True
+
+                        champids.append((champid, hovering))
         return champids
 
     def get_teammate_pickids(self) -> list[int]:
         """ Return a list of champion ids that teammates have locked in. """
-        champs = []
+        champids: list[int] = []
         for pick, is_hovering in self.get_teammate_champids():
             if not is_hovering:
-                champs.append(pick)
-        return champs
+                champids.append(pick)
+        return champids
 
 
-    def get_teammate_hovers(self) -> list[int]:
+    def get_teammate_hoverids(self) -> list[int]:
         """ Return a list of champion ids that teammates are hovering. """
-        champids = []
+        champids: list[int] = []
         for pick, is_hovering in self.get_teammate_champids():
             if is_hovering:
                 champids.append(pick)
@@ -291,7 +299,7 @@ class Connection:
     def teammate_hovering(self, champid: int) -> bool:
         """ Check if the given champion is being hovered by a teammate. """
         # print("teammates hovering id#", champid, ":", champid in self.get_teammate_hovers())
-        return champid in self.get_teammate_hovers()
+        return champid in self.get_teammate_hoverids()
 
 
     @staticmethod
@@ -339,9 +347,11 @@ class Connection:
 
     def ban_or_pick(self) -> None:
         """ Handle logic of whether to pick or ban, and then call the corresponding method. """
-        # If it's my turn to pick
-        print("actions:", self.pick_action, self.ban_action)
+
+        # Update the champs to be picked and banned
         self.update_champ_intent()
+
+        # If it's my turn to pick
         if self.is_currently_picking():
             print("pick action:", self.pick_action, "\n")
             self.hover_champ()
@@ -426,7 +436,7 @@ class Connection:
         if not self.has_banned:
             pass  # TODO: Fix this
         self.ban_intent = self.decide_ban()
-        print("ban intent", self.ban_intent)
+        print("ban intent:", self.ban_intent)
 
 
     def is_currently_picking(self) -> bool:
