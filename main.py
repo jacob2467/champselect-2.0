@@ -45,7 +45,6 @@ while not in_game:
                 case "FINALIZATION":
                     c.send_runes()
                     c.send_summs()
-                    print(c.get_recommended_runepage())
                 case "skip":
                     pass
 
