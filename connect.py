@@ -289,7 +289,7 @@ class Connection:
 
     def teammate_hovering(self, champid: int) -> bool:
         """ Check if the given champion is being hovered by a teammate. """
-        print("teammates hovering id#", champid, ":", champid in self.get_teammate_hovers())
+        # print("teammates hovering id#", champid, ":", champid in self.get_teammate_hovers())
         return champid in self.get_teammate_hovers()
 
 
@@ -338,16 +338,16 @@ class Connection:
 
     def ban_or_pick(self) -> None:
         """ Handle logic of whether to pick or ban, and then call the corresponding method. """
-        # print("ban_or_pick():", "self.pick_action.get('isInProgress', False)", self.pick_action.get("isInProgress", False), "self.ban_action.get('isInProgress', False)", self.ban_action.get("isInProgress", False))
-        # If it's my turn to pick (set False as default value)
-        if self.pick_action.get("isInProgress", False):
-            # print("pick action:", self.pick_action, "\n")
+        # If it's my turn to pick
+        print("actions:", self.pick_action, self.ban_action)
+        if self.is_currently_picking():
+            print("pick action:", self.pick_action, "\n")
             self.hover_champ()
             self.lock_champ()
 
-        # If it's my turn to ban (set False as default value)
-        elif self.ban_action.get("isInProgress", False):
-            # print("ban action:", self.ban_action, "\n")
+        # If it's my turn to ban
+        elif self.is_currently_banning():
+            print("ban action:", self.ban_action, "\n")
             self.ban_champ()
 
 
@@ -369,15 +369,7 @@ class Connection:
             self.do_champ(mode="pick", champid=champid)
 
 
-    def update_champs(self) -> None:
-        """ Update instance variables with up-to-date pick and ban intent. """
-        if not self.has_picked:
-            self.pick_intent = self.decide_pick()
-        if not self.has_banned:
-            self.ban_intent = self.decide_ban()
-
-
-    def hover_champ(self):
+    def hover_champ(self) -> None:
         """ Hover a champion. """
         # print("hover_champ(): self.is_hovering() = ", self.is_hovering(), "self.has_hovered:", self.has_hovered)
         champid = self.pick_intent
@@ -409,13 +401,12 @@ class Connection:
             api_method = self.api_patch
 
         # Lock in the champ and print info
-        # print(f"endpoint: {endpoint}")
         response = api_method(endpoint, data=data)
-        # print(response, "\n")
-        # try:
-        #     print(response.json())
-        # except:
-        #     print("Failed to parse response as json, the response is empty.")
+        print(response, "\n")
+        try:
+            print(response.json())
+        except:
+            print("Failed to parse response as json, the response is empty.")
         if 200 <= response.status_code <= 299:
             match mode:
                 case "hover":
@@ -424,6 +415,24 @@ class Connection:
                     self.has_banned = True
                 case "pick":
                     self.has_picked = True
+
+
+    def update_champs(self) -> None:
+        """ Update instance variables with up-to-date pick and ban intent. """
+        if not self.has_picked:
+            self.pick_intent = self.decide_pick()
+        if not self.has_banned:
+            self.ban_intent = self.decide_ban()
+
+
+    def is_currently_picking(self) -> bool:
+        """ Return a bool indicating whether or not the user is currently picking. """
+        return self.pick_action.get("isInProgress", False)
+
+
+    def is_currently_banning(self) -> bool:
+        """ Return a bool indicating whether or not the user is currently banning. """
+        return self.ban_action.get("isInProgress", False)
 
 
     def is_hovering(self) -> bool:
