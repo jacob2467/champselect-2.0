@@ -23,7 +23,7 @@ class Connection:
     l: Lockfile = Lockfile()
     has_picked: bool = False
     has_banned: bool = False
-    has_hovered: bool = False
+    has_hovered: bool = False  # Unecessary? Possibly remove later
     runes_chosen: bool = False
     endpoints: dict = {}
     all_champs: dict = {}
@@ -34,9 +34,9 @@ class Connection:
     all_actions: dict = {}
     user_pick: str = ""
     user_ban: str = ""
+    user_role_choice: str = ""
     pick_intent: str = ""
     ban_intent: str = ""
-    role_choice: str = ""
 
 
     def __init__(self):
@@ -85,8 +85,8 @@ class Connection:
 
         # These keys use endpoints from the dictionary, so we initialize the dict first and then add these keys after
         self.endpoints.update(
-            {"all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions-minimal",  # GET
-             "recommended_runes": lambda: self.get_rune_endpoint()},  # GET
+            {"all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions-minimal"  # GET
+             }
             )
 
 
@@ -119,7 +119,7 @@ class Connection:
         """ Get the user's first choice for picks and bans, as well as the role they're playing"""
         self.user_pick = self.clean_name(input("Who would you like to play?  "))
         self.user_ban = self.clean_name(input("Who would you like to ban?  "))
-        self.role_choice = self.clean_role_name(input("What role would you like to play?  "))
+        self.user_role_choice = self.clean_role_name(input("What role would you like to play?  "))
 
         # Set intent to userinput (intent can change later if first choice is banned, etc.)
         self.pick_intent = self.user_pick
@@ -129,22 +129,23 @@ class Connection:
     # Helper methods
     # --------------
     def reset_after_dodge(self) -> None:
-        """ Reset has_picked, has_banned, and has_hovered to False after someone dodges a lobby. """
-        # TODO: Fix this so that it actually works
+        """ Reset instance variables. """
         self.has_picked = False
         self.has_banned = False
         self.has_hovered = False
         self.runes_chosen = False
+        self.pick_intent = self.user_pick
+        self.ban_intent = self.user_ban
 
 
-    def decide_pick(self) -> int:
+    def decide_pick(self) -> str:
         """ Decide what champ the user should play. """
         # TODO: Fix this
         pick = self.pick_intent
         if self.is_valid_pick(pick):
-            return self.get_champid(pick)
+            return pick
         else:
-            options = parse_config(self.role_choice)
+            options = parse_config(self.user_role_choice)
 
         i = 0
         is_valid = False
@@ -153,7 +154,7 @@ class Connection:
             is_valid = self.is_valid_pick(pick)
             i += 1
         self.pick_intent = pick
-        return self.get_champid(pick)
+        return pick
 
 
     def is_valid_pick(self, champ: str) -> bool:
@@ -179,9 +180,9 @@ class Connection:
 
         # If the user got assigned a role other than the one they queued for, disregard the champ they picked
         # print(f"Role choice: {self.role_choice}, assigned role: {self.get_assigned_role()}")
-        if len(self.get_assigned_role()) != 0 and self.role_choice != self.get_assigned_role():
-                print(error_msg, "autofilled")
-                return False
+        if len(self.get_assigned_role()) != 0 and self.user_role_choice != self.get_assigned_role():
+            print(error_msg, "autofilled")
+            return False
 
         return True
 
@@ -191,9 +192,9 @@ class Connection:
         # TODO: Fix this
         ban = self.ban_intent
         if self.is_valid_ban(ban):
-            return self.get_champid(ban)
+            return ban
         else:
-            options = parse_config(self.role_choice, False)
+            options = parse_config(self.user_role_choice, False)
 
         i = 0
         is_valid = False
@@ -202,7 +203,7 @@ class Connection:
             is_valid = self.is_valid_ban(ban)
             i += 1
         self.ban_intent = ban
-        return self.get_champid(ban)
+        return ban
 
 
     def is_valid_ban(self, champ: str):
@@ -340,6 +341,7 @@ class Connection:
         """ Handle logic of whether to pick or ban, and then call the corresponding method. """
         # If it's my turn to pick
         print("actions:", self.pick_action, self.ban_action)
+        self.update_champ_intent()
         if self.is_currently_picking():
             print("pick action:", self.pick_action, "\n")
             self.hover_champ()
@@ -353,27 +355,26 @@ class Connection:
 
     def ban_champ(self) -> None:
         """ Ban a champion. """
-        # print("ban_champ(): self.has_banned = ", self.has_banned)
-        # TODO: Add input validation for bans
-        champid = self.ban_intent
-        if not self.has_banned:
-            self.do_champ(mode="ban", champid=champid)
+        champid = self.get_champid(self.ban_intent)
+        print("trying to ban champ with id", champid)
+        self.do_champ(mode="ban", champid=champid)
 
 
     def lock_champ(self) -> None:
         """ Lock in a champion. """
-        # print("lock_champ(): self.has_picked = ", self.has_picked)
         # TODO: Not lock champ if it gets banned or taken
-        champid = self.pick_intent
+        champid = self.get_champid(self.pick_intent)
         if not self.has_picked:
+            print("trying to lock champ with id", champid)
             self.do_champ(mode="pick", champid=champid)
 
 
     def hover_champ(self) -> None:
         """ Hover a champion. """
-        # print("hover_champ(): self.is_hovering() = ", self.is_hovering(), "self.has_hovered:", self.has_hovered)
-        champid = self.pick_intent
-        if not self.is_hovering() and not self.has_hovered:
+        champid = self.get_champid(self.pick_intent)
+        # Don't make the API call if we're already hovering the desired champ
+        if champid != self.pick_action["championId"]:
+            print("trying to hover champ with id", champid)
             self.do_champ(mode="hover", champid=champid)
 
 
@@ -417,12 +418,15 @@ class Connection:
                     self.has_picked = True
 
 
-    def update_champs(self) -> None:
+    def update_champ_intent(self) -> None:
         """ Update instance variables with up-to-date pick and ban intent. """
         if not self.has_picked:
             self.pick_intent = self.decide_pick()
+            print("pick intent:", self.pick_intent)
         if not self.has_banned:
-            self.ban_intent = self.decide_ban()
+            pass  # TODO: Fix this
+        self.ban_intent = self.decide_ban()
+        print("ban intent", self.ban_intent)
 
 
     def is_currently_picking(self) -> bool:
@@ -494,9 +498,11 @@ class Connection:
         return None
 
 
-    def get_champid(self, champ) -> int:
+    def get_champid(self, champ: str) -> int:
         """ Get the id of the champion with the given name. """
+        print(champ, type(champ))
         return self.all_champs[self.clean_name(champ)]
+
 
     def get_gamestate(self) -> requests.Response:
         """ Get the current state of the game (Lobby, ChampSelect, etc.) """
