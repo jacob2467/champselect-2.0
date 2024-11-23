@@ -76,11 +76,17 @@ class Connection:
             "champselect_action": "/lol-champ-select/v1/session/actions/",  # PATCH
             "owned_champs": "/lol-champions/v1/owned-champions-minimal",  # GET
             "current_summoner": "/lol-summoner/v1/current-summoner",  # GET
-            "all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions-minimal",  # GET
             "pickable_champs": "/lol-champ-select/v1/pickable-champions",  # GET
             "bannable_champs": "/lol-champ-select/v1/bannable-champion-ids",  # GET
-            "summoner_info_byid": "/lol-summoner/v1/summoners/"  # GET
+            "summoner_info_byid": "/lol-summoner/v1/summoners/",  # GET
+            "send_runes": "/lol-perks/v1/pages"  # POST
         }
+
+        # These keys use endpoints from the dictionary, so we initialize the dict first and then add these keys after
+        self.endpoints.update(
+            {"all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions-minimal",  # GET
+             "recommended_runes": lambda: self.get_rune_endpoint()},  # GET
+            )
 
 
     def populate_champ_table(self) -> None:
@@ -480,7 +486,7 @@ class Connection:
         return self.get_session()["localPlayerCellId"]
 
 
-    def get_request_url(self, endpoint) -> tuple[str, dict[str, str]]:
+    def get_request_url(self, endpoint: str) -> tuple[str, dict[str, str]]:
         """ Get the url to send http reqeusts to, and header data to send with it. """
         l = self.l
         https_auth = f"Basic {b64encode(f"riot:{l.password}".encode()).decode()}"
@@ -488,15 +494,26 @@ class Connection:
             "Authorization": https_auth,
             "Accept": "application/json"
         }
+        print(type(endpoint))
         url = f"{l.protocol}://127.0.0.1:{l.port}" + endpoint
         return url, headers
 
 
     def get_summoner_id(self) -> int:
         """ Get the id number of the user. """
-        # Note: This method can't use self.endpoints["current_summoner"] because
-        # this method is called during the dictionary's initialization.
-        return self.api_get("/lol-summoner/v1/current-summoner").json()["accountId"]
+        return self.api_get("current_summoner").json()["accountId"]
+
+
+    def get_rune_endpoint(self) -> str:
+        """ Get the endpoint used to get recommended runes. """
+        champid = self.get_champid(self.pick_intent)
+        position = self.get_assigned_role()
+        mapid = 11  # TODO: Add options for other maps (default to summoner's rift for now)
+        return f"/lol-perks/v1/recommended-pages/champion/{champid}/position/{position}/map/{mapid}"
+
+
+    def get_recommended_runepage(self):
+        return self.api_get("recommended_runes").json()
 
 
     def get_champselect_phase(self) -> str:
