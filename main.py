@@ -31,7 +31,6 @@ while not in_game:
             try:
                 phase = c.get_champselect_phase()
                 c.update_actions()
-                c.update_champs()
                 print(phase)
             except:
                 phase = "skip"
