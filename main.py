@@ -23,8 +23,8 @@ while not in_game:
             # TODO: Start queue
 
         case "ReadyCheck":
-            pass
-            # c.accept_match()
+            c.accept_match()
+            # pass
 
         case "ChampSelect":
             # Stop error that can happen if this block of code is run immediately after someone dodges
