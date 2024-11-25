@@ -117,6 +117,7 @@ class Connection:
 
     def get_first_choices(self) -> None:
         """ Get the user's first choice for picks and bans, as well as the role they're playing"""
+        # TODO: Add option to skip this and use config by pressing enter without typing anything
         self.user_pick = self.clean_name(input("Who would you like to play?  "))
         self.user_ban = self.clean_name(input("Who would you like to ban?  "))
         self.user_role_choice = self.clean_role_name(input("What role would you like to play?  "))
@@ -159,6 +160,11 @@ class Connection:
 
     def is_valid_pick(self, champ: str) -> bool:
         """ Check if the given champion can be picked """
+
+        # Handle empty input - allows user to skip selecting a champion and default to those in the config
+        if champ == "":
+            return False
+
         champ = self.clean_name(champ)
         id = self.get_champid(champ)
         error_msg = "Invalid pick:"
@@ -208,9 +214,15 @@ class Connection:
 
     def is_valid_ban(self, champ: str):
         """ Check if the given champion can be banned """
+        # Handle empty input - allows user to skip selecting a champion and default to those in the config
+        if champ == "":
+            return False
+
         champ = self.clean_name(champ)
         id = self.get_champid(champ)
         error_msg = "Invalid ban:"
+
+        print(f"Checking if {champ} (id: {id}) is valid to ban...")
 
         # If champ is banned already
         if id in self.get_banned_champids():
@@ -218,7 +230,9 @@ class Connection:
             return False
 
         # If a teammate is hovering the champ
-        if self.teammate_hovering(id):
+        hovering = self.teammate_hovering(id)
+        print(f"Teammate hovering check: {hovering}")
+        if hovering:
             print(error_msg, "teammate hovering")
             return False
 
@@ -240,9 +254,9 @@ class Connection:
                     champid: int = action["championId"]
 
                     # If champid is 0, the player isn't hovering a champ
-                    if champid != 0 and action:
+                    if champid != 0:
                         # If the action isn't in progress, they already locked in
-                        if action["isInProgress"]:
+                        if not action["completed"]:
                             hovering = True
 
                         champids.append((champid, hovering))
@@ -263,6 +277,7 @@ class Connection:
         for pick, is_hovering in self.get_teammate_champids():
             if is_hovering:
                 champids.append(pick)
+        print(f"Current teammate hovers: {champids}")
         return champids
 
 
@@ -430,11 +445,12 @@ class Connection:
 
     def update_champ_intent(self) -> None:
         """ Update instance variables with up-to-date pick and ban intent. """
+        # Only update intent if user hasn't already picked
         if not self.has_picked:
             self.pick_intent = self.decide_pick()
             print("pick intent:", self.pick_intent)
-        if not self.has_banned:
-            pass  # TODO: Fix this
+
+        # Always update ban intent to support multi-ban custom games and such
         self.ban_intent = self.decide_ban()
         print("ban intent:", self.ban_intent)
 
