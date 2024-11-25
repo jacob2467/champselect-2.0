@@ -234,8 +234,8 @@ class Connection:
         # Actions are grouped by type (pick, ban, etc), so we iterate over each group
         for action_group in self.all_actions:
             for action in action_group:
-                # Only look at pick actions, and only on user's team
-                if action["type"] == "pick" and action["isAllyAction"]:
+                # Only look at pick actions, and only on user's team that aren't the user
+                if action["type"] == "pick" and action["isAllyAction"] and action["actorCellId"] != self.get_localcellid():
                     hovering: bool = False
                     champid: int = action["championId"]
 
