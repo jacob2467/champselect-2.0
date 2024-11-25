@@ -48,6 +48,7 @@ def parse_config(role: str, picking: bool = True) -> list[str]:
         champs.append(config.get(config_section, str(i + 1)))
     return champs
 
+
 def trim(string: str) -> str:
     """ Remove whitespace and illegal characters from a string. """
     illegal = [" ", "'", "."]
@@ -56,3 +57,10 @@ def trim(string: str) -> str:
         if char not in illegal:
             new_string += char.lower()
     return new_string
+
+
+def debugprint(*args):
+    """ Functions exactly like print; only difference is the name. Useful for differentiating between
+    regular prints and ones intended for debugging. """
+    for arg in args:
+        print(arg)
