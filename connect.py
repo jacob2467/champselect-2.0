@@ -169,14 +169,14 @@ class Connection:
         id = self.get_champid(champ)
         error_msg = "Invalid pick:"
 
-        # If user doesn't own the champ
-        if champ not in self.owned_champs:
-            print(error_msg, "unowned")
-            return False
-
         # If champ is banned
         if id in self.get_banned_champids():
             print(error_msg, "banned")
+            return False
+
+        # If user doesn't own the champ
+        if champ not in self.owned_champs:
+            print(error_msg, "unowned")
             return False
 
         # If a teammate has already PICKED the champ (hovers ok, stealing champs is based)
@@ -250,16 +250,12 @@ class Connection:
             for action in action_group:
                 # Only look at pick actions, and only on user's team that aren't the user
                 if action["type"] == "pick" and action["isAllyAction"] and action["actorCellId"] != self.get_localcellid():
-                    hovering: bool = False
                     champid: int = action["championId"]
 
                     # If champid is 0, the player isn't hovering a champ
                     if champid != 0:
-                        # If the action isn't in progress, they already locked in
-                        if not action["completed"]:
-                            hovering = True
-
-                        champids.append((champid, hovering))
+                        # If the action isn't completed, they're still hovering
+                        champids.append((champid, not action["completed"]))
         return champids
 
     def get_teammate_pickids(self) -> list[int]:
@@ -362,9 +358,6 @@ class Connection:
 
     def ban_or_pick(self) -> None:
         """ Handle logic of whether to pick or ban, and then call the corresponding method. """
-
-        # Update the champs to be picked and banned
-        self.update_champ_intent()
 
         # If it's my turn to pick
         if self.is_currently_picking():
