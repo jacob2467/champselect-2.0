@@ -64,3 +64,37 @@ def debugprint(*args):
     regular prints and ones intended for debugging. """
     for arg in args:
         print(arg)
+
+
+def clean_name(name: str) -> str:
+    """ Remove whitespace and special characters from a champion's name. Example output:
+    Aurelion Sol -> aurelionsol
+    Bel'Veth -> belveth
+    """
+    # Remove all illegal characters and whitespace
+    new_name = trim(name)
+
+    # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
+    if "nunu" in new_name:
+        return "nunu"
+    elif new_name == "wukong":
+        return "monkeyking"
+
+    return new_name
+
+
+def clean_role_name(name: str) -> str:
+    """ Convert various role naming conventions to the format used by the game. Example output:
+    mid -> middle
+    supp -> utility
+    jg -> jungle
+    """
+    # Remove all illegal characters and whitespace
+    new_name = trim(name)
+
+    roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"], ["bottom", "bot", "adc", "adcarry", "b"], ["utility", "support", "supp", "faggot", "fag"]]
+    for role in roles:
+        if new_name in role:
+            return role[0]
+
+    raise Exception("Invalid role selection. Please try again")
