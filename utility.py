@@ -62,8 +62,10 @@ def trim(string: str) -> str:
 def debugprint(*args):
     """ Functions exactly like print; only difference is the name. Useful for differentiating between
     regular prints and ones intended for debugging. """
+    temp: str = ""
     for arg in args:
-        print(arg)
+        temp += str(arg) + " "
+    print(temp)
 
 
 def clean_name(name: str) -> str:
@@ -71,6 +73,8 @@ def clean_name(name: str) -> str:
     Aurelion Sol -> aurelionsol
     Bel'Veth -> belveth
     """
+    if name == "":
+        return name
     # Remove all illegal characters and whitespace
     new_name = trim(name)
 
@@ -80,7 +84,9 @@ def clean_name(name: str) -> str:
     elif new_name == "wukong":
         return "monkeyking"
 
+    # TODO: Finish this
     return new_name
+    # raise Exception("Invalid champion selection. Please try again")
 
 
 def clean_role_name(name: str) -> str:
@@ -89,6 +95,8 @@ def clean_role_name(name: str) -> str:
     supp -> utility
     jg -> jungle
     """
+    if name == "":
+        return name
     # Remove all illegal characters and whitespace
     new_name = trim(name)
 
