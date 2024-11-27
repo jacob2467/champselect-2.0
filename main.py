@@ -34,8 +34,8 @@ while not in_game:
                 try:
                     phase = c.get_champselect_phase()
                     c.update_actions()
-                    c.update_champ_intent()
-                    print(phase)
+                    c.update_intent()
+                    print("Champselect phase:", phase)
                 except:
                     phase = "skip"
 
@@ -60,3 +60,4 @@ while not in_game:
                 pass
     except requests.exceptions.ConnectionError:
         print("Connection error.")  # TODO: Add to this
+        c.parse_lockfile()
