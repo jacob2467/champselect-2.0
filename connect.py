@@ -99,7 +99,7 @@ class Connection:
         error: bool = False
         for champ in all_champs:
             try:
-                alias, id = clean_name(champ["alias"]), champ["id"]
+                alias, id = self.clean_name(champ["alias"]), champ["id"]
                 self.all_champs[alias] = id
             except TypeError:
                 warnings.warn("Champ data couldn't be retrieved, falling back to only"
@@ -108,7 +108,7 @@ class Connection:
 
         owned_champs = self.api_get("owned_champs").json()
         for champ in owned_champs:
-            alias, id = clean_name(champ["alias"]), champ["id"]
+            alias, id = self.clean_name(champ["alias"]), champ["id"]
             self.owned_champs[alias] = id
 
         if error:
@@ -118,8 +118,8 @@ class Connection:
     def get_first_choices(self) -> None:
         """ Get the user's first choice for picks and bans, as well as the role they're playing"""
         # TODO: Add option to skip this and use config by pressing enter without typing anything
-        self.user_pick = clean_name(input("Who would you like to play?  "))
-        self.user_ban = clean_name(input("Who would you like to ban?  "))
+        self.user_pick = self.clean_name(input("Who would you like to play?  "))
+        self.user_ban = self.clean_name(input("Who would you like to ban?  "))
         self.user_role = clean_role_name(input("What role would you like to play?  "))
 
         # Set intent to userinput (intent can change later if first choice is banned, etc.)
@@ -142,6 +142,33 @@ class Connection:
         self.role_intent = self.user_role
 
 
+    def clean_name(self, name: str) -> str:
+        """ Remove whitespace and special characters from a champion's name. Example output:
+        Aurelion Sol -> aurelionsol
+        Bel'Veth -> belveth
+        """
+        if name == "":
+            return name
+        # Remove all illegal characters and whitespace
+        new_name = trim(name)
+
+        # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
+        if "nunu" in new_name:
+            return "nunu"
+        elif new_name == "wukong":
+            return "monkeyking"
+
+        if new_name in self.all_champs:
+            return new_name
+        else:
+            # TODO:
+            #  - Implement fuzzy search
+            #  - Finish error handling
+            # raise Exception("Invalid champion selection. Please try again")
+            pass
+
+
+
     def decide_pick(self) -> str:
         """ Decide what champ the user should play. """
         pick: str = self.pick_intent
@@ -153,7 +180,7 @@ class Connection:
         i = 0
         is_valid = False
         while not is_valid and i < len(options):
-            pick = clean_name(options[i])
+            pick = self.clean_name(options[i])
             is_valid = self.is_valid_pick(pick)
             i += 1
         # TODO: Add error handling for when none of the config options are valid
@@ -167,7 +194,7 @@ class Connection:
         if champ == "":
             return False
 
-        champ = clean_name(champ)
+        champ = self.clean_name(champ)
         id: int = self.get_champid(champ)
         error_msg: str = "Invalid pick:"
 
@@ -222,7 +249,7 @@ class Connection:
         if champ == "":
             return False
 
-        champ = clean_name(champ)
+        champ = self.clean_name(champ)
         id = self.get_champid(champ)
         error_msg = "Invalid ban:"
 
@@ -499,7 +526,7 @@ class Connection:
 
     def get_champid(self, champ: str) -> int:
         """ Get the id of the champion with the given name. """
-        return self.all_champs[clean_name(champ)]
+        return self.all_champs[self.clean_name(champ)]
 
 
     def get_gamestate(self) -> requests.Response:
