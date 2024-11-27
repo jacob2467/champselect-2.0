@@ -68,27 +68,6 @@ def debugprint(*args):
     print(temp)
 
 
-def clean_name(name: str) -> str:
-    """ Remove whitespace and special characters from a champion's name. Example output:
-    Aurelion Sol -> aurelionsol
-    Bel'Veth -> belveth
-    """
-    if name == "":
-        return name
-    # Remove all illegal characters and whitespace
-    new_name = trim(name)
-
-    # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
-    if "nunu" in new_name:
-        return "nunu"
-    elif new_name == "wukong":
-        return "monkeyking"
-
-    # TODO: Finish this
-    return new_name
-    # raise Exception("Invalid champion selection. Please try again")
-
-
 def clean_role_name(name: str) -> str:
     """ Convert various role naming conventions to the format used by the game. Example output:
     mid -> middle
