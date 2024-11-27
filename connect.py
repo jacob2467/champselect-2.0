@@ -20,6 +20,7 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 
 
 class Connection:
+    ip_address = "127.0.0.1"
 
     def __init__(self):
         self.l: Lockfile = Lockfile()
@@ -516,7 +517,7 @@ class Connection:
             "Accept": "application/json"
         }
 
-        url = f"{l.protocol}://127.0.0.1:{l.port}" + endpoint
+        url = f"{l.protocol}://{self.ip_address}:{l.port}" + endpoint
         return url, headers
 
 
