@@ -27,6 +27,7 @@ class Connection:
         # self.has_hovered: bool = False  # Unecessary? Possibly remove later
         self.has_banned: bool = False
         self.has_picked: bool = False
+        self.role_checked: bool = False
         self.runes_chosen: bool = False
         self.endpoints: dict = {}
         self.all_champs: dict = {}
@@ -100,7 +101,7 @@ class Connection:
             try:
                 alias, id = clean_name(champ["alias"]), champ["id"]
                 self.all_champs[alias] = id
-            except Exception:
+            except TypeError:
                 warnings.warn("Champ data couldn't be retrieved, falling back to only"
                               "using data for owned champs...", RuntimeWarning)
                 error = True
@@ -135,6 +136,7 @@ class Connection:
         self.has_picked = False
         self.has_banned = False
         self.runes_chosen = False
+        self.role_checked = False
         self.pick_intent = self.user_pick
         self.ban_intent = self.user_ban
         self.role_intent = self.user_role
@@ -151,11 +153,10 @@ class Connection:
         i = 0
         is_valid = False
         while not is_valid and i < len(options):
-            pick = options[i]
+            pick = clean_name(options[i])
             is_valid = self.is_valid_pick(pick)
             i += 1
-        self.pick_intent = pick
-        # TODO: Add error handling
+        # TODO: Add error handling for when none of the config options are valid
         return pick
 
 
@@ -187,8 +188,9 @@ class Connection:
 
 
         # If the user got assigned a role other than the one they queued for, disregard the champ they picked
-        # debugprint(f"Role choice: {self.role_choice}, assigned role: {self.get_assigned_role()}")
-        if len(self.get_assigned_role()) != 0 and self.role_intent != self.get_assigned_role():
+        role_intent = self.get_assigned_role()
+        debugprint(f"Role choice: {self.user_role}, assigned role: {role_intent}\n")
+        if len(role_intent) != 0 and self.user_role != role_intent and self.pick_intent == self.user_pick:
             debugprint(error_msg, "autofilled")
             return False
 
@@ -226,14 +228,14 @@ class Connection:
 
         debugprint(f"Checking if {champ} (id: {id}) is valid to ban...")
 
-        # If champ is banned already
+        # If champ is already banned
         if id in self.get_banned_champids():
-            debugprint(error_msg, "banned already")
+            debugprint(error_msg, "already banned")
             return False
 
         # If a teammate is hovering the champ
         hovering = self.teammate_hovering(id)
-        debugprint(f"Teammate hovering check: {hovering}")
+        debugprint(f"Teammate hovering {champ}: {hovering}")
         if hovering:
             debugprint(error_msg, "teammate hovering")
             return False
@@ -326,18 +328,14 @@ class Connection:
     def ban_or_pick(self) -> None:
         """ Handle logic of whether to pick or ban, and then call the corresponding method. """
 
-        # Handle case where user doesn't select a role
-        if self.role_intent == "":
-            self.role_intent = self.get_assigned_role()
-
         # If it's my turn to pick
         if self.is_currently_picking():
-            debugprint("pick action:", self.pick_action, "\n")
+            # debugprint("pick action:", self.pick_action, "\n")
             self.lock_champ()
 
         # If it's my turn to ban
         elif self.is_currently_banning():
-            debugprint("ban action:", self.ban_action, "\n")
+            # debugprint("ban action:", self.ban_action, "\n")
             self.ban_champ()
 
 
@@ -411,16 +409,17 @@ class Connection:
                     self.has_picked = True
 
 
-    def update_champ_intent(self) -> None:
-        """ Update instance variables with up-to-date pick and ban intent. """
+    def update_intent(self) -> None:
+        """ Update instance variables with up-to-date pick, ban, and role intent. """
         # Only update intent if user hasn't already picked
         if not self.has_picked:
             self.pick_intent = self.decide_pick()
-            print("pick intent:", self.pick_intent)
+            debugprint("pick intent:", self.pick_intent)
 
         # Always update ban intent to support custom games with multiple bans
         self.ban_intent = self.decide_ban()
-        print("ban intent:", self.ban_intent)
+        debugprint("ban intent:", self.ban_intent)
+        debugprint()
 
 
     def is_currently_picking(self) -> bool:
@@ -483,18 +482,23 @@ class Connection:
 
 
     def get_assigned_role(self) -> str | None:
-        """ Get the name of the role the user was assigned to. """
-        my_team = self.get_session()["myTeam"]
-        my_id = self.get_summoner_id()
-        for player in my_team:
-            if player["summonerId"] == my_id:
-                return player["assignedPosition"]
-        return None
+        """ Get the name of the user's assigned role. """
+        # Skip unecessary API calls
+        if self.role_checked:
+            return self.role_intent
+        else:
+            to_return = "none"
+            my_team = self.get_session()["myTeam"]
+            my_id = self.get_summoner_id()
+            for player in my_team:
+                if player["summonerId"] == my_id:
+                    to_return = player["assignedPosition"]
+            self.role_intent = to_return
+            return to_return
 
 
     def get_champid(self, champ: str) -> int:
         """ Get the id of the champion with the given name. """
-        print(champ, type(champ))
         return self.all_champs[clean_name(champ)]
 
 
