@@ -32,7 +32,6 @@ class Connection:
         self.endpoints: dict = {}
         self.all_champs: dict = {}
         self.owned_champs: dict = {}
-        self.bannable_champids: list = []
         self.ban_action: dict = {}
         self.pick_action: dict = {}
         self.all_actions: dict = {}
@@ -99,7 +98,7 @@ class Connection:
         error: bool = False
         for champ in all_champs:
             try:
-                alias, id = self.clean_name(champ["alias"]), champ["id"]
+                alias, id = self.clean_name(champ["alias"], False), champ["id"]
                 self.all_champs[alias] = id
             except TypeError:
                 warnings.warn("Champ data couldn't be retrieved, falling back to only"
@@ -108,7 +107,7 @@ class Connection:
 
         owned_champs = self.api_get("owned_champs").json()
         for champ in owned_champs:
-            alias, id = self.clean_name(champ["alias"]), champ["id"]
+            alias, id = self.clean_name(champ["alias"], False), champ["id"]
             self.owned_champs[alias] = id
 
         if error:
@@ -142,10 +141,13 @@ class Connection:
         self.role_intent = self.user_role
 
 
-    def clean_name(self, name: str) -> str:
+    def clean_name(self, name: str, filter=True) -> str:
         """ Remove whitespace and special characters from a champion's name. Example output:
         Aurelion Sol -> aurelionsol
         Bel'Veth -> belveth
+        Parameters:
+        name: the name to clean
+        filter: whether or not to throw an error when an invalid name is selected
         """
         if name == "":
             return name
@@ -158,14 +160,15 @@ class Connection:
         elif new_name == "wukong":
             return "monkeyking"
 
-        if new_name in self.all_champs:
-            return new_name
-        else:
-            # TODO:
-            #  - Implement fuzzy search
-            #  - Finish error handling
-            # raise Exception("Invalid champion selection. Please try again")
-            pass
+        if filter:
+            if new_name in self.all_champs:
+                return new_name
+            else:
+                raise Exception("Invalid champion selection. Please try again")
+                # TODO:
+                #  - Implement fuzzy search
+                #  - Finish error handling
+        return new_name
 
 
 
