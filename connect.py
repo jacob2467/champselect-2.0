@@ -20,6 +20,7 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 
 
 class Connection:
+    has_picked: bool
     ip_address = "127.0.0.1"
 
     def __init__(self):
@@ -126,9 +127,9 @@ class Connection:
         self.ban_intent = self.user_ban
         self.role_intent = self.user_role
 
-    # --------------
-    # Helper methods
-    # --------------
+    # ------
+    # Lobby
+    # ------
     def reset_after_dodge(self) -> None:
         """ Reset instance variables. """
         # self.has_hovered = False
@@ -140,7 +141,19 @@ class Connection:
         self.ban_intent = self.user_ban
         self.role_intent = self.user_role
 
+    def accept_match(self) -> None:
+        """ Accept a match. """
+        self.api_post("accept_match")
 
+    def check_role(self):
+        # TODO: Get primary role the user is queueing for instead of getting it as user input
+        a = self  # so pycharm doesn't yell at me and say this method is static
+        a += 1
+        return "top"  # dummy value
+
+    # ------------
+    # Champselect
+    # ------------
     def clean_name(self, name: str, filter=True) -> str:
         """ Remove whitespace and special characters from a champion's name. Example output:
         Aurelion Sol -> aurelionsol
@@ -160,6 +173,7 @@ class Connection:
         elif new_name == "wukong":
             return "monkeyking"
 
+        # Filter out invalid resulting names
         if filter:
             if new_name in self.all_champs:
                 return new_name
@@ -186,13 +200,14 @@ class Connection:
             pick = self.clean_name(options[i])
             is_valid = self.is_valid_pick(pick)
             i += 1
-        # TODO: Add error handling for when none of the config options are valid
+        if not self.is_valid_pick(pick):
+            raise Exception("Unable to find a valid champion to pick.")
         return pick
 
 
     def is_valid_pick(self, champ: str) -> bool:
         """ Check if the given champion can be picked """
-
+        debugprint(f"Checking if {champ} is a valid pick...")
         # Handle empty input - allows user to skip selecting a champion and default to those in the config
         if champ == "":
             return False
@@ -211,7 +226,7 @@ class Connection:
             debugprint(error_msg, "unowned")
             return False
 
-        # If a teammate has already PICKED the champ (hovers ok, stealing champs is based)
+        # If a teammate has already PICKED the champ (hovering is ok)
         if id in self.get_teammate_pickids():
             debugprint(error_msg, "teammate picked")
             return False
@@ -222,8 +237,7 @@ class Connection:
         debugprint(f"Role choice: {self.user_role}, assigned role: {role_intent}\n")
         if (len(role_intent) != 0
         and (self.user_role != role_intent or self.user_role == "")
-        and self.pick_intent == self.user_pick):
-
+        and (self.user_pick == self.pick_intent or self.user_pick == "")):
             debugprint(error_msg, "autofilled")
             return False
 
@@ -244,7 +258,6 @@ class Connection:
             ban = options[i]
             is_valid = self.is_valid_ban(ban)
             i += 1
-        self.ban_intent = ban
         # TODO: Add error handling
         return ban
 
@@ -286,7 +299,9 @@ class Connection:
         for action_group in self.all_actions:
             for action in action_group:
                 # Only look at pick actions, and only on user's team that aren't the user
-                if action["type"] == "pick" and action["isAllyAction"] and action["actorCellId"] != self.get_localcellid():
+                if (action["type"] == "pick"
+                and action["isAllyAction"]
+                and action["actorCellId"] != self.get_localcellid()):
                     champid: int = action["championId"]
 
                     # If champid is 0, the player isn't hovering a champ
@@ -338,28 +353,16 @@ class Connection:
         return champid in self.get_banned_champids()
 
 
-    def check_role(self):
-        # TODO: Get primary role the user is queueing for instead of getting it as user input
-        a = self  # so pycharm doesn't yell at me and say this method is static
-        a += 1
-        return "top"  # dummy value
-
-
     def teammate_hovering(self, champid: int) -> bool:
         """ Check if the given champion is being hovered by a teammate. """
         # debugprint("teammates hovering id#", champid, ":", champid in self.get_teammate_hovers())
         return champid in self.get_teammate_hoverids()
 
-    # ----------------
-    # API Call Methods
-    # ----------------
-    def accept_match(self) -> None:
-        """ Accept a match. """
-        self.api_post("accept_match")
-
 
     def ban_or_pick(self) -> None:
         """ Handle logic of whether to pick or ban, and then call the corresponding method. """
+        # Always make sure
+        self.hover_champ()
 
         # If it's my turn to pick
         if self.is_currently_picking():
@@ -370,9 +373,7 @@ class Connection:
         elif self.is_currently_banning():
             # debugprint("ban action:", self.ban_action, "\n")
             self.ban_champ()
-
-        # Make sure we're hovering the correct champ
-        self.hover_champ()
+            self.hover_champ()
 
 
     def ban_champ(self) -> None:
@@ -398,7 +399,7 @@ class Connection:
             champid = self.get_champid(self.pick_intent)
         # Otherwise hover the specified champ
         # Don't make the API call if we're already hovering the desired champ or have already picked
-        if champid != self.pick_action["championId"] and not self.pick_action["isInProgress"]:
+        if champid != self.get_current_hoverid() and not self.has_picked:
             debugprint("trying to hover champ with id", champid)
             self.do_champ(mode="hover", champid=champid)
 
@@ -446,16 +447,25 @@ class Connection:
 
 
     def update_intent(self) -> None:
-        """ Update instance variables with up-to-date pick, ban, and role intent. """
+        """ Update instance variables with up-to-date pick, ban, and role intent, and hover the champ to be locked. """
         # Only update intent if user hasn't already picked
         if not self.has_picked:
             self.pick_intent = self.decide_pick()
+            champid: int = self.get_champid(self.pick_intent)
+            if champid != self.get_current_hoverid():
+                self.hover_champ(champid)
+
             debugprint("pick intent:", self.pick_intent)
 
         # Always update ban intent to support custom games with multiple bans
         self.ban_intent = self.decide_ban()
         debugprint("ban intent:", self.ban_intent)
         debugprint()
+
+
+    def get_current_hoverid(self) -> int:
+        """ Get the id number of the champ the player is currently hovering. """
+        return self.pick_action["championId"]
 
 
     def is_currently_picking(self) -> bool:
@@ -471,7 +481,7 @@ class Connection:
     def is_hovering(self) -> bool:
         """ Return a bool indicating whether or not the player is currently hovering a champ. """
         # print("is_hovering():", "self.pick_action['championId']", self.pick_action["championId"])
-        return self.pick_action["championId"] != 0
+        return self.get_current_hoverid() != 0
 
 
     def api_get(self, endpoint) -> requests.Response:
