@@ -59,5 +59,5 @@ while not in_game:
             case default:
                 pass
     except requests.exceptions.ConnectionError:
-        print("Connection error. Did you close the league client?")  # TODO: Add to this
+        print("Connection error. Did you close the league client?")
         c.parse_lockfile()
