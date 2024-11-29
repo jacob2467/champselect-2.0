@@ -36,7 +36,8 @@ while not in_game:
                     c.update_actions()
                     c.update_intent()
                     print("Champselect phase:", phase)
-                except:
+                except Exception as e:
+                    print("There was an error, did someone dodge?\n", e)
                     phase = "skip"
 
 
