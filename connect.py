@@ -154,6 +154,100 @@ class Connection:
     # ------------
     # Champselect
     # ------------
+    def ban_or_pick(self) -> None:
+        """ Handle logic of whether to pick or ban, and then call the corresponding method. """
+        # If it's my turn to pick
+        if self.is_currently_picking():
+            # debugprint("pick action:", self.pick_action, "\n")
+            self.lock_champ()
+
+        # If it's my turn to ban
+        elif self.is_currently_banning():
+            # debugprint("ban action:", self.ban_action, "\n")
+            self.ban_champ()
+            self.hover_champ()
+        # Make sure we're always showing our intent
+        else:
+            champid: int = self.get_champid(self.pick_intent)
+            if champid != self.get_current_hoverid():
+                self.hover_champ(champid)
+
+
+    def hover_champ(self, champid: int = None) -> None:
+        """ Hover a champion. """
+        if champid is None:
+            champid = self.get_champid(self.pick_intent)
+
+        # Don't make the API call if we're already hovering the desired champ or have already picked
+        if champid != self.get_current_hoverid() and not self.has_picked:
+            debugprint("trying to hover champ with id", champid)
+            self.do_champ(mode="hover", champid=champid)
+
+
+    def ban_champ(self) -> None:
+        """ Ban a champion. """
+        champid = self.get_champid(self.ban_intent)
+        # if not self.has_banned:
+        debugprint("trying to ban champ with id", champid)
+        self.do_champ(mode="ban", champid=champid)
+
+
+    def lock_champ(self) -> None:
+        """ Lock in a champion. """
+        champid = self.get_champid(self.pick_intent)
+        if not self.has_picked:
+            debugprint("trying to lock champ with id", champid)
+            self.do_champ(mode="pick", champid=champid)
+
+
+    def do_champ(self, **kwargs) -> None:
+        """ Pick or ban a champ in champselect.
+        Keyword arguments:
+        champid -- the champ to pick/ban (optional)
+        mode -- options are hover, ban, and pick
+        actionid -- the actionid to do the action with (only used internally)
+        """
+        champid = kwargs.get("champid")
+        mode = kwargs.get("mode")
+        actionid = kwargs.get("actionid", -1)
+
+        # Set up http request
+        data = {"championId": champid}
+        if actionid == -1:
+            if mode == "ban":
+                actionid = self.ban_action["id"]
+            else:
+                try:
+                    actionid = self.pick_action["id"]
+                except KeyError:
+                    warnings.warn("Unable to hover/lock the specified champion.", RuntimeWarning)
+        endpoint = self.endpoints["champselect_action"] + str(actionid)
+
+        # Hover the champ if we're not already
+        if mode != "hover":
+            api_method = self.api_post
+            self.do_champ(champid=champid, mode="hover", actionid=actionid)
+            endpoint += "/complete"
+        else:  # mode == "hover"
+            api_method = self.api_patch
+
+        # Lock in the champ and print info
+        response = api_method(endpoint, data=data)
+        debugprint(response, "\n")
+        try:
+            debugprint(response.json())
+        except:
+            debugprint("Failed to parse response as json, the response is empty.")
+        if 200 <= response.status_code <= 299:
+            match mode:
+                # case "hover":
+                #     self.has_hovered = True
+                case "ban":
+                    self.has_banned = True
+                case "pick":
+                    self.has_picked = True
+
+
     def clean_name(self, name: str, filter=True) -> str:
         """ Remove whitespace and special characters from a champion's name. Example output:
         Aurelion Sol -> aurelionsol
@@ -183,7 +277,6 @@ class Connection:
                 #  - Implement fuzzy search
                 #  - Finish error handling
         return new_name
-
 
 
     def decide_pick(self) -> str:
@@ -244,13 +337,13 @@ class Connection:
 
         return True
 
-
     def decide_ban(self) -> str:
         """ Decide what champ the user should ban. """
         ban = self.ban_intent
         if self.is_valid_ban(ban):
             return ban
         else:
+            print("assigned role:", self.get_assigned_role())
             options = parse_config(self.get_assigned_role(), False)
 
         i = 0
@@ -311,6 +404,7 @@ class Connection:
                         champids.append((champid, not action["completed"]))
         return champids
 
+
     def get_teammate_pickids(self) -> list[int]:
         """ Return a list of champion ids that teammates have locked in. """
         champids: list[int] = []
@@ -360,102 +454,11 @@ class Connection:
         return champid in self.get_teammate_hoverids()
 
 
-    def ban_or_pick(self) -> None:
-        """ Handle logic of whether to pick or ban, and then call the corresponding method. """
-        # Always make sure
-        self.hover_champ()
-
-        # If it's my turn to pick
-        if self.is_currently_picking():
-            # debugprint("pick action:", self.pick_action, "\n")
-            self.lock_champ()
-
-        # If it's my turn to ban
-        elif self.is_currently_banning():
-            # debugprint("ban action:", self.ban_action, "\n")
-            self.ban_champ()
-            self.hover_champ()
-
-
-    def ban_champ(self) -> None:
-        """ Ban a champion. """
-        champid = self.get_champid(self.ban_intent)
-        if not self.has_banned:
-            debugprint("trying to ban champ with id", champid)
-            self.do_champ(mode="ban", champid=champid)
-
-
-    def lock_champ(self) -> None:
-        """ Lock in a champion. """
-        champid = self.get_champid(self.pick_intent)
-        if not self.has_picked:
-            debugprint("trying to lock champ with id", champid)
-            self.do_champ(mode="pick", champid=champid)
-
-
-    def hover_champ(self, champid: int = None) -> None:
-        """ Hover a champion. """
-        # Default to hovering the pick intent
-        if champid is None:
-            champid = self.get_champid(self.pick_intent)
-        # Otherwise hover the specified champ
-        # Don't make the API call if we're already hovering the desired champ or have already picked
-        if champid != self.get_current_hoverid() and not self.has_picked:
-            debugprint("trying to hover champ with id", champid)
-            self.do_champ(mode="hover", champid=champid)
-
-
-    def do_champ(self, **kwargs) -> None:
-        """ Pick or ban a champ in champselect.
-        Keyword arguments:
-        champid -- the champ to pick/ban (optional)
-        mode -- options are hover, ban, and pick
-        """
-        champid = kwargs.get("champid")
-        mode = kwargs.get("mode")
-
-        # Set up http request
-        data = {"championId": champid}
-        if mode == "ban":
-            actionid = self.ban_action["id"]
-        else:
-            actionid = self.pick_action["id"]
-        endpoint = self.endpoints["champselect_action"] + str(actionid)
-
-        # Hover the champ if we're not already
-        if mode != "hover":
-            api_method = self.api_post
-            self.hover_champ(champid)
-            endpoint += "/complete"
-        else:  # mode == "hover"
-            api_method = self.api_patch
-
-        # Lock in the champ and print info
-        response = api_method(endpoint, data=data)
-        debugprint(response, "\n")
-        try:
-            debugprint(response.json())
-        except:
-            debugprint("Failed to parse response as json, the response is empty.")
-        if 200 <= response.status_code <= 299:
-            match mode:
-                # case "hover":
-                #     self.has_hovered = True
-                case "ban":
-                    self.has_banned = True
-                case "pick":
-                    self.has_picked = True
-
-
     def update_intent(self) -> None:
         """ Update instance variables with up-to-date pick, ban, and role intent, and hover the champ to be locked. """
         # Only update intent if user hasn't already picked
         if not self.has_picked:
             self.pick_intent = self.decide_pick()
-            champid: int = self.get_champid(self.pick_intent)
-            if champid != self.get_current_hoverid():
-                self.hover_champ(champid)
-
             debugprint("pick intent:", self.pick_intent)
 
         # Always update ban intent to support custom games with multiple bans
@@ -466,7 +469,7 @@ class Connection:
 
     def get_current_hoverid(self) -> int:
         """ Get the id number of the champ the player is currently hovering. """
-        return self.pick_action["championId"]
+        return self.pick_action.get("championId", 0)
 
 
     def is_currently_picking(self) -> bool:
@@ -534,12 +537,18 @@ class Connection:
         if self.role_checked:
             return self.role_intent
         else:
-            to_return = "none"
+            to_return = None
             my_team = self.get_session()["myTeam"]
             my_id = self.get_summoner_id()
             for player in my_team:
                 if player["summonerId"] == my_id:
                     to_return = player["assignedPosition"]
+
+            # Fall back on user input role if playing a gamemode with no assigned roles (customs, etc)
+            if len(to_return) == 0:
+                debugprint("unable to get assigned role, falling back to userinput...")
+                to_return = self.user_role
+
             self.role_intent = to_return
             return to_return
 
@@ -616,3 +625,4 @@ class Connection:
 
                     elif action["type"] == "pick":
                         self.pick_action = action
+                        print("pick action:", action)
