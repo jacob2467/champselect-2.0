@@ -232,12 +232,13 @@ class Connection:
             return False
 
 
-        # If the user got assigned a role other than the one they queued for, disregard the champ they picked
+        # If the user got assigned a role other than the one they queued for, disregard the champ they picked...
+        # UNLESS they didn't enter a role they wanted to play
         role_intent = self.get_assigned_role()
         debugprint(f"Role choice: {self.user_role}, assigned role: {role_intent}\n")
         if (len(role_intent) != 0
-        and (self.user_role != role_intent or self.user_role == "")
-        and (self.user_pick == self.pick_intent or self.user_pick == "")):
+        and (self.user_role != role_intent and self.user_role != "")
+        and (self.user_pick == self.pick_intent and self.user_pick == "")):
             debugprint(error_msg, "autofilled")
             return False
 
