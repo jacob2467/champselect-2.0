@@ -220,7 +220,10 @@ class Connection:
         # If the user got assigned a role other than the one they queued for, disregard the champ they picked
         role_intent = self.get_assigned_role()
         debugprint(f"Role choice: {self.user_role}, assigned role: {role_intent}\n")
-        if len(role_intent) != 0 and self.user_role != role_intent and self.pick_intent == self.user_pick:
+        if (len(role_intent) != 0
+        and (self.user_role != role_intent or self.user_role == "")
+        and self.pick_intent == self.user_pick):
+
             debugprint(error_msg, "autofilled")
             return False
 
@@ -368,6 +371,9 @@ class Connection:
             # debugprint("ban action:", self.ban_action, "\n")
             self.ban_champ()
 
+        # Make sure we're hovering the correct champ
+        self.hover_champ()
+
 
     def ban_champ(self) -> None:
         """ Ban a champion. """
@@ -391,8 +397,8 @@ class Connection:
         if champid is None:
             champid = self.get_champid(self.pick_intent)
         # Otherwise hover the specified champ
-        # Don't make the API call if we're already hovering the desired champ
-        if champid != self.pick_action["championId"]:
+        # Don't make the API call if we're already hovering the desired champ or have already picked
+        if champid != self.pick_action["championId"] and not self.pick_action["isInProgress"]:
             debugprint("trying to hover champ with id", champid)
             self.do_champ(mode="hover", champid=champid)
 
