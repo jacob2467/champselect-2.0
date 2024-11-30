@@ -219,7 +219,7 @@ class Connection:
                     warnings.warn("Unable to hover/lock the specified champion.", RuntimeWarning)
         endpoint = self.endpoints["champselect_action"] + str(actionid)
 
-        # Hover the champ if we're not already
+        # Hover the champ in case we're not already
         if mode != "hover":
             api_method = self.api_post
             self.do_champ(champid=champid, mode="hover", actionid=actionid)
