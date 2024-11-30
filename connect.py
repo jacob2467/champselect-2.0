@@ -157,7 +157,7 @@ class Connection:
     def ban_or_pick(self) -> None:
         """ Handle logic of whether to pick or ban, and then call the corresponding method. """
         # If it's my turn to pick
-        if self.is_currently_picking():
+        if not self.has_picked and self.is_currently_picking():
             # debugprint("pick action:", self.pick_action, "\n")
             self.lock_champ()
 
@@ -165,11 +165,12 @@ class Connection:
         elif self.is_currently_banning():
             # debugprint("ban action:", self.ban_action, "\n")
             self.ban_champ()
+            # Hover after the ban
             self.hover_champ()
         # Make sure we're always showing our intent
         else:
             champid: int = self.get_champid(self.pick_intent)
-            if champid != self.get_current_hoverid():
+            if not self.has_picked and champid != self.get_current_hoverid():
                 self.hover_champ(champid)
 
 
@@ -177,11 +178,8 @@ class Connection:
         """ Hover a champion. """
         if champid is None:
             champid = self.get_champid(self.pick_intent)
-
-        # Don't make the API call if we're already hovering the desired champ or have already picked
-        if champid != self.get_current_hoverid() and not self.has_picked:
-            debugprint("trying to hover champ with id", champid)
-            self.do_champ(mode="hover", champid=champid)
+        debugprint("trying to hover champ with id", champid)
+        self.do_champ(mode="hover", champid=champid)
 
 
     def ban_champ(self) -> None:
@@ -195,9 +193,8 @@ class Connection:
     def lock_champ(self) -> None:
         """ Lock in a champion. """
         champid = self.get_champid(self.pick_intent)
-        if not self.has_picked:
-            debugprint("trying to lock champ with id", champid)
-            self.do_champ(mode="pick", champid=champid)
+        debugprint("trying to lock champ with id", champid)
+        self.do_champ(mode="pick", champid=champid)
 
 
     def do_champ(self, **kwargs) -> None:
@@ -205,7 +202,6 @@ class Connection:
         Keyword arguments:
         champid -- the champ to pick/ban (optional)
         mode -- options are hover, ban, and pick
-        actionid -- the actionid to do the action with (only used internally)
         """
         champid = kwargs.get("champid")
         mode = kwargs.get("mode")
