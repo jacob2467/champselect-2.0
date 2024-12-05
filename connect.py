@@ -26,6 +26,7 @@ class Connection:
     def __init__(self):
         self.l: Lockfile = Lockfile()
         # self.has_hovered: bool = False  # Unecessary? Possibly remove later
+        self.started_queue: bool = False
         self.has_banned: bool = False
         self.has_picked: bool = False
         self.role_checked: bool = False
@@ -130,9 +131,17 @@ class Connection:
     # ------
     # Lobby
     # ------
+    def start_queue(self) -> None:
+        """ Start queueing for a match. """
+        if not self.started_queue:
+            self.api_post("start_queue")
+            self.started_queue = True
+
+
     def reset_after_dodge(self) -> None:
         """ Reset instance variables. """
         # self.has_hovered = False
+        self.started_queue = False
         self.has_picked = False
         self.has_banned = False
         self.runes_chosen = False
