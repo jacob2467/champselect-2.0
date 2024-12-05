@@ -22,6 +22,7 @@ while not in_game:
 
         match gamestate:
             case "Lobby":
+                c.start_queue()
                 c.reset_after_dodge()
                 # TODO: Start queue
 
