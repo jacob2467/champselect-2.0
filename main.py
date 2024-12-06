@@ -7,6 +7,7 @@ last_action = None
 last_gamestate = None
 last_phase = None
 last_session = None
+champselect_loop = 0
 
 while not in_game:
     time.sleep(1)
@@ -24,22 +25,22 @@ while not in_game:
             case "Lobby":
                 c.start_queue()
                 c.reset_after_dodge()
-                # TODO: Start queue
+                champselect_loop = 0
 
             case "ReadyCheck":
                 c.accept_match()
-                # pass
 
             case "ChampSelect":
+                champselect_loop += 1
+                print(f"\nChampselect loop # {champselect_loop}:")
                 # Stop error that can happen if this block of code is run immediately after someone dodges
-                try:
-                    phase = c.get_champselect_phase()
-                    c.update_actions()
-                    c.update_intent()
-                    print("Champselect phase:", phase)
-                except Exception as e:
-                    print("There was an error, did someone dodge?\n", e)
-                    phase = "skip"
+                # try:
+                c.update()
+                phase = c.get_champselect_phase()
+                print("Champselect phase:", phase)
+                # except Exception as e:
+                #     print("There was an error, did someone dodge?\n", e)
+                #     phase = "skip"
 
 
                 # Handle each champ select phase
