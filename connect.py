@@ -118,8 +118,7 @@ class Connection:
 
 
     def get_first_choices(self) -> None:
-        """ Get the user's first choice for picks and bans, as well as the role they're playing"""
-        # TODO: Add option to skip this and use config by pressing enter without typing anything
+        """ Get the user's first choice for picks and bans, as well as the role they're playing. """
         self.user_pick = self.clean_name(input("Who would you like to play?  "))
         self.user_ban = self.clean_name(input("Who would you like to ban?  "))
         self.user_role = clean_role_name(input("What role would you like to play?  "))
