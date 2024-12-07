@@ -327,7 +327,7 @@ class Connection:
         debugprint(f"Role choice: {self.user_role}, assigned role: {role_intent}\n")
         if (len(role_intent) != 0
                 and (self.user_role != role_intent and self.user_role != "")
-                and (self.user_pick == self.pick_intent and self.user_pick != "")):
+                and (self.user_pick == champ and self.user_pick != "")):
             debugprint(error_msg, "autofilled")
             return False
 
