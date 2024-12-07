@@ -21,7 +21,6 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 
 class Connection:
     has_picked: bool
-    ip_address = "127.0.0.1"
 
     def __init__(self):
         self.l: Lockfile = Lockfile()
@@ -85,6 +84,7 @@ class Connection:
             "bannable_champs": "/lol-champ-select/v1/bannable-champion-ids",  # GET
             "summoner_info_byid": "/lol-summoner/v1/summoners/",  # GET
             "send_runes": "/lol-perks/v1/pages",  # POST
+            "send_summs": "/lol-champ-select/v1/session/my-selection"  # PATCH
         }
 
         self.endpoints.update(
@@ -154,11 +154,9 @@ class Connection:
         """ Accept a match. """
         self.api_post("accept_match")
 
-    def check_role(self):
-        # TODO: Get primary role the user is queueing for instead of getting it as user input
-        a = self  # so pycharm doesn't yell at me and say this method is static
-        a += 1
-        return "top"  # dummy value
+    # def check_role(self):
+    #     TODO: Get role user is queuing for from API rather than user input
+    # return "top"  # dummy value
 
     # ------------
     # Champselect
@@ -389,7 +387,6 @@ class Connection:
             ban = options[i]
             is_valid = self.is_valid_ban(ban)
             i += 1
-        # TODO: Add error handling
         return ban
 
 
@@ -423,8 +420,8 @@ class Connection:
             for action in action_group:
                 # Only look at pick actions, and only on user's team that aren't the user
                 if (action["type"] == "pick"
-                and action["isAllyAction"]
-                and action["actorCellId"] != self.get_localcellid()):
+                        and action["isAllyAction"]
+                        and action["actorCellId"] != self.get_localcellid()):
                     champid: int = action["championId"]
 
                     # If champid is 0, the player isn't hovering a champ
@@ -434,18 +431,43 @@ class Connection:
         return champids
 
 
-    def send_runes(self) -> None:
-        """ Get the recommended rune page and send it to the client. """
+    def send_runes_summs(self) -> None:
+        """ Get the recommended rune page and summoner spells, and send them to the client. """
         # Can't send runes if playing a mode that doesn't have assigned roles
         if len(self.get_assigned_role()) == 0:
             return
-        # TODO: Actually send the runes
 
+        if not self.runes_chosen:
+            # Get recommended runes and summs
+            rune_data: dict = self.get_recommended_runepage()[0]
+            runes = rune_data["perks"]
+            summs = rune_data["summonerSpellIds"]
 
-    def send_summs(self) -> None:
-        # TODO: Implement this
-        return
+            # Send runes
+            request_body = {
+                "current": True,
+                "id": 0,
+                "isTemporary": True,
+                "name": f"{self.pick_intent} {self.get_assigned_role()} runes",
+                "order": 0,
+                "primaryStyleId": rune_data["primaryPerkStyleId"],
+                "selectedPerkIds": [rune["id"] for rune in runes],
+                "subStyleId": rune_data["secondaryPerkStyleId"]
+            }
+            self.api_post("send_runes", request_body)
 
+            # Make sure flash is always on F
+            if summs[0] == 4:
+                summs[0] = summs[1]
+                summs[1] = 4
+
+            # Send summs
+            request_body = {
+                "spell1Id": summs[0],
+                "spell2Id": summs[1]
+            }
+            self.api_patch("send_summs", request_body)
+            self.runes_chosen = True
 
     def get_banned_champids(self) -> list[int]:
         """ Get a list of all champion ids that have been banned. """
@@ -573,7 +595,7 @@ class Connection:
             "Accept": "application/json"
         }
 
-        url = f"{l.protocol}://{self.ip_address}:{l.port}" + endpoint
+        url = f"{l.protocol}://{"127.0.0.1"}:{l.port}" + endpoint
         return url, headers
 
 

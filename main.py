@@ -31,27 +31,22 @@ while not in_game:
                 c.accept_match()
 
             case "ChampSelect":
+                c.update()
+
                 champselect_loop += 1
                 print(f"\nChampselect loop # {champselect_loop}:")
-                # Stop error that can happen if this block of code is run immediately after someone dodges
-                # try:
-                c.update()
+
                 phase = c.get_champselect_phase()
                 print("Champselect phase:", phase)
-                # except Exception as e:
-                #     print("There was an error, did someone dodge?\n", e)
-                #     phase = "skip"
 
-
-                # Handle each champ select phase
+                # Handle each champ select phase separately
                 match phase:
                     case "PLANNING":
                         c.hover_champ()
                     case "BAN_PICK":
                         c.ban_or_pick()
                     case "FINALIZATION":
-                        c.send_runes()
-                        c.send_summs()
+                        c.send_runes_summs()
                     case "skip":
                         pass
 
