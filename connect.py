@@ -163,7 +163,7 @@ class Connection:
             self.lock_champ()
 
         # If it's my turn to ban
-        elif self.is_currently_banning():
+        elif not self.has_banned and self.is_currently_banning():
             # debugprint("ban action:", self.ban_action, "\n")
             self.ban_champ()
             # Hover after the ban
@@ -183,17 +183,18 @@ class Connection:
         self.do_champ(mode="hover", champid=champid)
 
 
-    def ban_champ(self) -> None:
+    def ban_champ(self, champid: int = None) -> None:
         """ Ban a champion. """
-        champid = self.get_champid(self.ban_intent)
-        # if not self.has_banned:
+        if champid is None:
+            champid = self.get_champid(self.ban_intent)
         debugprint("trying to ban champ with id", champid)
         self.do_champ(mode="ban", champid=champid)
 
 
-    def lock_champ(self) -> None:
+    def lock_champ(self, champid: int = None) -> None:
         """ Lock in a champion. """
-        champid = self.get_champid(self.pick_intent)
+        if champid is None:
+            champid = self.get_champid(self.pick_intent)
         debugprint("trying to lock champ with id", champid)
         self.do_champ(mode="pick", champid=champid)
 
@@ -238,6 +239,7 @@ class Connection:
             debugprint("Success:", response.json())
         except:
             debugprint("Failed to parse response as json, the response is empty.")
+        # don't worry about it
         if 200 <= response.status_code <= 299:
             match mode:
                 case "ban":
@@ -623,13 +625,16 @@ class Connection:
         # Only update intent if user hasn't already picked
         debugprint("Updating champ intent...")
         debugprint(f"{self.has_picked=}")
+
+        # Update pick intent
         if not self.has_picked:
             self.pick_intent = self.decide_pick()
-            debugprint("pick intent:", self.pick_intent)
+            debugprint(f"{self.pick_intent=}")
 
-        # Always update ban intent to support custom games with multiple bans
-        self.ban_intent = self.decide_ban()
-        debugprint("ban intent:", self.ban_intent)
+        # Update ban intent
+        if not self.has_banned:
+            self.ban_intent = self.decide_ban()
+            debugprint(f"{self.ban_intent=}")
         debugprint()
 
 
