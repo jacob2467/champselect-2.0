@@ -38,11 +38,14 @@ while not in_game:
         match gamestate:
             case "Lobby":
                 c.start_queue()
+                # TODO: Remove these; only makes a difference for custom games, which I'm sometimes using to test
                 c.reset_after_dodge()
                 champselect_loop = 1
 
             case "ReadyCheck":
                 c.accept_match()
+                c.reset_after_dodge()
+                champselect_loop = 1
 
 
             case "ChampSelect":
