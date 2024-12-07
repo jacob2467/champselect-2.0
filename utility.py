@@ -79,7 +79,7 @@ def clean_role_name(name: str) -> str:
     # Remove all illegal characters and whitespace
     new_name = trim(name)
 
-    roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"], ["bottom", "bot", "adc", "adcarry", "b"], ["utility", "support", "supp", "faggot", "fag"]]
+    roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"], ["bottom", "bot", "adc", "adcarry", "b"], ["utility", "support", "sup", "supp", "faggot", "fag"]]
     for role in roles:
         if new_name in role:
             return role[0]
