@@ -631,6 +631,8 @@ class Connection:
     def update_champ_intent(self) -> None:
         """ Update instance variables with up-to-date pick, ban, and role intent, and hover the champ to be locked. """
         # Only update intent if user hasn't already picked
+        debugprint("Updating champ intent...")
+        debugprint(f"{self.has_picked=}")
         if not self.has_picked:
             self.pick_intent = self.decide_pick()
             debugprint("pick intent:", self.pick_intent)
