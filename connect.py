@@ -8,11 +8,7 @@ import dependencies as d
 from utility import *
 
 # These libraries need to be installed, but urllib3 is a dependency of requests, so we only need to install requests
-try:
-    import requests
-except ModuleNotFoundError:
-    d.install("requests")
-    import requests
+requests = d.install_and_import("requests")
 from urllib3.exceptions import InsecureRequestWarning
 
 # Disable warning for insecure http requests
@@ -24,7 +20,6 @@ class Connection:
 
     def __init__(self):
         self.l: Lockfile = Lockfile()
-        # self.has_hovered: bool = False  # Unecessary? Possibly remove later
         self.started_queue: bool = False
         self.has_banned: bool = False
         self.has_picked: bool = False
@@ -140,7 +135,6 @@ class Connection:
 
     def reset_after_dodge(self) -> None:
         """ Reset instance variables. """
-        # self.has_hovered = False
         self.started_queue = False
         self.has_picked = False
         self.has_banned = False
@@ -246,8 +240,6 @@ class Connection:
             debugprint("Failed to parse response as json, the response is empty.")
         if 200 <= response.status_code <= 299:
             match mode:
-                # case "hover":
-                #     self.has_hovered = True
                 case "ban":
                     self.has_banned = True
                 case "pick":
@@ -279,9 +271,7 @@ class Connection:
                 return new_name
             else:
                 raise Exception("Invalid champion selection. Please try again")
-                # TODO:
-                #  - Implement fuzzy search
-                #  - Finish error handling
+                # TODO: Implement fuzzy search (?)
         return new_name
 
 
