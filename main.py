@@ -39,8 +39,8 @@ while not in_game:
             case "Lobby":
                 c.start_queue()
                 # TODO: Remove these; only makes a difference for custom games, which I'm sometimes using to test
-                c.reset_after_dodge()
-                champselect_loop = 1
+                # c.reset_after_dodge()
+                # champselect_loop = 1
 
             case "ReadyCheck":
                 c.accept_match()
