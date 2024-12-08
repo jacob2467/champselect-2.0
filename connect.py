@@ -246,6 +246,12 @@ class Connection:
                     self.has_banned = True
                 case "pick":
                     self.has_picked = True
+        else:
+            match mode:
+                case "ban":
+                    self.has_banned = True
+                case "pick":
+                    self.has_picked = True
 
 
     def clean_name(self, name: str, filter=True) -> str:
@@ -321,6 +327,8 @@ class Connection:
         if id in self.get_teammate_pickids():
             debugprint(error_msg, "teammate picked")
             return False
+
+        # TODO: Check if an enemy locked it
 
 
         # If the user got assigned a role other than the one they queued for, disregard the champ they picked...
