@@ -323,8 +323,8 @@ class Connection:
             debugprint(error_msg, "unowned")
             return False
 
-        # If a teammate has already PICKED the champ (hovering is ok)
-        if id in self.get_teammate_pickids():
+        # If a player has already PICKED the champ (hovering is ok)
+        if id in self.get_champ_pickids():
             debugprint(error_msg, "teammate picked")
             return False
 
@@ -390,10 +390,10 @@ class Connection:
         return ban
 
 
-    def get_teammate_pickids(self) -> list[int]:
-        """ Return a list of champion ids that teammates have locked in. """
+    def get_champ_pickids(self) -> list[int]:
+        """ Return a list of champion ids that players have locked in. """
         champids: list[int] = []
-        for pick, is_hovering in self.get_teammate_champids():
+        for pick, is_enemy, is_hovering in self.get_champids():
             if not is_hovering:
                 champids.append(pick)
         return champids
@@ -402,32 +402,31 @@ class Connection:
     def get_teammate_hoverids(self) -> list[int]:
         """ Return a list of champion ids that teammates are hovering. """
         champids: list[int] = []
-        for pick, is_hovering in self.get_teammate_champids():
-            if is_hovering:
+        for pick, is_enemy, is_hovering in self.get_champids():
+            if not is_enemy and is_hovering:
                 champids.append(pick)
         debugprint(f"Current teammate hovers: {champids}")
         return champids
 
 
-    def get_teammate_champids(self) -> list[tuple[int, bool]]:
-        """ Return a list of tuples. Each tuple contains a teammate's champion id and a boolean indicating whether they
-        are hovering (True) or have already picked (False) the champion with the specified ID.
+    def get_champids(self) -> list[tuple[int, bool, bool]]:
+        """ Return a list of tuples. Each tuple contains a player's champ id, a bool indicating whether they are on the
+        user's team, and a bool hovering (True) or have already picked (False) the champion with the specified ID.
         """
-        champids: list[tuple[int, bool]] = []
+        champids: list[tuple[int, bool, bool]] = []
 
         # Actions are grouped by type (pick, ban, etc), so we iterate over each group
         for action_group in self.all_actions:
             for action in action_group:
                 # Only look at pick actions, and only on user's team that aren't the user
                 if (action["type"] == "pick"
-                        and action["isAllyAction"]
                         and action["actorCellId"] != self.get_localcellid()):
                     champid: int = action["championId"]
 
                     # If champid is 0, the player isn't hovering a champ
                     if champid != 0:
                         # If the action isn't completed, they're still hovering
-                        champids.append((champid, not action["completed"]))
+                        champids.append((champid, action["isAllyAction"], not action["completed"]))
         return champids
 
 
@@ -447,7 +446,7 @@ class Connection:
             request_body = {
                 "current": True,
                 "id": 0,
-                "isTemporary": True,
+                "isTemporary": False,
                 "name": f"{self.pick_intent} {self.get_assigned_role()} runes",
                 "order": 0,
                 "primaryStyleId": rune_data["primaryPerkStyleId"],
