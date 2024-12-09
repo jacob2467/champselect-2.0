@@ -96,8 +96,8 @@ class Connection:
         error: bool = False
         for champ in all_champs:
             try:
-                alias, id = self.clean_name(champ["alias"], False), champ["id"]
-                self.all_champs[alias] = id
+                alias, champid = self.clean_name(champ["alias"], False), champ["id"]
+                self.all_champs[alias] = champid
             except TypeError:
                 warnings.warn("Champ data couldn't be retrieved, falling back to only"
                               "using data for owned champs...", RuntimeWarning)
@@ -105,8 +105,8 @@ class Connection:
 
         owned_champs = self.api_get("owned_champs").json()
         for champ in owned_champs:
-            alias, id = self.clean_name(champ["alias"], False), champ["id"]
-            self.owned_champs[alias] = id
+            alias, champid = self.clean_name(champ["alias"], False), champ["id"]
+            self.owned_champs[alias] = champid
 
         if error:
             self.all_champs = copy.deepcopy(owned_champs)
@@ -237,8 +237,9 @@ class Connection:
         debugprint(response, "\n")
         try:
             debugprint("Success:", response.json())
-        except:
+        except Exception as e:
             debugprint("Failed to parse response as json, the response is empty.")
+            print("Error raised by response.json():", e)
         # don't worry about it
         if 200 <= response.status_code <= 299:
             match mode:
@@ -254,7 +255,7 @@ class Connection:
                     self.has_picked = True
 
 
-    def clean_name(self, name: str, filter=True) -> str:
+    def clean_name(self, name: str, should_filter=True) -> str:
         """ Remove whitespace and special characters from a champion's name. Example output:
         Aurelion Sol -> aurelionsol
         Bel'Veth -> belveth
@@ -274,7 +275,7 @@ class Connection:
             return "monkeyking"
 
         # Filter out invalid resulting names
-        if filter:
+        if should_filter:
             if new_name in self.all_champs:
                 return new_name
             else:
@@ -309,12 +310,12 @@ class Connection:
             return False
 
         champ = self.clean_name(champ)
-        id: int = self.get_champid(champ)
+        champid: int = self.get_champid(champ)
         debugprint(f"Checking if {champ} is a valid pick...")
         error_msg: str = "Invalid pick:"
 
         # If champ is banned
-        if self.is_banned(id):
+        if self.is_banned(champid):
             debugprint(error_msg, "banned")
             return False
 
@@ -324,8 +325,8 @@ class Connection:
             return False
 
         # If a player has already PICKED the champ (hovering is ok)
-        if id in self.get_champ_pickids():
-            debugprint(error_msg, "teammate picked")
+        if champid in self.get_champ_pickids():
+            debugprint(error_msg, "already picked")
             return False
 
         # TODO: Check if an enemy locked it
@@ -349,9 +350,9 @@ class Connection:
         if champ == "":
             return False
 
-        id = self.get_champid(champ)
+        champid = self.get_champid(champ)
         champ = self.clean_name(champ)
-        debugprint(f"Checking if {champ} (id: {id}) is a valid ban...")
+        debugprint(f"Checking if {champ} (id: {champid}) is a valid ban...")
         error_msg = "Invalid ban:"
 
         # If trying to ban the champ the user wants to play
@@ -360,12 +361,12 @@ class Connection:
             return False
 
         # If champ is already banned
-        if self.is_banned(id):
+        if self.is_banned(champid):
             debugprint(error_msg, "already banned")
             return False
 
         # If a teammate is hovering the champ
-        if self.teammate_hovering(id):
+        if self.teammate_hovering(champid):
             debugprint(error_msg, "teammate hovering")
             return False
 
@@ -536,6 +537,8 @@ class Connection:
                 request = requests.post
             case "patch":
                 request = requests.patch
+            case _:
+                request = None
 
         # Send the request
         return request(url, headers=headers, json=data, verify=False)
