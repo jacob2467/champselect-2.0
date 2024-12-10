@@ -1,0 +1,136 @@
+[
+  {
+    "isDefaultPosition": true,
+    "isRecommendationOverride": false,
+    "keystone": {
+      "iconPath": "string",
+      "id": 8008,
+      "longDesc": "string",
+      "name": "Lethal Tempo",
+      "recommendationDescriptor": "Ramping Attack Speed",
+      "shortDesc": "string",
+      "slotType": "kKeyStone",
+      "styleId": 8000,
+      "styleIdName": "precision",
+      "tooltip": "string"
+    },
+    "perks": [
+      {
+        "iconPath": "string",
+        "id": 8008,
+        "longDesc": "string",
+        "name": "Lethal Tempo",
+        "recommendationDescriptor": "Ramping Attack Speed",
+        "shortDesc": "string",
+        "slotType": "kKeyStone",
+        "styleId": 8000,
+        "styleIdName": "precision",
+        "tooltip": "string"
+      },
+      {
+        "iconPath": "string",
+        "id": 8009,
+        "longDesc": "string",
+        "name": "Presence of Mind",
+        "recommendationDescriptor": "",
+        "shortDesc": "string",
+        "slotType": "kMixedRegularSplashable",
+        "styleId": 8000,
+        "styleIdName": "precision",
+        "tooltip": "string"
+      },
+      {
+        "iconPath": "string",
+        "id": 9103,
+        "longDesc": "string",
+        "name": "Legend: Bloodline",
+        "recommendationDescriptor": "",
+        "shortDesc": "string",
+        "slotType": "kMixedRegularSplashable",
+        "styleId": 8000,
+        "styleIdName": "precision",
+        "tooltip": "string"
+      },
+      {
+        "iconPath": "string",
+        "id": 8014,
+        "longDesc": "string",
+        "name": "Coup de Grace",
+        "recommendationDescriptor": "",
+        "shortDesc": "string",
+        "slotType": "kMixedRegularSplashable",
+        "styleId": 8000,
+        "styleIdName": "precision",
+        "tooltip": "string"
+      },
+      {
+        "iconPath": "string",
+        "id": 8233,
+        "longDesc": "string",
+        "name": "Absolute Focus",
+        "recommendationDescriptor": "",
+        "shortDesc": "string",
+        "slotType": "kMixedRegularSplashable",
+        "styleId": 8200,
+        "styleIdName": "sorcery",
+        "tooltip": "string"
+      },
+      {
+        "iconPath": "string",
+        "id": 8236,
+        "longDesc": "string",
+        "name": "Gathering Storm",
+        "recommendationDescriptor": "",
+        "shortDesc": "string",
+        "slotType": "kMixedRegularSplashable",
+        "styleId": 8200,
+        "styleIdName": "sorcery",
+        "tooltip": "string"
+      },
+      {
+        "iconPath": "string",
+        "id": 5005,
+        "longDesc": "string",
+        "name": "Attack Speed",
+        "recommendationDescriptor": "",
+        "shortDesc": "string",
+        "slotType": "kStatMod",
+        "styleId": 8400,
+        "styleIdName": "resolve",
+        "tooltip": "string"
+      },
+      {
+        "iconPath": "string",
+        "id": 5008,
+        "longDesc": "string",
+        "name": "Adaptive Force",
+        "recommendationDescriptor": "",
+        "shortDesc": "string",
+        "slotType": "kStatMod",
+        "styleId": 8400,
+        "styleIdName": "resolve",
+        "tooltip": "string"
+      },
+      {
+        "iconPath": "string",
+        "id": 5001,
+        "longDesc": "string",
+        "name": "Health Scaling",
+        "recommendationDescriptor": "",
+        "shortDesc": "string",
+        "slotType": "kStatMod",
+        "styleId": 8400,
+        "styleIdName": "resolve",
+        "tooltip": "string"
+      }
+    ],
+    "position": "BOTTOM",
+    "primaryPerkStyleId": 8000,
+    "primaryRecommendationAttribute": "kBurstDamage",
+    "recommendationChampionId": 222,
+    "recommendationId": "2024-11-11.000748",
+    "secondaryPerkStyleId": 8200,
+    "secondaryRecommendationAttribute": "kMana",
+    "summonerSpellIds": [21, 4]
+  }
+]
