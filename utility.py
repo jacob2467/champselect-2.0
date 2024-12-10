@@ -1,3 +1,4 @@
+""" A collection of static utility methods. """
 import os
 import configparser
 from dataclasses import dataclass
