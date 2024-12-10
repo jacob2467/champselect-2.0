@@ -78,7 +78,7 @@ class Connection:
             "pickable_champs": "/lol-champ-select/v1/pickable-champions",  # GET
             "bannable_champs": "/lol-champ-select/v1/bannable-champion-ids",  # GET
             "summoner_info_byid": "/lol-summoner/v1/summoners/",  # GET
-            "send_runes": "/lol-perks/v1/pages",  # POST
+            "runes": "/lol-perks/v1/pages",  # GET / POST
             "send_summs": "/lol-champ-select/v1/session/my-selection"  # PATCH
         }
 
@@ -454,7 +454,7 @@ class Connection:
                 "selectedPerkIds": [rune["id"] for rune in runes],
                 "subStyleId": rune_data["secondaryPerkStyleId"]
             }
-            self.api_post("send_runes", request_body)
+            self.api_post("runes", request_body)
 
             # Make sure flash is always on F
             if summs[0] == 4:
