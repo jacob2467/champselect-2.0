@@ -14,6 +14,7 @@ def install_and_import(package):
             # Suppress pip output
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL)
-
         # Return the installed package
         return importlib.import_module(package)
+    except Exception as e:
+        print(f"Error while installing {package}: {e}")
