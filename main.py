@@ -23,6 +23,7 @@ while not connection_initiated:
         # Client is still loading, try again until it finishes loading
         pass
 
+c.get_first_choices()
 while not in_game:
     time.sleep(UPDATE_INTERVAL)
     # Wrap the loop in a try block to catch errors when the client closes
