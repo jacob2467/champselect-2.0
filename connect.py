@@ -495,6 +495,7 @@ class Connection:
             request_body = {
                 "current": True,
                 "isTemporary": False,
+                # TODO: If bryan, add "I love child porn" to runepage name
                 "name": f"{self.RUNEPAGE_PREFIX} {self.pick_intent} {self.get_assigned_role()} runes",
                 "order": 0,
                 "primaryStyleId": recommended_runepage["primaryPerkStyleId"],
