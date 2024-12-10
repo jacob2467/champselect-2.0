@@ -16,7 +16,8 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 
 
 class Connection:
-    RUNEPAGE_PREFIX = "Jacob:"  # Prefix for the name of rune pages created by this script
+    RUNEPAGE_PREFIX: str = "Auto:"  # Prefix for the name of rune pages created by this script
+    BRYAN_SUMMONERID: int = 2742039436911744
 
     def __init__(self):
         self.l: Lockfile = Lockfile()
@@ -41,7 +42,6 @@ class Connection:
         self.parse_lockfile()
         self.setup_endpoints()
         self.populate_champ_table()
-        self.get_first_choices()
 
     # ----------------
     # Connection Setup
@@ -66,23 +66,25 @@ class Connection:
 
     def setup_endpoints(self) -> None:
         """ Set up a dictionary containing varius endpoints for the API. """
+
         self.endpoints = {
             "gamestate": "/lol-gameflow/v1/gameflow-phase",  # GET
             "start_queue": "/lol-lobby/v2/lobby/matchmaking/search",  # POST
             "match_found": "/lol-matchmaking/v1/ready-check",  # GET
             "accept_match": "/lol-matchmaking/v1/ready-check/accept",  # POST
             "champselect_session": "/lol-champ-select/v1/session",  # GET
-            "champselect_action": "/lol-champ-select/v1/session/actions/",  # PATCH
             "owned_champs": "/lol-champions/v1/owned-champions-minimal",  # GET
             "current_summoner": "/lol-summoner/v1/current-summoner",  # GET
             "pickable_champs": "/lol-champ-select/v1/pickable-champions",  # GET
             "bannable_champs": "/lol-champ-select/v1/bannable-champion-ids",  # GET
-            "summoner_info_byid": "/lol-summoner/v1/summoners/",  # GET
             "runes": "/lol-perks/v1/pages",  # GET / POST
-            "send_runes": "/lol-perks/v1/pages/",  # PUT
-            "send_summs": "/lol-champ-select/v1/session/my-selection"  # PATCH
-        }
+            "send_summs": "/lol-champ-select/v1/session/my-selection",  # PATCH
 
+            # These endpoints need additional parameters added to the end of them
+            "send_runes": "/lol-perks/v1/pages/",  # PUT (+runepageid)
+            "summoner_info_byid": "/lol-summoner/v1/summoners/",  # GET (+summonerid)
+            "champselect_action": "/lol-champ-select/v1/session/actions/"  # PATCH (+actionid)
+        }
         self.endpoints.update(
             {"all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions-minimal"  # GET
              }
@@ -491,12 +493,17 @@ class Connection:
             runes = recommended_runepage["perks"]
             summs = recommended_runepage["summonerSpellIds"]
 
+            # Get the name for the rune page
+            if self.get_summoner_id() == self.BRYAN_SUMMONERID:
+                name = "I LOVE CHILD PORN"
+            else:
+                name = f"{self.RUNEPAGE_PREFIX} {self.pick_intent} {self.get_assigned_role()} runes",
+
             # Send runes
             request_body = {
                 "current": True,
                 "isTemporary": False,
-                # TODO: If bryan, add "I love child porn" to runepage name
-                "name": f"{self.RUNEPAGE_PREFIX} {self.pick_intent} {self.get_assigned_role()} runes",
+                "name": name,
                 "order": 0,
                 "primaryStyleId": recommended_runepage["primaryPerkStyleId"],
                 "selectedPerkIds": [rune["id"] for rune in runes],
@@ -725,6 +732,5 @@ class Connection:
 
                     elif action["type"] == "pick":
                         self.pick_action = action
-                        debugprint("pick action:", action)
 
         self.update_champ_intent()
