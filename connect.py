@@ -486,7 +486,8 @@ class Connection:
 
         if not self.runes_chosen:
             # Get the runepage to be overwritten
-            endpoint = self.endpoints["send_runes"] + str(self.get_runepage_id())
+            runepage_id: int = self.get_runepage_id()
+            endpoint = self.endpoints["send_runes"] + str(runepage_id)
 
             # Get recommended runes and summs
             recommended_runepage: dict = self.get_recommended_runepage()[0]
@@ -507,6 +508,7 @@ class Connection:
                 "current": True,
                 "isTemporary": False,
                 "name": name,
+                "id": runepage_id,
                 "order": 0,
                 "primaryStyleId": recommended_runepage["primaryPerkStyleId"],
                 "selectedPerkIds": [rune["id"] for rune in runes],
