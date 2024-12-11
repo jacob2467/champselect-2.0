@@ -4,6 +4,7 @@ import time
 
 connection_initiated: bool = False
 in_game: bool = False
+should_print: bool = True
 last_gamestate: dict = {}
 champselect_loop: int = 0  # Keep track of how many loops run during champselect
 RETRY_RATE: int = 10  # How many seconds to wait after a failed connection attempt
@@ -58,17 +59,20 @@ while not in_game:
                     phase = "skip"
 
                 champselect_loop += 1
-                print(f"\nChampselect loop # {champselect_loop}:")
-                print("Champselect phase:", phase)
+                if should_print:
+                    print(f"\nChampselect loop # {champselect_loop}:")
+                    print("Champselect phase:", phase)
 
                 # Handle each champ select phase separately
                 match phase:
                     case "PLANNING":
                         c.hover_champ()
+                        should_print = True
                     case "BAN_PICK":
                         c.ban_or_pick()
                     case "FINALIZATION":
                         c.send_runes_summs()
+                        should_print = False
                     case "skip":
                         pass
 
