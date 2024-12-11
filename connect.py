@@ -497,7 +497,7 @@ class Connection:
             if self.get_summoner_id() == self.BRYAN_SUMMONERID:
                 name = "I LOVE CHILD PORN"
             else:
-                name = f"{self.RUNEPAGE_PREFIX} {self.pick_intent} {self.get_assigned_role()} runes",
+                name = f"{self.RUNEPAGE_PREFIX} {self.pick_intent} {self.get_assigned_role()} runes"
 
             # Send runes
             request_body = {
