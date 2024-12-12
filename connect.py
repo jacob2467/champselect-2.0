@@ -709,14 +709,13 @@ class Connection:
         if not self.has_picked:
             debugprint("Updating pick intent...")
             self.pick_intent = self.decide_pick()
-            debugprint(f"Pick intent: {self.pick_intent}")
+            debugprint(f"Pick intent: {self.pick_intent}\n")
 
         # Update ban intent
         if not self.has_banned:
             debugprint("Updating pick intent...")
             self.ban_intent = self.decide_ban()
-            debugprint(f"Ban intent: {self.ban_intent}")
-        debugprint()
+            debugprint(f"Ban intent: {self.ban_intent}\n")
 
 
     def update(self) -> None:
