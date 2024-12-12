@@ -36,3 +36,4 @@ bin/
 /.idea
 .gitattributes
 *.pyc
+output.log
