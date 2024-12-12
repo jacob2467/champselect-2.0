@@ -61,12 +61,13 @@ def trim(string: str) -> str:
 
 
 def debugprint(*args):
-    """ Functions exactly like print; only difference is the name. Useful for differentiating between
-    regular prints and ones intended for debugging. """
+    """ Print the input, and save it to a log file. """
     temp: str = ""
     for arg in args:
         temp += str(arg) + " "
     print(temp)
+    with open("output.log", "a") as file:
+        file.write(temp + "\n")
 
 
 def clean_role_name(name: str) -> str:
@@ -85,4 +86,4 @@ def clean_role_name(name: str) -> str:
         if new_name in role:
             return role[0]
 
-    raise Exception("Invalid role selection. Please try again")
+    return "invalid"
