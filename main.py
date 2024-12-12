@@ -1,6 +1,7 @@
 import connect
 import requests
 import time
+from utility import *
 
 connection_initiated: bool = False
 in_game: bool = False
@@ -10,6 +11,10 @@ champselect_loop: int = 0  # Keep track of how many loops run during champselect
 RETRY_RATE: int = 10  # How many seconds to wait after a failed connection attempt
 UPDATE_INTERVAL: float = .1  # How many seconds to wait before re-running the main loop
 
+# Clear output file
+with open("output.log", "w") as file:
+    pass
+
 # Wait for client to open if it's not open already
 while not connection_initiated:
     try:
@@ -17,7 +22,7 @@ while not connection_initiated:
         connection_initiated = True
     # If the connection isn't successful or the lockfile doesn't exist, the client isn't open yet
     except (requests.exceptions.ConnectionError, FileNotFoundError) as e:
-        print(f"Failed to connect to the league client - is it open? Retrying in {RETRY_RATE} seconds...")
+        debugprint(f"Failed to connect to the league client - is it open? Retrying in {RETRY_RATE} seconds...")
         time.sleep(RETRY_RATE)
 
     except KeyError as e:
@@ -33,7 +38,7 @@ while not in_game:
 
         # Print current gamestate if it's different from the last one
         if gamestate != last_gamestate:
-            print("Current gamestate:", gamestate)
+            debugprint("Current gamestate:", gamestate)
             last_gamestate = gamestate
 
 
@@ -60,8 +65,8 @@ while not in_game:
 
                 champselect_loop += 1
                 if should_print:
-                    print(f"\nChampselect loop # {champselect_loop}:")
-                    print("Champselect phase:", phase)
+                    debugprint(f"\nChampselect loop # {champselect_loop}:")
+                    debugprint("Champselect phase:", phase)
 
                 # Handle each champ select phase separately
                 match phase:
@@ -83,5 +88,5 @@ while not in_game:
             case default:
                 pass
     except requests.exceptions.ConnectionError:
-        print("Connection error. Did you close the league client?")
+        debugprint("Connection error. Did you close the league client?")
         c.parse_lockfile()
