@@ -5,7 +5,11 @@ from dataclasses import dataclass
 
 # Read config
 config = configparser.ConfigParser()
-config.read("config.ini")
+config_contents = config.read("config.ini")
+
+# Check for empty/missing config
+if not config_contents:
+    raise RuntimeError("Unable to parse config.ini - does it exist?")
 
 @dataclass
 class Lockfile:
