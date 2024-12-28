@@ -285,7 +285,6 @@ class Connection:
                 return new_name
             else:
                 return "invalid"
-                # TODO: Implement fuzzy search (?)
         return new_name
 
 
@@ -333,8 +332,6 @@ class Connection:
         if champid in self.get_champ_pickids():
             debugprint(error_msg, "already picked")
             return False
-
-        # TODO: Check if an enemy locked it
 
 
         # If the user got assigned a role other than the one they queued for, disregard the champ they picked...
@@ -494,7 +491,7 @@ class Connection:
             runes = recommended_runepage["perks"]
             summs = recommended_runepage["summonerSpellIds"]
 
-            # Get the name for the rune page
+            # Set the name for the rune page
             if self.get_summoner_id() == self.BRYAN_SUMMONERID:
                 name = "I LOVE CHILD PORN"
             else:
@@ -682,7 +679,7 @@ class Connection:
         """ Get the endpoint used to get recommended runes. """
         champid = self.get_champid(self.pick_intent)
         position = self.get_assigned_role()
-        mapid = 11  # TODO: Add options for other maps (default to summoner's rift for now)
+        mapid = 11  # mapid for summoner's rift
         return f"/lol-perks/v1/recommended-pages/champion/{champid}/position/{position}/map/{mapid}"
 
 
