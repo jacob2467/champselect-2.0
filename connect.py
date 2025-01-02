@@ -427,7 +427,7 @@ class Connection:
                     # If champid is 0, the player isn't hovering a champ
                     if champid != 0:
                         # If the action isn't completed, they're still hovering
-                        champids.append((champid, action["isAllyAction"], not action["completed"]))
+                        champids.append((champid, not action["isAllyAction"], not action["completed"]))
         return champids
 
 
