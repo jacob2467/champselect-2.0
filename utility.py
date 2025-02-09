@@ -67,7 +67,7 @@ def trim(string: str) -> str:
     return new_string
 
 
-def debugprint(*args):
+def debugprint(*args: object) -> None:
     """ Print the input, and save it to a log file. """
     temp: str = ""
     for arg in args:
