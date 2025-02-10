@@ -189,7 +189,7 @@ class Connection:
                 self.hover_champ(champid)
 
 
-    def hover_champ(self, champid: int = None) -> None:
+    def hover_champ(self, champid: int | None = None) -> None:
         """ Hover a champion. """
         if champid is None:
             champid = self.get_champid(self.pick_intent)
@@ -197,7 +197,7 @@ class Connection:
         self.do_champ(mode="hover", champid=champid)
 
 
-    def ban_champ(self, champid: int = None) -> None:
+    def ban_champ(self, champid: int | None = None) -> None:
         """ Ban a champion. """
         if champid is None:
             champid = self.get_champid(self.ban_intent)
@@ -205,7 +205,7 @@ class Connection:
         self.do_champ(mode="ban", champid=champid)
 
 
-    def lock_champ(self, champid: int = None) -> None:
+    def lock_champ(self, champid: int | None = None) -> None:
         """ Lock in a champion. """
         if champid is None:
             champid = self.get_champid(self.pick_intent)
@@ -219,13 +219,13 @@ class Connection:
         champid -- the champ to pick/ban (optional)
         mode -- options are hover, ban, and pick
         """
-        champid = kwargs.get("champid")
-        mode = kwargs.get("mode")
-        actionid = kwargs.get("actionid", -1)
+        champid: int | None = kwargs.get("champid")
+        mode: str | None = kwargs.get("mode")
+        actionid: int | None = kwargs.get("actionid", None)
 
         # Set up http request
         data = {"championId": champid}
-        if actionid == -1:
+        if actionid is None:
             if mode == "ban":
                 try:
                     actionid = self.ban_action["id"]
@@ -473,16 +473,19 @@ class Connection:
             # Success - the runepage was created successfully. Now we return its id
             u.debugprint(f"Success! Created a runepage with id {response.json()["id"]}")
             return response.json()["id"]
+        
+        # No empty rune page slots
         elif response.status_code == 400:
-            if response.json()["message"] == "Max pages reached":
-                # Full of rune pages - return the id of one to overwrite
-                u.debugprint(f"Couldn't create a new runepage - overwriting page named {all_pages[-1]["name"]}, " +
-                             f"with id {all_pages[-1]["id"]}")
-                return all_pages[-1]["id"]
-            else:
+            if response.json()["message"] != "Max pages reached":
                 raise RuntimeError("An unknown error occured while trying to create a runepage.")
-        return -1
-
+            
+            # Full of rune pages - return the id of one to overwrite
+            u.debugprint(f"Couldn't create a new runepage - overwriting page named {all_pages[-1]["name"]}, " +
+                         f"with id {all_pages[-1]["id"]}")
+            return all_pages[-1]["id"]
+        
+        raise RuntimeError("This error exists to make MyPy happy, and should never be raised. If you're seeing this, "
+                           f"there's a bug in my code! HTTP response:\n{response.json()["message"]}")
 
     def send_runes_summs(self) -> None:
         """ Get the recommended rune page and summoner spells, and send them to the client. """
@@ -502,7 +505,7 @@ class Connection:
 
             # Set the name for the rune page
             if self.get_summoner_id() == self.BRYAN_SUMMONERID:
-                name = "I LOVE CHILD PORN"
+                name = "stinky mexican rune page"
             else:
                 role: str = self.pick_intent
                 if role == "utility":
