@@ -5,7 +5,7 @@ import copy
 
 # These files are part of this project, and also don't require installation
 import dependencies as d
-from utility import *
+import utility as u
 
 # These libraries need to be installed, but urllib3 is a dependency of requests, so we only need to install requests
 requests = d.install_and_import("requests")
@@ -20,25 +20,35 @@ class Connection:
     BRYAN_SUMMONERID: int = 2742039436911744
 
     def __init__(self):
-        self.l: Lockfile = Lockfile()
+        self.l: u.Lockfile = u.Lockfile()
+
+        # Flags
         self.started_queue: bool = False
         self.has_banned: bool = False
         self.has_picked: bool = False
         self.role_checked: bool = False
         self.runes_chosen: bool = False
-        self.endpoints: dict = {}
+
+        # Dictionaries of League Champions
         self.all_champs: dict = {}
         self.owned_champs: dict = {}
+
+        # Dictionaries storing info about the gamestate
         self.session: dict = {}
         self.ban_action: dict = {}
         self.pick_action: dict = {}
         self.all_actions: dict = {}
-        self.user_pick: str = ""
-        self.user_ban: str = ""
-        self.role_intent: str = ""
-        self.user_role: str = ""
-        self.pick_intent: str = ""
-        self.ban_intent: str = ""
+
+        # User intent and actual selections
+        self.user_pick: str = ""  # the user's intended pick
+        self.user_ban: str = ""  # the user's intended ban
+        self.user_role: str = ""  # the user's intended role
+        self.pick_intent: str = ""  # actual pick intent
+        self.ban_intent: str = ""  # actual ban intent
+        self.role_intent: str = ""  # actual role intent
+
+        # Setup
+        self.endpoints: dict = {}
         self.parse_lockfile()
         self.setup_endpoints()
         self.populate_champ_table()
@@ -48,12 +58,11 @@ class Connection:
     # ----------------
     def parse_lockfile(self) -> None:
         """ Parse the user's lockfile into a dictionary. """
-        l: Lockfile = self.l
-        path: str = get_lockfile_path()
+        l: u.Lockfile = self.l
+        path: str = u.get_lockfile_path()
         try:
             with open(path) as f:
-                contents: str = f.read()
-                contents: list[str] = contents.split(":")
+                contents: list[str] = f.read().split(":")
                 l.pid, l.port, l.password, l.protocol = contents[1:5]
 
         except FileNotFoundError:
@@ -124,9 +133,9 @@ class Connection:
         while self.user_ban == "invalid":
             self.user_ban = self.clean_name(input("Invalid champion name! Please try again:  "))
 
-        self.user_role = clean_role_name(input("What role would you like to play?  "))
+        self.user_role = u.clean_role_name(input("What role would you like to play?  "))
         while self.user_role == "invalid":
-            self.user_role = clean_role_name(input("Invalid role name! Please try again:  "))
+            self.user_role = u.clean_role_name(input("Invalid role name! Please try again:  "))
 
         # Set intent to userinput (intent can change later if first choice is banned, etc.)
         self.pick_intent = self.user_pick
@@ -184,7 +193,7 @@ class Connection:
         """ Hover a champion. """
         if champid is None:
             champid = self.get_champid(self.pick_intent)
-        debugprint("Trying to hover champ with id", champid)
+        u.debugprint("Trying to hover champ with id", champid)
         self.do_champ(mode="hover", champid=champid)
 
 
@@ -192,7 +201,7 @@ class Connection:
         """ Ban a champion. """
         if champid is None:
             champid = self.get_champid(self.ban_intent)
-        debugprint("trying to ban champ with id", champid)
+        u.debugprint("trying to ban champ with id", champid)
         self.do_champ(mode="ban", champid=champid)
 
 
@@ -200,7 +209,7 @@ class Connection:
         """ Lock in a champion. """
         if champid is None:
             champid = self.get_champid(self.pick_intent)
-        debugprint("trying to lock champ with id", champid)
+        u.debugprint("trying to lock champ with id", champid)
         self.do_champ(mode="pick", champid=champid)
 
 
@@ -239,12 +248,12 @@ class Connection:
 
         # Lock in the champ and print info
         response = api_method(endpoint, data=data)
-        debugprint(response, "\n")
+        u.debugprint(response, "\n")
         try:
-            debugprint("Success:", response.json())
+            u.debugprint("Success:", response.json())
         except Exception as e:
-            debugprint("Failed to parse response as json, the response is empty.")
-            debugprint("Error raised by response.json():", e)
+            u.debugprint("Failed to parse response as json, the response is empty.")
+            u.debugprint("Error raised by response.json():", e)
         # don't worry about it
         if 200 <= response.status_code <= 299:
             match mode:
@@ -264,14 +273,13 @@ class Connection:
         """ Remove whitespace and special characters from a champion's name. Example output:
         Aurelion Sol -> aurelionsol
         Bel'Veth -> belveth
-        Parameters:
-        name: the name to clean
-        filter: whether or not to throw an error when an invalid name is selected
+        :param name: the name to clean
+        :param should_filter: if True, return "invalid" when an invalid champion name is passed
         """
         if name == "":
             return name
         # Remove all illegal characters and whitespace
-        new_name = trim(name)
+        new_name = u.trim(name)
 
         # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
         if "nunu" in new_name:
@@ -294,7 +302,7 @@ class Connection:
         if self.is_valid_pick(pick):
             return pick
         else:
-            options: list[str] = parse_config(self.get_assigned_role())
+            options: list[str] = u.parse_config(self.get_assigned_role())
 
         i = 0
         is_valid = False
@@ -315,33 +323,33 @@ class Connection:
 
         champ = self.clean_name(champ)
         champid: int = self.get_champid(champ)
-        debugprint(f"Checking if {champ} is a valid pick...")
+        u.debugprint(f"Checking if {champ} is a valid pick...")
         error_msg: str = "Invalid pick:"
 
         # If champ is banned
         if self.is_banned(champid):
-            debugprint(error_msg, "banned")
+            u.debugprint(error_msg, "banned")
             return False
 
         # If user doesn't own the champ
         if champ not in self.owned_champs:
-            debugprint(error_msg, "unowned")
+            u.debugprint(error_msg, "unowned")
             return False
 
         # If a player has already PICKED the champ (hovering is ok)
         if champid in self.get_champ_pickids():
-            debugprint(error_msg, "already picked")
+            u.debugprint(error_msg, "already picked")
             return False
 
 
         # If the user got assigned a role other than the one they queued for, disregard the champ they picked...
         # UNLESS they didn't enter a role they wanted to play
         role_intent = self.get_assigned_role()
-        debugprint(f"Role choice: {self.user_role}, assigned role: {role_intent}\n")
+        u.debugprint(f"Role choice: {self.user_role}, assigned role: {role_intent}\n")
         if (len(role_intent) != 0
                 and (self.user_role != role_intent and self.user_role != "")
                 and (self.user_pick == champ and self.user_pick != "")):
-            debugprint(error_msg, "autofilled")
+            u.debugprint(error_msg, "autofilled")
             return False
 
         return True
@@ -354,22 +362,22 @@ class Connection:
 
         champid = self.get_champid(champ)
         champ = self.clean_name(champ)
-        debugprint(f"Checking if {champ} is a valid ban...")
+        u.debugprint(f"Checking if {champ} is a valid ban...")
         error_msg = "Invalid ban:"
 
         # If trying to ban the champ the user wants to play
         if champ == self.pick_intent:
-            debugprint(error_msg, f"user intends to play {champ}")
+            u.debugprint(error_msg, f"user intends to play {champ}")
             return False
 
         # If champ is already banned
         if self.is_banned(champid):
-            debugprint(error_msg, "already banned")
+            u.debugprint(error_msg, "already banned")
             return False
 
         # If a teammate is hovering the champ
         if self.teammate_hovering(champid):
-            debugprint(error_msg, "teammate hovering")
+            u.debugprint(error_msg, "teammate hovering")
             return False
 
         return True
@@ -383,7 +391,7 @@ class Connection:
             return ban
 
         # Look at the user's config to find out who to ban
-        options = parse_config(self.get_assigned_role(), False)
+        options = u.parse_config(self.get_assigned_role(), False)
 
         for ban in options:
             if self.is_valid_ban(ban):
@@ -406,7 +414,7 @@ class Connection:
         for pick, is_enemy, is_hovering in self.get_champids():
             if not is_enemy and is_hovering:
                 champids.append(pick)
-        debugprint(f"Current teammate hovers: {champids}")
+        u.debugprint(f"Current teammate hovers: {champids}")
         return champids
 
 
@@ -444,16 +452,16 @@ class Connection:
         """ Figure out which rune page to overwrite, and return its id. """
         # First, check if this script has already created a runepage
         all_pages: list[dict] = self.get_runepages()
-        debugprint("Checking for a rune page created by this script...")
+        u.debugprint("Checking for a rune page created by this script...")
         for page in all_pages:
             name: str = page["name"]
             prefix = self.RUNEPAGE_PREFIX
             if name[0:len(prefix)] == prefix:
-                debugprint(f"Runepage with id {page["id"]} was created by this script - overwriting...")
+                u.debugprint(f"Runepage with id {page["id"]} was created by this script - overwriting...")
                 return page["id"]
 
         # No pages have been created by this script - try to create a new one
-        debugprint("No runepage created by this script was found. Trying to create a new one...")
+        u.debugprint("No runepage created by this script was found. Trying to create a new one...")
         request_body = {
             "current": True,
             "isTemporary": False,
@@ -463,16 +471,17 @@ class Connection:
         response = self.api_post("runes", request_body)
         if response.status_code == 200:
             # Success - the runepage was created successfully. Now we return its id
-            debugprint(f"Success! Created a runepage with id {response.json()["id"]}")
+            u.debugprint(f"Success! Created a runepage with id {response.json()["id"]}")
             return response.json()["id"]
         elif response.status_code == 400:
             if response.json()["message"] == "Max pages reached":
                 # Full of rune pages - return the id of one to overwrite
-                debugprint(f"Couldn't create a new runepage - overwriting page named {all_pages[-1]["name"]}, " +
-                           f"with id {all_pages[-1]["id"]}")
+                u.debugprint(f"Couldn't create a new runepage - overwriting page named {all_pages[-1]["name"]}, " +
+                             f"with id {all_pages[-1]["id"]}")
                 return all_pages[-1]["id"]
             else:
                 raise RuntimeError("An unknown error occured while trying to create a runepage.")
+        return -1
 
 
     def send_runes_summs(self) -> None:
@@ -512,12 +521,12 @@ class Connection:
                 "subStyleId": recommended_runepage["secondaryPerkStyleId"]
             }
             response = self.api_put(endpoint, request_body)
-            debugprint(response)
+            u.debugprint(response)
             try:
                 if not (200 <= response.status_code <= 299):
-                    debugprint("Error code:", response.json())
+                    u.debugprint("Error code:", response.json())
             except Exception as e:
-                debugprint("An exception occured:", e)
+                u.debugprint("An exception occured:", e)
 
             # Make sure flash is always on F
             if summs[0] == 4:
@@ -607,8 +616,6 @@ class Connection:
                 request = requests.patch
             case "put":
                 request = requests.put
-            case _:
-                request = None
 
         # Send the request
         return request(url, headers=headers, json=data, verify=False)
@@ -621,12 +628,12 @@ class Connection:
     # --------------
     # Getter methods
     # --------------
-    def get_assigned_role(self) -> str | None:
+    def get_assigned_role(self) -> str:
         """ Get the name of the user's assigned role. """
         # Skip unecessary API calls
         if self.role_checked:
             return self.role_intent
-        role = None
+        role = ""
         my_team = self.session["myTeam"]
         my_id = self.get_summoner_id()
         for player in my_team:
@@ -694,7 +701,7 @@ class Connection:
 
         # If someone dodged, phase will be None, causing an error - return "skip" to handle this
         if phase is None:
-            debugprint("phase is None")
+            u.debugprint("phase is None")
             return "skip"
         return phase
 
@@ -704,15 +711,15 @@ class Connection:
 
         # Update pick intent
         if not self.has_picked:
-            debugprint("Updating pick intent...")
+            u.debugprint("Updating pick intent...")
             self.pick_intent = self.decide_pick()
-            debugprint(f"Pick intent: {self.pick_intent}\n")
+            u.debugprint(f"Pick intent: {self.pick_intent}\n")
 
         # Update ban intent
         if not self.has_banned:
-            debugprint("Updating pick intent...")
+            u.debugprint("Updating pick intent...")
             self.ban_intent = self.decide_ban()
-            debugprint(f"Ban intent: {self.ban_intent}\n")
+            u.debugprint(f"Ban intent: {self.ban_intent}\n")
 
 
     def update(self) -> None:
