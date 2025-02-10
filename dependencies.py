@@ -1,8 +1,10 @@
 import subprocess
 import sys
 import importlib
+from types import ModuleType
 
-def install_and_import(package):
+
+def install_and_import(package) -> ModuleType:
     try:
         # If the package is already installed, just return it
         return importlib.import_module(package)
@@ -19,4 +21,4 @@ def install_and_import(package):
         print(f"Successfully installed package \"{package}\"!")
         return module
     except Exception as e:
-        print(f"Error while installing {package}: {e}")
+        raise RuntimeError(f"Error while installing {package}: {e}")
