@@ -58,7 +58,7 @@ def parse_config(role: str, picking: bool = True) -> list[str]:
 
 
 def trim(string: str) -> str:
-    """ Remove whitespace and illegal characters from a string. """
+    """ Remove whitespace and illegal characters from a string, and convert it to lowercase. """
     illegal = [" ", "'", "."]
     new_string = ""
     for char in string:
