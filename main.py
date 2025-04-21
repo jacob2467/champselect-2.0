@@ -7,7 +7,7 @@ connection_initiated: bool = False
 in_game: bool = False
 should_print: bool = True
 last_gamestate: dict = {}
-champselect_loop: int = 0  # Keep track of how many loops run during champselect
+champselect_loop_iteration: int = 0  # Keep track of how many loops run during champselect
 RETRY_RATE: int = 10  # How many seconds to wait after a failed connection attempt
 UPDATE_INTERVAL: float = .1  # How many seconds to wait before re-running the main loop
 
@@ -52,7 +52,7 @@ while not in_game:
             case "ReadyCheck":
                 c.accept_match()
                 c.reset_after_dodge()
-                champselect_loop = 1
+                champselect_loop_iteration = 1
 
 
             case "ChampSelect":
@@ -63,9 +63,9 @@ while not in_game:
                 except KeyError:
                     phase = "skip"
 
-                champselect_loop += 1
+                champselect_loop_iteration += 1
                 if should_print:
-                    debugprint(f"\nChampselect loop # {champselect_loop}:")
+                    debugprint(f"\nChampselect loop # {champselect_loop_iteration}:")
                     debugprint("Champselect phase:", phase)
 
                 # Handle each champ select phase separately

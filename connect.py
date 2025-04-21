@@ -38,6 +38,7 @@ class Connection:
         self.ban_action: dict = {}
         self.pick_action: dict = {}
         self.all_actions: dict = {}
+        self.invalid_picks: list[int] = []
 
         # User intent and actual selections
         self.user_pick: str = ""  # the user's intended pick
@@ -162,6 +163,7 @@ class Connection:
         self.pick_intent = self.user_pick
         self.ban_intent = self.user_ban
         self.role_intent = self.user_role
+        self.invalid_picks = []
 
     def accept_match(self) -> None:
         """ Accept a match. """
@@ -254,13 +256,22 @@ class Connection:
         except Exception as e:
             u.debugprint("Failed to parse response as json, the response is empty.")
             u.debugprint("Error raised by response.json():", e)
-        # don't worry about it
-        if 200 <= response.status_code <= 299:
+
+        # If the request was successful
+        if response.status_code == 204:
             match mode:
                 case "ban":
                     self.has_banned = True
                 case "pick":
                     self.has_picked = True
+
+        # If unable to lock champ (is banned, etc.)
+        elif response.status_code == 500:
+            self.invalid_picks.append(champid)
+            # Note: This will break in custom game tournament drafts and in clash - the API returns an error code of
+            # 500 when you try to hover a champ during the ban phase, causing every champ the script tries to hover to
+            # be marked as invalid. However, this script is indended for normal draft modes, so it's calm.
+
         else:
             match mode:
                 case "ban":
@@ -326,6 +337,11 @@ class Connection:
         u.debugprint(f"Checking if {champ} is a valid pick...")
         error_msg: str = "Invalid pick:"
 
+        # If champ has already been checked, and was invalid
+        if champid in self.invalid_picks:
+            u.debugprint(error_msg, "in list of invalid champs")
+            return False
+
         # If champ is banned
         if self.is_banned(champid):
             u.debugprint(error_msg, "banned")
@@ -366,7 +382,7 @@ class Connection:
         error_msg = "Invalid ban:"
 
         # If trying to ban the champ the user wants to play
-        if champ == self.pick_intent:
+        if champ == self.pick_intent or champ == self.user_pick:
             u.debugprint(error_msg, f"user intends to play {champ}")
             return False
 
