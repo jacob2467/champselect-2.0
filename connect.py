@@ -267,10 +267,11 @@ class Connection:
 
         # If unable to lock champ (is banned, etc.)
         elif response.status_code == 500:
-            self.invalid_picks.append(champid)
-            # Note: This will break in custom game tournament drafts and in clash - the API returns an error code of
-            # 500 when you try to hover a champ during the ban phase, causing every champ the script tries to hover to
-            # be marked as invalid. However, this script is indended for normal draft modes, so it's calm.
+            if "banned" in str(response.json()).lower():
+                # Note: This will break in custom game tournament drafts and in clash - the API returns an error code of
+                # 500 when you try to hover a champ during the ban phase, causing every champ the script tries to hover to
+                # be marked as invalid. However, this script is indended for normal draft modes, so it's calm.
+                self.invalid_picks.append(champid)
 
         else:
             match mode:
