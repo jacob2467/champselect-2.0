@@ -1,4 +1,5 @@
 # These libraries are included with Python, and therefore don't require installation
+import time
 from base64 import b64encode
 import warnings
 import copy
@@ -28,6 +29,7 @@ class Connection:
         self.has_picked: bool = False
         self.role_checked: bool = False
         self.runes_chosen: bool = False
+        self.has_changed_runes: bool = False
 
         # Dictionaries of League Champions
         self.all_champs: dict = {}
@@ -96,7 +98,7 @@ class Connection:
         }
         self.endpoints.update(
             {"all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions-minimal"  # GET
-             }
+            }
         )
 
 
@@ -160,6 +162,7 @@ class Connection:
         self.has_banned = False
         self.runes_chosen = False
         self.role_checked = False
+        self.has_changed_runes = False
         self.pick_intent = self.user_pick
         self.ban_intent = self.user_ban
         self.role_intent = self.user_role
@@ -242,20 +245,17 @@ class Connection:
 
         # Hover the champ in case we're not already
         if mode != "hover":
-            api_method = self.api_post
             self.do_champ(champid=champid, mode="hover", actionid=actionid)
-            endpoint += "/complete"
-        else:  # mode == "hover"
-            api_method = self.api_patch
+            data["completed"] = True
 
         # Lock in the champ and print info
-        response = api_method(endpoint, data=data)
-        u.debugprint(response, "\n")
+        response = self.api_patch(endpoint, data=data)
+        u.debugprint(f"API Response: \n\t{response} \n")
         try:
-            u.debugprint("Success:", response.json())
+            u.debugprint("API Response as json:", response.json())
         except Exception as e:
-            u.debugprint("Failed to parse response as json, the response is empty.")
-            u.debugprint("Error raised by response.json():", e)
+            u.debugprint("\tFailed to parse response as json, the response is empty.")
+            u.debugprint("\tError raised by response.json():", e)
 
         # If the request was successful
         if response.status_code == 204:
@@ -268,9 +268,10 @@ class Connection:
         # If unable to lock champ (is banned, etc.)
         elif response.status_code == 500:
             if "banned" in str(response.json()).lower():
-                # Note: This will break in custom game tournament drafts and in clash - the API returns an error code of
-                # 500 when you try to hover a champ during the ban phase, causing every champ the script tries to hover to
-                # be marked as invalid. However, this script is indended for normal draft modes, so it's calm.
+                # Note: This will break in custom game tournament drafts and in clash - the API returns an error code
+                # of 500 when you try to hover a champ during the ban phase, causing every champ the script tries to
+                # hover to be marked as invalid. However, this script is indended for normal draft, so this shouldn't
+                # be a problem to begin with.
                 self.invalid_picks.append(champid)
 
         else:
@@ -510,7 +511,8 @@ class Connection:
         if len(self.get_assigned_role()) == 0:
             return
 
-        if not self.runes_chosen:
+        # TODO: Implement check for if user has changed runes since champselect start
+        if not self.runes_chosen and not self.has_changed_runes:
             # Get the runepage to be overwritten
             runepage_id: int = self.get_runepage_id()
             endpoint = self.endpoints["send_runes"] + str(runepage_id)
@@ -638,7 +640,10 @@ class Connection:
                 request = requests.put
 
         # Send the request
-        return request(url, headers=headers, json=data, verify=False)
+        u.debugprint(f"Making API call...\n\tEndpoint: {endpoint}")
+        result = request(url, headers=headers, json=data, verify=False)
+        u.debugprint(f"\tResult: {result}")
+        return result
 
 
     def get_session(self) -> dict:

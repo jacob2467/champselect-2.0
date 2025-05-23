@@ -9,7 +9,7 @@ should_print: bool = True
 last_gamestate: dict = {}
 champselect_loop_iteration: int = 0  # Keep track of how many loops run during champselect
 RETRY_RATE: int = 10  # How many seconds to wait after a failed connection attempt
-UPDATE_INTERVAL: float = .1  # How many seconds to wait before re-running the main loop
+UPDATE_INTERVAL: float = 1  # How many seconds to wait before re-running the main loop
 
 # Clear output file
 with open("output.log", "w") as file:
