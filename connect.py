@@ -54,7 +54,6 @@ class Connection:
         self.endpoints: dict = {}
         self.parse_lockfile()
         self.setup_endpoints()
-        self.populate_champ_table()
 
     # ----------------
     # Connection Setup

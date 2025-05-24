@@ -29,6 +29,7 @@ while not connection_initiated:
         # Client is still loading, try again until it finishes loading
         pass
 
+c.populate_champ_table()
 c.get_first_choices()
 while not in_game:
     time.sleep(UPDATE_INTERVAL)
@@ -45,9 +46,6 @@ while not in_game:
         match gamestate:
             case "Lobby":
                 c.start_queue()
-                # TODO: Remove these; only makes a difference for custom games, which I'm sometimes using to test
-                # c.reset_after_dodge()
-                # champselect_loop = 1
 
             case "ReadyCheck":
                 c.accept_match()
