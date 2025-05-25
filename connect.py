@@ -131,7 +131,8 @@ class Connection:
 
         self.user_ban = self.get_champ_name_input("Who would you like to ban?  ")
 
-        self.user_role = self.get_desired_role_input("What role would you like to play?  ")
+        # self.user_role = self.get_desired_role_input("What role would you like to play?  ")
+        # self.user_role = self.get_primary_role()
 
         self.should_change_runes = u.get_bool_input("Would you like the script to handle runes and summoner "
                                                     "spells automatically? y/n:  ")
@@ -140,6 +141,15 @@ class Connection:
         self.pick_intent = self.user_pick
         self.ban_intent = self.user_ban
         self.role_intent = self.user_role
+
+    def update_primary_role(self) -> None:
+        """ Get the primary role the user is queuing for as a string. """
+        try:
+            self.user_role = self.api_get("/lol-lobby/v2/lobby").json()["localMember"]["firstPositionPreference"].lower().trim()
+        except Exception as e:
+            warnings.warn(f"Unable to find player's role: {e}", RuntimeWarning)
+        print(self.user_role)
+        print(len(self.user_role))
 
     # ------
     # Lobby
@@ -385,6 +395,7 @@ class Connection:
 
     def is_valid_ban(self, champ: str) -> bool:
         """ Check if the given champion can be banned """
+        # TODO: Fix bug where champ is already banned
         # Handle empty input - allows user to skip selecting a champion and default to those in the config
         if champ == "":
             return False
@@ -653,7 +664,7 @@ class Connection:
         # Send the request
         u.debugprint(f"Making API call...\n\tEndpoint: {endpoint}")
         result = request(url, headers=headers, json=data, verify=False)
-        u.debugprint(f"\tResult: {result}")
+        u.debugprint(f"\tResult: {result}\n")
         return result
 
 
@@ -758,7 +769,7 @@ class Connection:
             u.debugprint(f"Ban intent: {self.ban_intent}\n")
 
 
-    def update(self) -> None:
+    def update_champselect(self) -> None:
         """ Update all champselect session data. """
         self.session = self.get_session()
         self.all_actions = self.session["actions"]

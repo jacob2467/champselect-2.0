@@ -115,8 +115,10 @@ def get_bool_input(prompt: str, default_answer: bool = False) -> bool:
         if response_str == "yes" or response_str == "no":
             response_str = response_str[0]
 
-        if response_str == "y":
-            response = True
+    if response_str == "y":
+        response = True
 
-        if response_str == "n":
-            response = False
+    if response_str == "n":
+        response = False
+
+    return response

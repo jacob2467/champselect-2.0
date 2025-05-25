@@ -52,6 +52,7 @@ while not in_game:
 
             case "ReadyCheck":
                 if updated_gamestate:
+                    c.update_role()
                     c.accept_match()
                     c.reset_after_dodge()
                     champselect_loop_iteration = 1
@@ -60,7 +61,7 @@ while not in_game:
             case "ChampSelect":
                 # Wrap in try block to catch KeyError when someone dodges - champselect actions don't exist anymore
                 try:
-                    c.update()
+                    c.update_champselect()
                     phase = c.get_champselect_phase()
                 except KeyError:
                     phase = "skip"
