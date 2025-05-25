@@ -533,7 +533,6 @@ class Connection:
         if len(self.get_assigned_role()) == 0:
             return
 
-        # TODO: Implement check for if user has changed runes since champselect start
         if not self.runes_chosen and self.should_change_runes:
             # Get the runepage to be overwritten
             runepage_id: int = self.get_runepage_id()
@@ -689,7 +688,7 @@ class Connection:
 
         # Fall back on user input role if playing a gamemode with no assigned roles (customs, etc)
         if len(role) == 0:
-            # debugprint("Unable to get assigned role. Falling back to user input...")
+            u.debugprint("Unable to get assigned role. Falling back to user input...")
             role = self.user_role
 
         self.role_intent = role

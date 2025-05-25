@@ -1,9 +1,12 @@
 import connect
 
 c = connect.Connection()
-result = c.api_get("/lol-lobby/v2/lobby")
 
-json = result.json()
+c.populate_champ_table()
+c.update_champselect()
+runes = c.get_recommended_runepage()
+
+print(runes)
 
 # local_summonerid = c.get_summoner_id()
 #

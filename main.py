@@ -37,13 +37,13 @@ while not in_game:
     try:
         gamestate = c.api_get("gamestate").json()
 
-        updated_gamestate: bool = True#gamestate != last_gamestate
+        # TODO: Fix this
+        updated_gamestate: bool = gamestate != last_gamestate
 
         # Print current gamestate if it's different from the last one
         if updated_gamestate:
             debugprint("Current gamestate:", gamestate)
             last_gamestate = gamestate
-
 
         match gamestate:
             case "Lobby":
@@ -52,7 +52,7 @@ while not in_game:
 
             case "ReadyCheck":
                 if updated_gamestate:
-                    c.update_role()
+                    c.update_primary_role()
                     c.accept_match()
                     c.reset_after_dodge()
                     champselect_loop_iteration = 1

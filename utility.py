@@ -1,6 +1,7 @@
 """ A collection of static utility methods. """
 import os
 import configparser
+import warnings
 from dataclasses import dataclass
 
 # Read config
@@ -40,11 +41,12 @@ def get_lockfile_path() -> str:
 
 
 def parse_config(role: str, picking: bool = True) -> list[str]:
-    """ Parse the user's config for backup champs and return it as a dictionary"""
-    if len(role) == 0:
-        raise RuntimeError("Unable to find an appropriate champion - no role was specified, " +
-                           "and the game didn't assign you a role.")
+    """ Parse the user's config for backup champs and return it as a list. """
     champs = []
+    if len(role) == 0:
+        warnings.warn(f"Unable to find backup champions - the user wasn't assigned a role", RuntimeWarning)
+        return champs
+
     if picking:
         config_section = "pick"
     else:
