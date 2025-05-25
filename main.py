@@ -52,7 +52,9 @@ while not in_game:
 
             case "ReadyCheck":
                 if updated_gamestate:
+                    debugprint(f"assigned role:{c.assigned_role}, intended role: {c.user_role}")
                     c.update_primary_role()
+                    debugprint(f"assigned role:{c.assigned_role}, intended role: {c.user_role}")
                     c.accept_match()
                     c.reset_after_dodge()
                     champselect_loop_iteration = 1

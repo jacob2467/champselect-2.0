@@ -48,7 +48,7 @@ class Connection:
         self.user_role: str = ""  # the user's intended role
         self.pick_intent: str = ""  # actual pick intent
         self.ban_intent: str = ""  # actual ban intent
-        self.role_intent: str = ""  # actual role intent
+        self.assigned_role: str = ""  # assigned role
 
         # Setup
         self.endpoints: dict = {}
@@ -140,12 +140,12 @@ class Connection:
         # Set intent to userinput (intent can change later if first choice is banned, etc.)
         self.pick_intent = self.user_pick
         self.ban_intent = self.user_ban
-        self.role_intent = self.user_role
+        self.assigned_role = self.user_role
 
     def update_primary_role(self) -> None:
         """ Get the primary role the user is queuing for as a string. """
         try:
-            self.user_role = self.api_get("/lol-lobby/v2/lobby").json()["localMember"]["firstPositionPreference"].lower().trim()
+            self.user_role = self.api_get("/lol-lobby/v2/lobby").json()["localMember"]["firstPositionPreference"].lower().strip()
         except Exception as e:
             warnings.warn(f"Unable to find player's role: {e}", RuntimeWarning)
         print(self.user_role)
@@ -170,7 +170,7 @@ class Connection:
         self.role_checked = False
         self.pick_intent = self.user_pick
         self.ban_intent = self.user_ban
-        self.role_intent = self.user_role
+        self.assigned_role = self.user_role
         self.invalid_picks = []
 
     def accept_match(self) -> None:
@@ -678,7 +678,7 @@ class Connection:
         """ Get the name of the user's assigned role. """
         # Skip unecessary API calls
         if self.role_checked:
-            return self.role_intent
+            return self.assigned_role
         role = ""
         my_team = self.session["myTeam"]
         my_id = self.get_summoner_id()
@@ -691,7 +691,7 @@ class Connection:
             u.debugprint("Unable to get assigned role. Falling back to user input...")
             role = self.user_role
 
-        self.role_intent = role
+        self.assigned_role = role
         return role
 
 
