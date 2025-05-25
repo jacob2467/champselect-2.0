@@ -99,6 +99,7 @@ def clean_role_name(prompt: str) -> str:
 
 def get_bool_input(prompt: str, default_answer: bool = False) -> bool:
     """ Get boolean input from the user. """
+    # TODO: Make this method less disgusting
     response_str: str = input(prompt)
     if response_str == "":
         return default_answer
