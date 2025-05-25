@@ -29,7 +29,7 @@ class Connection:
         self.has_picked: bool = False
         self.role_checked: bool = False
         self.runes_chosen: bool = False
-        self.has_changed_runes: bool = False
+        self.should_change_runes: bool = False
 
         # Dictionaries of League Champions
         self.all_champs: dict = {}
@@ -100,7 +100,6 @@ class Connection:
             }
         )
 
-
     def populate_champ_table(self) -> None:
         """ Get a list of all champions in the game and another of all that the player owns, and store them
         in a dictionary along with their id numbers.
@@ -124,20 +123,18 @@ class Connection:
         if error:
             self.all_champs = copy.deepcopy(owned_champs)
 
-
     def get_first_choices(self) -> None:
-        """ Get the user's first choice for picks and bans, as well as the role they're playing. """
-        self.user_pick = self.clean_name(input("Who would you like to play?  "))
-        while self.user_pick == "invalid":
-            self.user_pick = self.clean_name(input("Invalid champion name! Please try again:  "))
+        """ Get the user's first choice for picks and bans, as well as the role they're playing. Also ask them if
+         they'd like the script to handle their runes and summoner spells.
+         """
+        self.user_pick = self.get_champ_name_input("Who would you like to play?  ")
 
-        self.user_ban = self.clean_name(input("Who would you like to ban?  "))
-        while self.user_ban == "invalid":
-            self.user_ban = self.clean_name(input("Invalid champion name! Please try again:  "))
+        self.user_ban = self.get_champ_name_input("Who would you like to ban?  ")
 
-        self.user_role = u.clean_role_name(input("What role would you like to play?  "))
-        while self.user_role == "invalid":
-            self.user_role = u.clean_role_name(input("Invalid role name! Please try again:  "))
+        self.user_role = self.get_desired_role_input("What role would you like to play?  ")
+
+        self.should_change_runes = u.get_bool_input("Would you like the script to handle runes and summoner "
+                                                    "spells automatically? y/n:  ")
 
         # Set intent to userinput (intent can change later if first choice is banned, etc.)
         self.pick_intent = self.user_pick
@@ -155,13 +152,12 @@ class Connection:
 
 
     def reset_after_dodge(self) -> None:
-        """ Reset instance variables. """
+        """ Reset class instance variables after someone dodges a lobby. """
         self.started_queue = False
         self.has_picked = False
         self.has_banned = False
         self.runes_chosen = False
         self.role_checked = False
-        self.has_changed_runes = False
         self.pick_intent = self.user_pick
         self.ban_intent = self.user_ban
         self.role_intent = self.user_role
@@ -270,7 +266,7 @@ class Connection:
                 # Note: This will break in custom game tournament drafts and in clash - the API returns an error code
                 # of 500 when you try to hover a champ during the ban phase, causing every champ the script tries to
                 # hover to be marked as invalid. However, this script is indended for normal draft, so this shouldn't
-                # be a problem to begin with.
+                # be a problem to begin with, but I still felt it was worth noting.
                 self.invalid_picks.append(champid)
 
         else:
@@ -291,21 +287,37 @@ class Connection:
         if name == "":
             return name
         # Remove all illegal characters and whitespace
-        new_name = u.trim(name)
+        name = u.trim(name)
 
         # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
-        if "nunu" in new_name:
+        if "nunu" in name:
             return "nunu"
-        elif new_name == "wukong":
+        elif name == "wukong":
             return "monkeyking"
 
         # Filter out invalid resulting names
         if should_filter:
-            if new_name in self.all_champs:
-                return new_name
+            if name in self.all_champs:
+                return name
             else:
                 return "invalid"
-        return new_name
+        return name
+
+    def get_champ_name_input(self, prompt: str) -> str:
+        """ Get user input for the name of a champion. """
+        name: str = self.clean_name(input(prompt))
+        while name == "invalid":
+            name = self.clean_name(input("Invalid champion name! Please try again:  "))
+
+        return name
+
+    def get_desired_role_input(self, prompt: str) -> str:
+        """ Get user input for their desired role. """
+        role: str = u.clean_role_name(prompt)
+        while role == "invalid":
+            role = self.clean_name("Invalid role name! Please try again:  ")
+
+        return role
 
 
     def decide_pick(self) -> str:
@@ -361,10 +373,10 @@ class Connection:
 
         # If the user got assigned a role other than the one they queued for, disregard the champ they picked...
         # UNLESS they didn't enter a role they wanted to play
-        role_intent = self.get_assigned_role()
-        u.debugprint(f"Role choice: {self.user_role}, assigned role: {role_intent}\n")
-        if (len(role_intent) != 0
-                and (self.user_role != role_intent and self.user_role != "")
+        assigned_role = self.get_assigned_role()
+        u.debugprint(f"Role choice: {self.user_role}, assigned role: {assigned_role}\n")
+        if (len(assigned_role) != 0
+                and (self.user_role != assigned_role and self.user_role != "")
                 and (self.user_pick == champ and self.user_pick != "")):
             u.debugprint(error_msg, "autofilled")
             return False
@@ -459,7 +471,7 @@ class Connection:
     def get_runepages(self) -> list[dict]:
         """ Get the runepages the player currently has set. """
         response = self.api_get("runes")
-        print(response)
+        u.debugprint(response)
         if 200 <= response.status_code <= 299:
             return response.json()
         else:
@@ -511,7 +523,7 @@ class Connection:
             return
 
         # TODO: Implement check for if user has changed runes since champselect start
-        if not self.runes_chosen and not self.has_changed_runes:
+        if not self.runes_chosen and self.should_change_runes:
             # Get the runepage to be overwritten
             runepage_id: int = self.get_runepage_id()
             endpoint = self.endpoints["send_runes"] + str(runepage_id)

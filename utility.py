@@ -77,12 +77,13 @@ def debugprint(*args: object) -> None:
         file.write(temp + "\n")
 
 
-def clean_role_name(name: str) -> str:
+def clean_role_name(prompt: str) -> str:
     """ Convert various role naming conventions to the format used by the game. Example output:
     mid -> middle
     supp -> utility
     jg -> jungle
     """
+    name: str = input(prompt)
     if name == "":
         return name
     # Remove all illegal characters and whitespace
@@ -94,3 +95,27 @@ def clean_role_name(name: str) -> str:
             return role[0]
 
     return "invalid"
+
+
+def get_bool_input(prompt: str, default_answer: bool = False) -> bool:
+    """ Get boolean input from the user. """
+    response_str: str = input(prompt)
+    if response_str == "":
+        return default_answer
+
+    response_str = response_str.lower()
+
+    if response_str == "yes" or response_str == "no":
+        response_str = response_str[0]
+
+    while response_str != "y" and response_str != "n":
+        response_str = input("Invalid input! Please type y or n:  ").lower()
+
+        if response_str == "yes" or response_str == "no":
+            response_str = response_str[0]
+
+        if response_str == "y":
+            response = True
+
+        if response_str == "n":
+            response = False
