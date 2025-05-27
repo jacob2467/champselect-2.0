@@ -29,7 +29,7 @@ def get_lockfile_path() -> str:
         dir = config_dir
     else:  # Use default filepaths
         osx = "/Applications/League of Legends.app/Contents/LoL/lockfile"
-        windows = "C:/Riot Games/League of Legends/lockfile"
+        windows = "C:\\Riot Games\\League of Legends\\lockfile"
         # league can't be played on linux anymore because rito
 
         match os.name:
@@ -49,11 +49,12 @@ def parse_config(role: str, picking: bool = True) -> list[str]:
         return champs
 
     section_name: str = "pick" if picking else "ban"
-    section_name += "_" + role
+    section_name += f"_{role}"
 
     option_index: int = 1
     config_section = config[section_name]
     champ_name: str = config_section.get(str(option_index), "none")
+
     while champ_name != "none":
         champs.append(champ_name)
         option_index += 1
@@ -72,7 +73,7 @@ def trim(string: str) -> str:
 
 
 def print_and_write(*args: object, **kwargs) -> None:
-    """ Print the input, and save it to a log file. """
+    """ Print the input and save it to a log file. """
     text: str = " ".join(str(arg) for arg in args)
 
     should_print: bool = kwargs.get("should_print", True)
@@ -94,12 +95,12 @@ def clean_role_name(prompt: str) -> str:
     if name == "":
         return name
     # Remove all illegal characters and whitespace
-    new_name = trim(name)
+    clean_name = trim(name)
 
     roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"],
              ["bottom", "bot", "adc", "adcarry", "b"], ["utility", "support", "sup", "supp"]]
     for role in roles:
-        if new_name in role:
+        if clean_name in role:
             return role[0]
 
     return "invalid"
@@ -111,12 +112,15 @@ def get_bool_input(prompt: str, default_answer: bool = False) -> bool:
     while response_str not in ("y", "n"):
         response_str = input(prompt).lower()
 
+        # Return default answer if user didn't answer
         if response_str == "":
             return default_answer
 
+        # Normalize "yes" to "y", "no" to "n"
         if response_str in ("yes", "no"):
             response_str = response_str[0]
 
+        # Change prompt after first loop
         prompt = "Invalid input! Please type y or n:  "
 
     # After the while loop, response_str is guaranteed to either be "y" or "n"
