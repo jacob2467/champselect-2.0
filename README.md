@@ -13,7 +13,7 @@ The script is _intended_ to be used only normal draft and ranked. However, it ca
 
 # Limitations
 1. Breaks in tournament draft
-2. Not guaranteed to work for non-draft modes or custom games (as of the time of writing, it works for other gamemodes, but that could change)
+2. Not guaranteed to work for non-draft modes or custom games (as of the time of writing, 5/27/25, it works for other gamemodes, but that could change)
 3. No GUI
 4. Runes are pulled directly from the client, so they're usually not very good
 
