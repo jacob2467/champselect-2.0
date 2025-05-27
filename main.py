@@ -6,7 +6,7 @@ from utility import *
 connection_initiated: bool = False
 in_game: bool = False
 should_print: bool = True
-last_gamestate: dict = {}
+last_gamestate: dict = {}  #
 champselect_loop_iteration: int = 0  # Keep track of how many loops run during champselect
 RETRY_RATE: int = 10  # How many seconds to wait after a failed connection attempt
 UPDATE_INTERVAL: float = 1  # How many seconds to wait before re-running the main loop
@@ -37,28 +37,26 @@ while not in_game:
     try:
         gamestate = c.api_get("gamestate").json()
 
-        # TODO: Fix this
-        updated_gamestate: bool = gamestate != last_gamestate
+        gamestate_has_changed: bool = gamestate != last_gamestate
 
         # Print current gamestate if it's different from the last one
-        if updated_gamestate:
+        if gamestate_has_changed:
             debugprint("Current gamestate:", gamestate)
             last_gamestate = gamestate
 
         match gamestate:
             case "Lobby":
-                if updated_gamestate:
+                if gamestate_has_changed:
                     c.start_queue()
 
             case "ReadyCheck":
-                if updated_gamestate:
+                if gamestate_has_changed:
                     debugprint(f"assigned role:{c.assigned_role}, intended role: {c.user_role}")
                     c.update_primary_role()
                     debugprint(f"assigned role:{c.assigned_role}, intended role: {c.user_role}")
                     c.accept_match()
                     c.reset_after_dodge()
                     champselect_loop_iteration = 1
-
 
             case "ChampSelect":
                 # Wrap in try block to catch KeyError when someone dodges - champselect actions don't exist anymore

@@ -13,7 +13,8 @@ class Connection:
     BRYAN_SUMMONERID: int = 2742039436911744
 
     def __init__(self):
-        self.l: u.Lockfile = u.Lockfile()
+        # Info stored in lockfile
+        self.lockfile = u.Lockfile()
 
         # Flags
         self.started_queue: bool = False
@@ -55,7 +56,7 @@ class Connection:
     # ----------------
     def parse_lockfile(self) -> None:
         """ Parse the user's lockfile into a dictionary. """
-        l: u.Lockfile = self.l
+        l: u.Lockfile = self.lockfile
         path: str = u.get_lockfile_path()
         try:
             with open(path) as f:
@@ -484,7 +485,6 @@ class Connection:
     def get_runepages(self) -> list[dict]:
         """ Get the runepages the player currently has set. """
         response = self.api_get("runes")
-        print(f"get_runepages() response: {response}")
         if 200 <= response.status_code <= 299:
             return response.json()
         else:
@@ -714,7 +714,7 @@ class Connection:
 
     def get_request_url(self, endpoint: str) -> tuple[str, dict[str, str]]:
         """ Get the url to send http reqeusts to, and header data to send with it. """
-        l = self.l
+        l = self.lockfile
         https_auth = f"Basic {b64encode(f"riot:{l.password}".encode()).decode()}"
         headers = {
             "Authorization": https_auth,

@@ -30,6 +30,7 @@ def get_lockfile_path() -> str:
     else:  # Use default filepaths
         osx = "/Applications/League of Legends.app/Contents/LoL/lockfile"
         windows = "C:/Riot Games/League of Legends/lockfile"
+        # league can't be played on linux anymore because rito
 
         match os.name:
             case "nt":
@@ -48,14 +49,19 @@ def parse_config(role: str, picking: bool = True) -> list[str]:
         return champs
 
     if picking:
-        config_section = "pick"
+        section_name: str = "pick"
     else:
-        config_section = "ban"
+        section_name: str = "ban"
 
-    config_section += "_" + role
+    section_name += "_" + role
 
-    for i in range(5):
-        champs.append(config.get(config_section, str(i + 1)))
+    option_index: int = 1
+    config_section = config[section_name]
+    champ_name: str = config_section.get(str(option_index), "none")
+    while champ_name != "none":
+        champs.append(champ_name)
+        option_index += 1
+        champ_name = config_section.get(str(option_index), "none")
     return champs
 
 
@@ -91,7 +97,7 @@ def clean_role_name(prompt: str) -> str:
     # Remove all illegal characters and whitespace
     new_name = trim(name)
 
-    roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"], ["bottom", "bot", "adc", "adcarry", "b"], ["utility", "support", "sup", "supp", "faggot", "fag"]]
+    roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"], ["bottom", "bot", "adc", "adcarry", "b"], ["utility", "support", "sup", "supp"]]
     for role in roles:
         if new_name in role:
             return role[0]
