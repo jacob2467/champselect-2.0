@@ -6,7 +6,7 @@ from utility import *
 connection_initiated: bool = False
 in_game: bool = False
 should_print: bool = True
-last_gamestate: dict = {}  #
+last_gamestate: str = ""  # last gamestate - used to skip unnecessary API calls
 champselect_loop_iteration: int = 0  # Keep track of how many loops run during champselect
 RETRY_RATE: int = 10  # How many seconds to wait after a failed connection attempt
 UPDATE_INTERVAL: float = 1  # How many seconds to wait before re-running the main loop
@@ -22,7 +22,7 @@ while not connection_initiated:
         connection_initiated = True
     # If the connection isn't successful or the lockfile doesn't exist, the client isn't open yet
     except (requests.exceptions.ConnectionError, FileNotFoundError) as e:
-        debugprint(f"Failed to connect to the league client - is it open? Retrying in {RETRY_RATE} seconds...")
+        print_and_write(f"Failed to connect to the league client - is it open? Retrying in {RETRY_RATE} seconds...")
         time.sleep(RETRY_RATE)
 
     except KeyError as e:
@@ -35,25 +35,26 @@ while not in_game:
     time.sleep(UPDATE_INTERVAL)
     # Wrap the loop in a try block to catch errors when the client closes
     try:
-        gamestate = c.api_get("gamestate").json()
-
+        gamestate: str = c.api_get("gamestate").json()
         gamestate_has_changed: bool = gamestate != last_gamestate
 
         # Print current gamestate if it's different from the last one
         if gamestate_has_changed:
-            debugprint("Current gamestate:", gamestate)
+            print_and_write(f"\nCurrent gamestate: {gamestate}")
             last_gamestate = gamestate
 
-        match gamestate:
+        # Pycharm was complaining about this match statment for no reason, and this... somehow fixes it.
+        # https://youtrack.jetbrains.com/issue/PY-80762/match-statement-giving-false-positive-on-unreachable-code-inspection
+        _gamestate = [gamestate]
+        match _gamestate[0]:
             case "Lobby":
                 if gamestate_has_changed:
                     c.start_queue()
 
             case "ReadyCheck":
                 if gamestate_has_changed:
-                    debugprint(f"assigned role:{c.assigned_role}, intended role: {c.user_role}")
+                    print_and_write(f"Assigned role:{c.assigned_role}, intended role: {c.user_role}")
                     c.update_primary_role()
-                    debugprint(f"assigned role:{c.assigned_role}, intended role: {c.user_role}")
                     c.accept_match()
                     c.reset_after_dodge()
                     champselect_loop_iteration = 1
@@ -68,8 +69,8 @@ while not in_game:
 
                 champselect_loop_iteration += 1
                 if should_print:
-                    debugprint(f"\nChampselect loop # {champselect_loop_iteration}:")
-                    debugprint("Champselect phase:", phase)
+                    print_and_write(f"\nChampselect loop #{champselect_loop_iteration}:")
+                    print_and_write("\tChampselect phase:", phase)
 
                 # Handle each champ select phase separately
                 match phase:
@@ -91,5 +92,5 @@ while not in_game:
             case default:
                 pass
     except requests.exceptions.ConnectionError:
-        debugprint("Connection error. Did you close the league client?")
+        print_and_write("Connection error. Did you close the league client?")
         c.parse_lockfile()

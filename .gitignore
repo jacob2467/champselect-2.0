@@ -30,7 +30,6 @@ bin/
 .DS_Store
 
 ### Misc. ###
-config.ini
 *.xml
 *.iml
 .DS_Store

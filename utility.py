@@ -43,16 +43,12 @@ def get_lockfile_path() -> str:
 
 def parse_config(role: str, picking: bool = True) -> list[str]:
     """ Parse the user's config for backup champs and return it as a list. """
-    champs = []
+    champs: list[str] = []
     if len(role) == 0:
         warnings.warn(f"Unable to find backup champions - the user wasn't assigned a role", RuntimeWarning)
         return champs
 
-    if picking:
-        section_name: str = "pick"
-    else:
-        section_name: str = "ban"
-
+    section_name: str = "pick" if picking else "ban"
     section_name += "_" + role
 
     option_index: int = 1
@@ -75,14 +71,17 @@ def trim(string: str) -> str:
     return new_string
 
 
-def debugprint(*args: object) -> None:
+def print_and_write(*args: object, **kwargs) -> None:
     """ Print the input, and save it to a log file. """
-    temp: str = ""
-    for arg in args:
-        temp += str(arg) + " "
-    print(temp)
+    text: str = " ".join(str(arg) for arg in args)
+
+    should_print: bool = kwargs.get("should_print", True)
+
+    if should_print:
+        print(text)
+
     with open("output.log", "a") as file:
-        file.write(temp + "\n")
+        file.write(text + "\n")
 
 
 def clean_role_name(prompt: str) -> str:
@@ -97,7 +96,8 @@ def clean_role_name(prompt: str) -> str:
     # Remove all illegal characters and whitespace
     new_name = trim(name)
 
-    roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"], ["bottom", "bot", "adc", "adcarry", "b"], ["utility", "support", "sup", "supp"]]
+    roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"],
+             ["bottom", "bot", "adc", "adcarry", "b"], ["utility", "support", "sup", "supp"]]
     for role in roles:
         if new_name in role:
             return role[0]
@@ -107,26 +107,23 @@ def clean_role_name(prompt: str) -> str:
 
 def get_bool_input(prompt: str, default_answer: bool = False) -> bool:
     """ Get boolean input from the user. """
-    # TODO: Make this method less disgusting
-    response_str: str = input(prompt)
-    if response_str == "":
-        return default_answer
+    response_str: str = ""
+    while response_str not in ("y", "n"):
+        response_str = input(prompt).lower()
 
-    response_str = response_str.lower()
+        if response_str == "":
+            return default_answer
 
-    if response_str == "yes" or response_str == "no":
-        response_str = response_str[0]
-
-    while response_str != "y" and response_str != "n":
-        response_str = input("Invalid input! Please type y or n:  ").lower()
-
-        if response_str == "yes" or response_str == "no":
+        if response_str in ("yes", "no"):
             response_str = response_str[0]
 
-    if response_str == "y":
-        response = True
+        prompt = "Invalid input! Please type y or n:  "
 
-    if response_str == "n":
-        response = False
+    # After the while loop, response_str is guaranteed to either be "y" or "n"
+    return response_str == "y"
 
-    return response
+def custom_formatwarning(message, category, *_):
+    """ Create and return a custom warning format, containing only the warning message. """
+    formatted_msg: str = f"\tWarning: {message}\n"
+    print_and_write(formatted_msg, should_print=False)  # don't print the error here because it will be printed anyways
+    return formatted_msg
