@@ -15,7 +15,7 @@ The script is _intended_ to be used only normal draft and ranked. However, it ca
 1. Breaks in tournament draft
 2. Not guaranteed to work for non-draft modes or custom games (as of the time of writing, 5/27/25, it works for other gamemodes, but that could change)
 3. No GUI
-4. Runes are pulled directly from the client, so they're usually not very good
+4. Runes are pulled directly from the client ~~so they're usually not very good~~
 
 # Goals for the project
 Because drafting in champselect is an important part of the game, I don't necessarily encourage the use of this project, especially for ranked. I mostly made it because I thought it would be fun, a good learning experience, and occasionally useful.
