@@ -1,15 +1,17 @@
 import connect
 import requests
 import time
-from utility import *
+import utility as u
 
 connection_initiated: bool = False
 in_game: bool = False
 should_print: bool = True
 last_gamestate: str = ""  # last gamestate - used to skip unnecessary API calls
 champselect_loop_iteration: int = 0  # Keep track of how many loops run during champselect
-RETRY_RATE: int = 10  # How many seconds to wait after a failed connection attempt
-UPDATE_INTERVAL: float = 1  # How many seconds to wait before re-running the main loop
+# How many seconds to wait after a failed connection attempt
+RETRY_RATE: float = float(u.get_config_option("settings", "retry_rate"))
+# How many seconds to wait before re-running the main loop
+UPDATE_INTERVAL: float = float(u.get_config_option("settings", "update_interval"))
 
 # Clear output file
 with open("output.log", "w") as file:
@@ -22,7 +24,7 @@ while not connection_initiated:
         connection_initiated = True
     # If the connection isn't successful or the lockfile doesn't exist, the client isn't open yet
     except (requests.exceptions.ConnectionError, FileNotFoundError) as e:
-        print_and_write(f"Failed to connect to the league client - is it open? Retrying in {RETRY_RATE} seconds...")
+        u.print_and_write(f"Failed to connect to the league client - is it open? Retrying in {RETRY_RATE} seconds...")
         time.sleep(RETRY_RATE)
 
     except KeyError as e:
@@ -40,7 +42,7 @@ while not in_game:
 
         # Print current gamestate if it's different from the last one
         if gamestate_has_changed:
-            print_and_write(f"\nCurrent gamestate: {gamestate}")
+            u.print_and_write(f"\nCurrent gamestate: {gamestate}")
             last_gamestate = gamestate
 
         # Pycharm was complaining about this match statment for no reason, and this... somehow fixes it.
@@ -50,10 +52,10 @@ while not in_game:
             case "Lobby":
                 if gamestate_has_changed:
                     c.start_queue()
+                    c.reset_after_dodge()  # for testing the script in custom games, unnecessary for real games
 
             case "ReadyCheck":
                 if gamestate_has_changed:
-                    print_and_write(f"Assigned role:{c.assigned_role}, intended role: {c.user_role}")
                     c.update_primary_role()
                     c.accept_match()
                     c.reset_after_dodge()
@@ -69,8 +71,8 @@ while not in_game:
 
                 champselect_loop_iteration += 1
                 if should_print:
-                    print_and_write(f"\nChampselect loop #{champselect_loop_iteration}:")
-                    print_and_write("\tChampselect phase:", phase)
+                    u.print_and_write(f"\nChampselect loop #{champselect_loop_iteration}:")
+                    u.print_and_write("\tChampselect phase:", phase)
 
                 # Handle each champ select phase separately
                 match phase:
@@ -92,5 +94,5 @@ while not in_game:
             case default:
                 pass
     except requests.exceptions.ConnectionError:
-        print_and_write("Connection error. Did you close the league client?")
+        u.print_and_write("Connection error. Did you close the league client?")
         c.parse_lockfile()

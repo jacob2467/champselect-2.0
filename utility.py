@@ -4,13 +4,15 @@ import configparser
 import warnings
 from dataclasses import dataclass
 
+config_name = "config.ini"
+
 # Read config
 config = configparser.ConfigParser()
-config_contents = config.read("config.ini")
+config_contents = config.read(config_name)
 
 # Check for empty/missing config
 if not config_contents:
-    raise RuntimeError("Unable to parse config.ini - does it exist?")
+    raise RuntimeError(f"Unable to parse {config_name} - does it exist?")
 
 @dataclass
 class Lockfile:
@@ -20,9 +22,23 @@ class Lockfile:
     protocol: str = "https"
 
 
+def get_config_option(section: str, option: str) -> str:
+    """ Get and return the value of a config option from the config file. """
+    try:
+        value: str = config.get(section, option)
+        return value
+
+    except configparser.NoSectionError as e:
+        raise RuntimeError(f"Invalid config section '{section}': {e}")
+    except configparser.NoOptionError as e:
+        raise RuntimeError(f"Invalid config option '{option}': {e}")
+
+    except Exception as e:
+        raise RuntimeError(f"An unknown error occurred while reading {config_name}: {e}")
+
 def get_lockfile_path() -> str:
     """ Get the path to the user's lockfile. """
-    config_dir = config.get("league_directory", "directory")
+    config_dir = get_config_option("settings", "directory")
 
     # Use directory specified in config if it exists
     if config_dir != "":

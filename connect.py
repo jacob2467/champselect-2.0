@@ -1,8 +1,11 @@
+import time
 from base64 import b64encode
 import warnings
 import utility as u
 import requests
 from urllib3.exceptions import InsecureRequestWarning
+
+from utility import print_and_write
 
 # Configure warnings
 warnings.formatwarning = u.custom_formatwarning
@@ -16,6 +19,9 @@ class Connection:
     def __init__(self):
         # Info stored in lockfile
         self.lockfile = u.Lockfile()
+
+        # How many seconds to wait before locking in the champ
+        self.lock_in_delay: float = float(u.get_config_option("settings", "lock_in_delay"))
 
         # Flags
         self.started_queue: bool = False
@@ -50,7 +56,7 @@ class Connection:
         self.setup_endpoints()
 
         # Check for Bryan
-        self.user_is_bryan: bool = self.get_summoner_id() == self.BRYAN_SUMMONERID
+        self.is_bryan: bool = self.get_summoner_id() == self.BRYAN_SUMMONERID
 
     # ----------------
     # Connection Setup
@@ -141,7 +147,7 @@ class Connection:
             local_player_data: dict = self.api_get("lobby").json()["localMember"]
             self.user_role = local_player_data["firstPositionPreference"].strip().lower()
         except Exception as e:
-            warnings.warn(f"Unable to find player's role: {e}", RuntimeWarning)
+            warnings.warn(f"Unable to find player's role. Error raised: {e}", RuntimeWarning)
 
     # ------
     # Lobby
@@ -245,6 +251,9 @@ class Connection:
         if mode != "hover":
             self.do_champ(champid=champid, mode="hover", actionid=actionid)
             data["completed"] = True
+            tmp_mode: str = "banning" if mode == "ban" else mode + "ing"
+            u.print_and_write(f"\nWaiting {self.lock_in_delay} seconds before {tmp_mode}...\n")
+            time.sleep(self.lock_in_delay)
 
         # Lock in the champ and print info
         response = self.api_patch(endpoint, data=data)
@@ -320,7 +329,7 @@ class Connection:
     def decide_pick(self) -> str:
         """ Decide what champ the user should play. """
         # Make sure Bryan plays his favorite champ
-        if self.user_is_bryan:
+        if self.is_bryan:
             return "yuumi"
 
         # First check current pick intent
@@ -417,7 +426,7 @@ class Connection:
     def decide_ban(self) -> str:
         """ Decide what champ the user should ban. """
         # Make sure Bryan bans his least favorite champ
-        if self.user_is_bryan:
+        if self.is_bryan:
             return "kayn"
 
         # First check current ban intent
@@ -480,22 +489,31 @@ class Connection:
     def get_runepages(self) -> list[dict]:
         """ Get the runepages the player currently has set. """
         response = self.api_get("runes")
-        if 200 <= response.status_code <= 299:
+        if 200 <= response.status_code <= 299:  # TODO: Find out the actual response code for this...
             return response.json()
         else:
             raise RuntimeError("Unable to get runepages.")
 
-    def get_runepage_id(self) -> int:
-        """ Figure out which rune page to overwrite, and return its id. """
+    def get_runepage(self) -> tuple[dict, bool]:
+        """
+        Figure out which rune page to overwrite or use, and return its contents
+        Returns:
+            tuple[int, bool]: the rune page data (dictionary), and a bool indicating whether it should be overwritten
+                (True) or used as-is (False)
+        """
         # First, check if this script has already created a runepage
         all_pages: list[dict] = self.get_runepages()
-        u.print_and_write("Checking for a rune page created by this script...")
         for page in all_pages:
-            name: str = page["name"]
+            page_name: str = page["name"]
             prefix = self.RUNEPAGE_PREFIX
-            if name[0:len(prefix)] == prefix:
-                u.print_and_write(f"Runepage with id {page["id"]} was created by this script - overwriting...")
-                return page["id"]
+            # If rune page with champ name is found
+            if self.pick_intent in self.clean_name(page_name, False):
+                u.print_and_write(f"Runepage '{page_name}' has '{self.pick_intent}' in it. Using this runepage...")
+                return page, False
+            # If rune page with this script's naming scheme is found
+            if page_name[0:len(prefix)] == prefix:
+                u.print_and_write(f"Runepage '{page_name}' was created by this script - overwriting...")
+                return page, True
 
         # No pages have been created by this script - try to create a new one
         u.print_and_write("No runepage created by this script was found. Trying to create a new one...")
@@ -507,9 +525,9 @@ class Connection:
         }
         response = self.api_post("runes", request_body)
         if response.status_code == 200:
-            # Success - the runepage was created successfully. Now we return its id
+            # Success - the runepage was created successfully. Now we return its data
             u.print_and_write(f"Success! Created a runepage with id {response.json()["id"]}")
-            return response.json()["id"]
+            return response.json(), True
         
         # No empty rune page slots
         elif response.status_code == 400:
@@ -519,67 +537,70 @@ class Connection:
             # Full of rune pages - return the id of one to overwrite
             u.print_and_write(f"Couldn't create a new runepage - overwriting page named {all_pages[-1]["name"]}, " +
                          f"with id {all_pages[-1]["id"]}")
-            return all_pages[-1]["id"]
-        
-        raise RuntimeError("This error exists to make MyPy happy, and should never be raised. If you're seeing this, "
-                           f"there's a bug in my code! HTTP response:\n{response.json()["message"]}")
+            return all_pages[-1], True
 
     def send_runes_summs(self) -> None:
-        """ Get the recommended rune page and summoner spells, and send them to the client. """
-        # Can't send runes if playing a mode that doesn't have assigned roles
-        if len(self.get_assigned_role()) == 0:
-            return
+        """ Get the recommended rune page and summoner spells and send them to the client,
+        if the user has opted in to this feature. """
+        # Get assigned role
+        role_name: str = self.get_assigned_role()
+        # Use mid as a temp role to get runes if the user doesn't have an assigned role
+        if len(role_name) == 0:
+            role_name: str = "middle"
 
         if not self.runes_chosen and self.should_change_runes:
-            # Get the runepage to be overwritten
-            runepage_id: int = self.get_runepage_id()
-            endpoint = self.endpoints["send_runes"] + str(runepage_id)
+            # Get the runepage to use
+            current_runepage, should_overwrite = self.get_runepage()
+            endpoint = self.endpoints["send_runes"] + str(current_runepage["id"])
 
             # Get recommended runes and summs
-            recommended_runepage: dict = self.get_recommended_runepage()[0]
-            runes = recommended_runepage["perks"]
+            recommended_runepage: dict = self.get_recommended_runepage(role_name)[0]
+
+            if should_overwrite:
+                # Set the name for the rune page
+                if role_name == "utility":
+                    role_name = "support"
+                name = f"{self.RUNEPAGE_PREFIX} {self.pick_intent} {role_name} {self.get_assigned_role()} runes"
+                runes = recommended_runepage["perks"]
+                request_body: dict = {
+                    "current": True,
+                    "isTemporary": False,
+                    "id": current_runepage["id"],
+                    "order": 0,
+                    "name": name,
+                    "primaryStyleId": recommended_runepage["primaryPerkStyleId"],
+                    "selectedPerkIds": [rune["id"] for rune in runes],
+                    "subStyleId": recommended_runepage["secondaryPerkStyleId"]
+                }
+
+            else:  # use existing rune page
+                request_body = current_runepage
+
             summs = recommended_runepage["summonerSpellIds"]
 
-            # Set the name for the rune page
-            role: str = self.pick_intent
-            if role == "utility":
-                role = "support"
-            name = f"{self.RUNEPAGE_PREFIX} {role} {self.get_assigned_role()} runes"
-
-            # Send runes
-            request_body = {
-                "current": True,
-                "isTemporary": False,
-                "name": name,
-                "id": runepage_id,
-                "order": 0,
-                "primaryStyleId": recommended_runepage["primaryPerkStyleId"],
-                "selectedPerkIds": [rune["id"] for rune in runes],
-                "subStyleId": recommended_runepage["secondaryPerkStyleId"]
-            }
             response = self.api_put(endpoint, request_body)
             try:
-                if not (200 <= response.status_code <= 299):
+                if response.status_code == 400:
                     u.print_and_write("Error code:", response.json())
             except Exception as e:
                 u.print_and_write("An exception occured:", e)
 
             # Make sure flash is always on F
             if summs[0] == 4:
-                summs[0] = summs[1]
-                summs[1] = 4
+                summs[0], summs[1] = summs[1], 4
 
             # TODO: Make sure Bryan always takes ghost/cleanse (he needs it)
-            # if self.user_is_bryan:
+            # if self.is_bryan:
             #     pass
 
             # Send summs
-            request_body = {
-                "spell1Id": summs[0],
-                "spell2Id": summs[1]
-            }
-            self.api_patch("send_summs", request_body)
-            self.runes_chosen = True
+            if self.should_change_runes:
+                request_body = {
+                    "spell1Id": summs[0],
+                    "spell2Id": summs[1]
+                }
+                self.api_patch("send_summs", request_body)
+                self.runes_chosen = True
 
     def get_banned_champids(self) -> list[int]:
         """ Get a list of all champion ids that have been banned. """
@@ -688,7 +709,7 @@ class Connection:
 
         # Can't find user's role
         if len(role) == 0:
-            warnings.warn("Unable to get assigned role.", RuntimeWarning)
+            warnings.warn("Unable to get assigned role", RuntimeWarning)
             role = self.user_role
 
         self.assigned_role = role
@@ -728,17 +749,16 @@ class Connection:
         return self.api_get("current_summoner").json()["accountId"]
 
 
-    def get_rune_recommendation_endpoint(self) -> str:
+    def get_rune_recommendation_endpoint(self, position: str) -> str:
         """ Get the endpoint used to get recommended runes. """
         champid = self.get_champid(self.pick_intent)
-        position = self.get_assigned_role()
         mapid = 11  # mapid for summoner's rift
         return f"/lol-perks/v1/recommended-pages/champion/{champid}/position/{position}/map/{mapid}"
 
 
-    def get_recommended_runepage(self) -> dict:
+    def get_recommended_runepage(self, role_name: str) -> dict:
         """ Get the recommended runepage from the client as a dictionary. """
-        return self.api_get(self.get_rune_recommendation_endpoint()).json()
+        return self.api_get(self.get_rune_recommendation_endpoint(role_name)).json()
 
 
     def get_champselect_phase(self) -> str:
