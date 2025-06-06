@@ -18,4 +18,4 @@ The script is _intended_ to be used only normal draft and ranked. However, it ca
 4. Runes are pulled directly from the client, so they're usually not very good
 
 # Goals for the project
-Because drafting in champselect is an important part of the game, I don't really feel comfortable endorsing the use of this project, especially for ranked. I mostly made it because I thought it would be a good learning experience for me, and it would occasionally come in handy for me.
+Because drafting in champselect is an important part of the game, I don't necessarily encourage the use of this project, especially for ranked. I mostly made it because I thought it would be fun, a good learning experience, and occasionally useful.
