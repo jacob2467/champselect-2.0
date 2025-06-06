@@ -3,7 +3,7 @@ This project aims to automate the process of queuing for a match of League of Le
 
 1. Prompt the user for what champion they'd like to play, which one they want to ban, and whether or not they  want the script to set their runes and summoner spells. 
 2. Attempt to start queueing for a match _once_. If the user cancels the queue, it won't be started again. If the user is not the host of the lobby, this does nothing.
-3. When the prompt appears, accept the match and check what role the user was queueing for
+3. When the prompt appears, accept the match and check what role the user was queueing for.
 4. Once in champselect, hover the desired champion during the planning phase. If the user was autofilled (assigned a different role than the primary role they were queuing for), instead hover a champion from a config file with backup champions listed for each role.
 5. During the ban phase, ban the champion the user specified. If the user was autofilled, or a teammate intends to play the specified champion, instead ban a champion from their config.
 6. During the pick phase, attempt to lock in the champion currently being hovered. If it was banned, check config for a new one.
