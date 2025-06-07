@@ -202,7 +202,7 @@ class Connection:
         """ Hover a champion in champselect. """
         if champid is None:
             champid = self.get_champid(self.pick_intent)
-        u.print_and_write(f"trying to hover champ with id {champid}")
+        # u.print_and_write(f"trying to hover champ with id {champid}")
         self.do_champ(mode="hover", champid=champid)
 
 
@@ -402,7 +402,7 @@ class Connection:
 
         champid = self.get_champid(champ)
         champ = self.clean_name(champ)
-        u.print_and_write(f"Checking if {champ} is a valid ban...")
+        u.print_and_write(f"\tChecking if {champ} is a valid ban...")
         error_msg = "Invalid ban:"
 
         # If trying to ban the champ the user wants to play
@@ -463,7 +463,7 @@ class Connection:
         for pick, is_enemy, is_hovering in self.get_all_player_champids():
             if not is_enemy and is_hovering:
                 champids.append(pick)
-        u.print_and_write(f"Current teammate hovers: {champids}")
+        # u.print_and_write(f"Current teammate hovers: {champids}")
         return champids
 
 
