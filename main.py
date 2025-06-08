@@ -37,7 +37,7 @@ while not in_game:
     time.sleep(UPDATE_INTERVAL)
     # Wrap the loop in a try block to catch errors when the client closes
     try:
-        gamestate: str = c.api_get("gamestate").json()
+        gamestate: str = c.get_gamestate()
         gamestate_has_changed: bool = gamestate != last_gamestate
 
         # Print current gamestate if it's different from the last one
@@ -52,7 +52,7 @@ while not in_game:
             case "Lobby":
                 if gamestate_has_changed:
                     c.start_queue()
-                    c.reset_after_dodge()  # for testing the script in custom games, unnecessary for real games
+                    # c.reset_after_dodge()  # for testing the script in custom games, unnecessary for real games
 
             case "ReadyCheck":
                 if gamestate_has_changed:

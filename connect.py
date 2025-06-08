@@ -5,8 +5,6 @@ import utility as u
 import requests
 from urllib3.exceptions import InsecureRequestWarning
 
-from utility import print_and_write
-
 # Configure warnings
 warnings.formatwarning = u.custom_formatwarning
 warnings.simplefilter('ignore', InsecureRequestWarning)
@@ -35,7 +33,8 @@ class Connection:
         self.all_champs: dict = {}
         self.owned_champs: dict = {}  # champions the player owns
 
-        # Dictionaries storing info about the gamestate
+        # Info about the current gamestate
+        self.gamestate: requests.Response
         self.session: dict = {}  # champselect session data
         self.all_actions: dict = {}  # all champselect actions
         self.ban_action: dict = {}  # local player champselect ban action
@@ -402,7 +401,7 @@ class Connection:
 
         champid = self.get_champid(champ)
         champ = self.clean_name(champ)
-        u.print_and_write(f"\tChecking if {champ} is a valid ban...")
+        # u.print_and_write(f"\tChecking if {champ} is a valid ban...")
         error_msg = "Invalid ban:"
 
         # If trying to ban the champ the user wants to play
@@ -498,22 +497,47 @@ class Connection:
         """
         Figure out which rune page to overwrite or use, and return its contents
         Returns:
-            tuple[int, bool]: the rune page data (dictionary), and a bool indicating whether it should be overwritten
+            tuple[dict, bool]: the rune page data (dictionary), and a bool indicating whether it should be overwritten
                 (True) or used as-is (False)
         """
+        to_return: None | tuple[dict, bool] = None
+        auto_page_name: str = ""
         # First, check if this script has already created a runepage
         all_pages: list[dict] = self.get_runepages()
+        prefix = self.RUNEPAGE_PREFIX
         for page in all_pages:
             page_name: str = page["name"]
-            prefix = self.RUNEPAGE_PREFIX
+            clean_page_name: str = self.clean_name(page_name, False)
+
             # If rune page with champ name is found
-            if self.pick_intent in self.clean_name(page_name, False):
-                u.print_and_write(f"Runepage '{page_name}' has '{self.pick_intent}' in it. Using this runepage...")
-                return page, False
-            # If rune page with this script's naming scheme is found
-            if page_name[0:len(prefix)] == prefix:
-                u.print_and_write(f"Runepage '{page_name}' was created by this script - overwriting...")
-                return page, True
+            if self.pick_intent in clean_page_name:
+                # If rune page was user-created
+                if not page_name.startswith(prefix):
+                    u.print_and_write(f"Runepage '{page_name}' has '{self.pick_intent}' in it. Using this runepage...")
+                    return page, False
+                # If the page was created by this script, keep looking for a user-created one
+                else:
+                    auto_page_name = page_name
+                    to_return = page, False
+
+
+            # If rune page with this script's naming scheme is found (that has *not* been modified by the player)
+            elif page_name.startswith(prefix):
+                auto_page_name = page_name
+                # don't return here, because we might find a user-created rune page in a future iteration of this
+                # loop that contains the champ's name
+                to_return = page, True
+
+        # If we found a page created by this script, return it now
+        if to_return is not None:
+            # If the runepage is being overwritten
+            if to_return[1]:
+                u.print_and_write(f"Runepage '{auto_page_name}' was created by this script - overwriting...")
+            # Using rune page without modifying (it has the user's champ name in it already, could have been modified
+            # by the user, so leave it alone)
+            else:
+                pass
+            return to_return
 
         # No pages have been created by this script - try to create a new one
         u.print_and_write("No runepage created by this script was found. Trying to create a new one...")
@@ -525,7 +549,7 @@ class Connection:
         }
         response = self.api_post("runes", request_body)
         if response.status_code == 200:
-            # Success - the runepage was created successfully. Now we return its data
+            # Success - the runepage was created successfully. Now return its data
             u.print_and_write(f"Success! Created a runepage with id {response.json()["id"]}")
             return response.json(), True
         
@@ -534,10 +558,11 @@ class Connection:
             if response.json()["message"] != "Max pages reached":
                 raise RuntimeError("An unknown error occured while trying to create a runepage.")
             
-            # Full of rune pages - return the id of one to overwrite
-            u.print_and_write(f"Couldn't create a new runepage - overwriting page named {all_pages[-1]["name"]}, " +
-                         f"with id {all_pages[-1]["id"]}")
-            return all_pages[-1], True
+            # Full of rune pages - return the id of one to overwrite (the last one)
+            page = all_pages[-1]
+            u.print_and_write(f"No room for new rune pages - overwriting page named {page["name"]}, " +
+                         f"with id {page["id"]}")
+            return page, True
 
     def send_runes_summs(self) -> None:
         """ Get the recommended rune page and summoner spells and send them to the client,
@@ -560,7 +585,7 @@ class Connection:
                 # Set the name for the rune page
                 if role_name == "utility":
                     role_name = "support"
-                name = f"{self.RUNEPAGE_PREFIX} {self.pick_intent} {role_name} {self.get_assigned_role()} runes"
+                name = f"{self.RUNEPAGE_PREFIX} {self.pick_intent} {role_name} runes"
                 runes = recommended_runepage["perks"]
                 request_body: dict = {
                     "current": True,
@@ -721,9 +746,9 @@ class Connection:
         return self.all_champs[self.clean_name(champ)]
 
 
-    def get_gamestate(self) -> requests.Response:
+    def get_gamestate(self) -> str:
         """ Get the current state of the game (Lobby, ChampSelect, etc.) """
-        return self.api_get("gamestate")
+        return self.api_get("gamestate").json()
 
 
     def get_localcellid(self) -> int:
@@ -755,11 +780,9 @@ class Connection:
         mapid = 11  # mapid for summoner's rift
         return f"/lol-perks/v1/recommended-pages/champion/{champid}/position/{position}/map/{mapid}"
 
-
     def get_recommended_runepage(self, role_name: str) -> dict:
         """ Get the recommended runepage from the client as a dictionary. """
         return self.api_get(self.get_rune_recommendation_endpoint(role_name)).json()
-
 
     def get_champselect_phase(self) -> str:
         """ Get the name of the current champselect phase. """
@@ -770,7 +793,6 @@ class Connection:
             u.print_and_write("phase is None")
             return "skip"
         return phase
-
 
     def update_champ_intent(self) -> None:
         """ Update instance variables with up-to-date pick, ban, and role intent, and hover the champ to be locked. """
@@ -790,17 +812,16 @@ class Connection:
     def update_champselect(self) -> None:
         """ Update all champselect session data. """
         self.session = self.get_session()
-        self.all_actions = self.session["actions"]
-        local_cellid = self.get_localcellid()
+        if self.get_champselect_phase() != "FINALIZATION":  # skip unnecessary API calls
+            self.all_actions = self.session["actions"]
+            # Look at each action, and return the one with the corresponding cellid
+            for action_group in self.all_actions:
+                for action in action_group:
+                    if action["actorCellId"] == self.get_localcellid():
+                        if action["type"] == "ban":
+                            self.ban_action = action
 
-        # Look at each action, and return the one with the corresponding cellid
-        for action_group in self.all_actions:
-            for action in action_group:
-                if action["actorCellId"] == local_cellid:
-                    if action["type"] == "ban":
-                        self.ban_action = action
+                        elif action["type"] == "pick":
+                            self.pick_action = action
 
-                    elif action["type"] == "pick":
-                        self.pick_action = action
-
-        self.update_champ_intent()
+            self.update_champ_intent()
