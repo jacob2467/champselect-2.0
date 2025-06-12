@@ -107,7 +107,18 @@ class Connection:
         """ Get a list of all champions in the game and another of all that the player owns, and store them
         in a dictionary along with their id numbers.
         """
-        all_champs: dict = self.api_get("all_champs").json()
+        response: requests.Response = self.api_get("all_champs")
+
+        # Handle this strang error that only happens on certain accounts
+        # TODO: Find a different endpoint for this (?)
+        # {'errorCode': 'RPC_ERROR', 'httpStatus': 404, 'implementationDetails': {},
+        # 'message': 'Champion data has not yet been received.'}
+        if response.status_code == 404:
+            # Fall back to owned champs, which, for some reason, works *better*
+            response = self.api_get("owned_champs")
+            if response.status_code == 404:
+                raise RuntimeError(f"Unable to get list of of champs: {response.json()}")
+        all_champs: dict = response.json()
 
         for champ in all_champs:
             champ_name = self.clean_name(champ["alias"], False)
