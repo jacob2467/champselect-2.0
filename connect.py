@@ -11,7 +11,7 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 
 
 class Connection:
-    RUNEPAGE_PREFIX: str = "Auto:"  # Prefix for the name of rune pages created by this script
+    RUNEPAGE_PREFIX: str = "Blitz:"  # Prefix for the name of rune pages created by this script
     BRYAN_SUMMONERID: int = 2742039436911744
 
     def __init__(self):
@@ -144,7 +144,7 @@ class Connection:
 
         # Choose whether or not the script should handle runes and summoner spells
         self.should_change_runes = u.get_bool_input("Would you like the script to handle runes and summoner "
-                                                    "spells automatically? y/n:  ")
+                                                    "spells automatically? y/n:  ", True)
 
         # Set intent to user input (intent can change later if first choice is banned, etc.)
         self.pick_intent = self.user_pick
@@ -578,6 +578,8 @@ class Connection:
     def send_runes_summs(self) -> None:
         """ Get the recommended rune page and summoner spells and send them to the client,
         if the user has opted in to this feature. """
+        ''' TODO: Check if user manually locked in a different champ than the pick intent, and if so, give them runes
+         for that champ'''
         # Get assigned role
         role_name: str = self.get_assigned_role()
         # Use mid as a temp role to get runes if the user doesn't have an assigned role
@@ -625,11 +627,14 @@ class Connection:
             if summs[0] == 4:
                 summs[0], summs[1] = summs[1], 4
 
-            # TODO: Make sure Bryan always takes ghost/cleanse (he needs it)
-            # if self.is_bryan:
-            #     pass
+            # Make sure Bryan always takes ghost/cleanse (he needs it)
+            if self.is_bryan:
+                request_body = {
+                    "spell1Id": 1,
+                    "spell2Id": 6
+                }
 
-            # Send summs
+            # Send summoner spells
             if self.should_change_runes:
                 request_body = {
                     "spell1Id": summs[0],
