@@ -87,6 +87,7 @@ class Connection:
             "accept_match": "/lol-matchmaking/v1/ready-check/accept",  # POST
             "champselect_session": "/lol-champ-select/v1/session",  # GET
             "owned_champs": "/lol-champions/v1/owned-champions-minimal",  # GET
+            "current_champ": "/lol-champ-select/v1/current-champion", # GET
             "current_summoner": "/lol-summoner/v1/current-summoner",  # GET
             "pickable_champs": "/lol-champ-select/v1/pickable-champions",  # GET
             "bannable_champs": "/lol-champ-select/v1/bannable-champion-ids",  # GET
@@ -502,9 +503,17 @@ class Connection:
         if 200 <= response.status_code <= 299:  # TODO: Find out the actual response code for this...
             return response.json()
         else:
-            raise RuntimeError("Unable to get runepages.")
+            raise RuntimeError(f"Unable to get rune pages: {response}")
 
-    def get_runepage(self) -> tuple[dict, bool]:
+    def get_champ_name_by_id(self, target_id: int) -> str:
+        """ Find the champion with the specified id number and return their name as a string. """
+        for name, id in self.all_champs.items():
+            if id == target_id:
+                return name
+        warnings.warn(f"Unable to find champion name with id {target_id}")
+        return "unknown"
+
+    def get_runepage(self, champ_name: str) -> tuple[dict, bool]:
         """
         Figure out which rune page to overwrite or use, and return its contents
         Returns:
@@ -513,18 +522,19 @@ class Connection:
         """
         to_return: None | tuple[dict, bool] = None
         auto_page_name: str = ""
+        prefix = self.RUNEPAGE_PREFIX
         # First, check if this script has already created a runepage
         all_pages: list[dict] = self.get_runepages()
-        prefix = self.RUNEPAGE_PREFIX
+
         for page in all_pages:
             page_name: str = page["name"]
             clean_page_name: str = self.clean_name(page_name, False)
 
             # If rune page with champ name is found
-            if self.pick_intent in clean_page_name:
+            if champ_name in clean_page_name:
                 # If rune page was user-created
                 if not page_name.startswith(prefix):
-                    u.print_and_write(f"Runepage '{page_name}' has '{self.pick_intent}' in it. Using this runepage...")
+                    u.print_and_write(f"Runepage '{page_name}' has '{champ_name}' in it. Using this runepage...")
                     return page, False
                 # If the page was created by this script, keep looking for a user-created one
                 else:
@@ -546,8 +556,6 @@ class Connection:
                 u.print_and_write(f"Runepage '{auto_page_name}' was created by this script - overwriting...")
             # Using rune page without modifying (it has the user's champ name in it already, could have been modified
             # by the user, so leave it alone)
-            else:
-                pass
             return to_return
 
         # No pages have been created by this script - try to create a new one
@@ -561,13 +569,14 @@ class Connection:
         response = self.api_post("runes", request_body)
         if response.status_code == 200:
             # Success - the runepage was created successfully. Now return its data
-            u.print_and_write(f"Success! Created a runepage with id {response.json()["id"]}")
+            u.print_and_write(f"Success! Created a rune page with id {response.json()["id"]}")
             return response.json(), True
         
         # No empty rune page slots
         elif response.status_code == 400:
-            if response.json()["message"] != "Max pages reached":
-                raise RuntimeError("An unknown error occured while trying to create a runepage.")
+            response_msg: str = response.json()["message"]
+            if response_msg != "Max pages reached":
+                raise RuntimeError(f"An error occured while trying to create a rune page: {response_msg}")
             
             # Full of rune pages - return the id of one to overwrite (the last one)
             page = all_pages[-1]
@@ -578,27 +587,28 @@ class Connection:
     def send_runes_summs(self) -> None:
         """ Get the recommended rune page and summoner spells and send them to the client,
         if the user has opted in to this feature. """
-        ''' TODO: Check if user manually locked in a different champ than the pick intent, and if so, give them runes
-         for that champ'''
         # Get assigned role
         role_name: str = self.get_assigned_role()
         # Use mid as a temp role to get runes if the user doesn't have an assigned role
         if len(role_name) == 0:
             role_name: str = "middle"
 
+        champid: int = self.api_get("current_champ").json()
+        champ_name: str = self.get_champ_name_by_id(champid)
+
         if not self.runes_chosen and self.should_change_runes:
             # Get the runepage to use
-            current_runepage, should_overwrite = self.get_runepage()
+            current_runepage, should_overwrite = self.get_runepage(champ_name)
             endpoint = self.endpoints["send_runes"] + str(current_runepage["id"])
 
             # Get recommended runes and summs
-            recommended_runepage: dict = self.get_recommended_runepage(role_name)[0]
+            recommended_runepage: dict = self.get_recommended_runepage(champid, role_name)[0]
 
             if should_overwrite:
                 # Set the name for the rune page
                 if role_name == "utility":
                     role_name = "support"
-                name = f"{self.RUNEPAGE_PREFIX} {self.pick_intent} {role_name} runes"
+                name = f"{self.RUNEPAGE_PREFIX} {champ_name} {role_name} runes"
                 runes = recommended_runepage["perks"]
                 request_body: dict = {
                     "current": True,
@@ -623,19 +633,17 @@ class Connection:
             except Exception as e:
                 u.print_and_write("An exception occured:", e)
 
+            # Make sure Bryan always takes ghost/cleanse (he needs it)
+            if self.is_bryan:
+                summs[0], summs[1] = 1, 6
+
             # Make sure flash is always on F
             if summs[0] == 4:
                 summs[0], summs[1] = summs[1], 4
 
-            # Make sure Bryan always takes ghost/cleanse (he needs it)
-            if self.is_bryan:
-                request_body = {
-                    "spell1Id": 1,
-                    "spell2Id": 6
-                }
 
             # Send summoner spells
-            if self.should_change_runes:
+            if self.should_change_runes or self.is_bryan:
                 request_body = {
                     "spell1Id": summs[0],
                     "spell2Id": summs[1]
@@ -789,16 +797,15 @@ class Connection:
         """ Get the id number of the user. """
         return self.api_get("current_summoner").json()["accountId"]
 
-
-    def get_rune_recommendation_endpoint(self, position: str) -> str:
+    @staticmethod
+    def get_rune_recommendation_endpoint(champid: int, position: str) -> str:
         """ Get the endpoint used to get recommended runes. """
-        champid = self.get_champid(self.pick_intent)
         mapid = 11  # mapid for summoner's rift
         return f"/lol-perks/v1/recommended-pages/champion/{champid}/position/{position}/map/{mapid}"
 
-    def get_recommended_runepage(self, role_name: str) -> dict:
+    def get_recommended_runepage(self, champid: int, role_name: str) -> dict:
         """ Get the recommended runepage from the client as a dictionary. """
-        return self.api_get(self.get_rune_recommendation_endpoint(role_name)).json()
+        return self.api_get(self.get_rune_recommendation_endpoint(champid, role_name)).json()
 
     def get_champselect_phase(self) -> str:
         """ Get the name of the current champselect phase. """
