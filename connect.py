@@ -19,7 +19,7 @@ class Connection:
         self.lockfile = u.Lockfile()
 
         # How many seconds to wait before locking in the champ
-        self.lock_in_delay: float = float(u.get_config_option("settings", "lock_in_delay"))
+        self.lock_in_delay: int = int(u.get_config_option("settings", "lock_in_delay"))
 
         # Flags
         self.started_queue: bool = False
@@ -591,7 +591,7 @@ class Connection:
         role_name: str = self.get_assigned_role()
         # Use mid as a temp role to get runes if the user doesn't have an assigned role
         if len(role_name) == 0:
-            role_name: str = "middle"
+            role_name = "middle"
 
         champid: int = self.api_get("current_champ").json()
         champ_name: str = self.get_champ_name_by_id(champid)
