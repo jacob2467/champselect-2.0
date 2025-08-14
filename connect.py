@@ -264,7 +264,31 @@ class Connection:
             data["completed"] = True
             tmp_mode: str = "banning" if mode == "ban" else mode + "ing"
             u.print_and_write(f"\nWaiting {self.lock_in_delay} seconds before {tmp_mode}...\n")
-            time.sleep(self.lock_in_delay)
+
+            start_time: float = time.time()
+            still_waiting: bool = False if self.lock_in_delay == 0 else True
+
+            u.print_and_write(f"{self.pick_action=}")
+            u.print_and_write(f"{self.ban_action=}")
+
+            while still_waiting:
+                # TODO: Check # of seconds left on timer, lock in/ban if timer is ending soon
+                time.sleep(1)
+
+                if time.time() > start_time + self.lock_in_delay:
+                    still_waiting = False
+
+                self.update_champselect()
+
+                if mode == "ban" and self.ban_action["completed"]:
+                    still_waiting = False
+
+                if mode == "pick" and self.pick_action["completed"]:
+                    still_waiting = False
+
+                # If someone dodged the lobby
+                if mode == "skip":
+                    still_waiting = False
 
         # Lock in the champ and print info
         response = self.api_patch(endpoint, data=data)
@@ -283,7 +307,7 @@ class Connection:
                 # Note: This will break in custom game tournament drafts and in clash - the API returns an error code
                 # of 500 when you try to hover a champ during the ban phase, causing every champ the script tries to
                 # hover to be marked as invalid. However, this script is indended for normal draft, so this shouldn't
-                # be a problem to begin with, but I still felt it was worth noting.
+                # be a problem to begin with.
                 self.invalid_picks.append(champid)
 
         else:
