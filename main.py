@@ -3,6 +3,8 @@ import requests
 import time
 import utility as u
 
+
+
 connection_initiated: bool = False
 in_game: bool = False
 should_print: bool = True
@@ -12,6 +14,10 @@ champselect_loop_iteration: int = 0  # Keep track of how many loops run during c
 RETRY_RATE: float = float(u.get_config_option("settings", "retry_rate"))
 # How many seconds to wait before re-running the main loop
 UPDATE_INTERVAL: float = float(u.get_config_option("settings", "update_interval"))
+
+CLIENT_CONNECTION_FAILURE_MSG: str = (f"Failed to connect to the league client - "
+                                      f"is it open? Retrying in {RETRY_RATE} seconds...")
+CLOSED_CLIENT_MSG: str = "Connection error. Did you close the league client?"
 
 # Clear output file
 with open("output.log", "w") as file:
@@ -24,7 +30,7 @@ while not connection_initiated:
         connection_initiated = True
     # If the connection isn't successful or the lockfile doesn't exist, the client isn't open yet
     except (requests.exceptions.ConnectionError, FileNotFoundError) as e:
-        u.print_and_write(f"Failed to connect to the league client - is it open? Retrying in {RETRY_RATE} seconds...")
+        u.print_and_write(CLIENT_CONNECTION_FAILURE_MSG)
         time.sleep(RETRY_RATE)
 
     except KeyError as e:
@@ -45,10 +51,7 @@ while not in_game:
             u.print_and_write(f"\nCurrent gamestate: {gamestate}")
             last_gamestate = gamestate
 
-        # Pycharm was complaining about this match statment for no reason, and this... somehow fixes it.
-        # https://youtrack.jetbrains.com/issue/PY-80762/match-statement-giving-false-positive-on-unreachable-code-inspection
-        _gamestate = [gamestate]
-        match _gamestate[0]:
+        match gamestate:
             case "Lobby":
                 if gamestate_has_changed:
                     c.start_queue()
@@ -94,5 +97,5 @@ while not in_game:
             case default:
                 pass
     except requests.exceptions.ConnectionError:
-        u.print_and_write("Connection error. Did you close the league client?")
+        u.print_and_write(CLOSED_CLIENT_MSG)
         c.parse_lockfile()
