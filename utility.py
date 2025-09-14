@@ -21,11 +21,22 @@ class Lockfile:
     password: str = ""
     protocol: str = "https"
 
+def get_config_option_str(section: str, option: str) -> str:
+    """ Get the specified string option from the config file. """
+    return _get_config_option(section, option, False) # type: ignore
 
-def get_config_option(section: str, option: str) -> str:
-    """ Get and return the value of a config option from the config file. """
+def get_config_option_bool(section: str, option: str) -> bool:
+    """ Get the specified bool option from the config file. """
+    return _get_config_option(section, option, True) # type: ignore
+
+def _get_config_option(section: str, option: str, is_bool: bool = False) -> str | bool:
+    """ Get and return the value (str or bool) of a config option from the config file. """
     try:
-        value: str = config.get(section, option)
+        value: str | bool
+        if is_bool:
+            value = config.getboolean(section, option)
+        else:
+            value = config.get(section, option)
         return value
 
     except configparser.NoSectionError as e:
@@ -38,7 +49,7 @@ def get_config_option(section: str, option: str) -> str:
 
 def get_lockfile_path() -> str:
     """ Get the path to the user's lockfile. """
-    config_dir = get_config_option("settings", "directory")
+    config_dir: str = get_config_option_str("settings", "directory")
 
     # Use directory specified in config if it exists
     if config_dir != "":
@@ -57,7 +68,7 @@ def get_lockfile_path() -> str:
     return dir
 
 
-def parse_config(role: str, picking: bool = True) -> list[str]:
+def get_backup_config_champs(role: str, picking: bool = True) -> list[str]:
     """ Parse the user's config for backup champs and return it as a list. """
     champs: list[str] = []
     if len(role) == 0:
@@ -78,15 +89,18 @@ def parse_config(role: str, picking: bool = True) -> list[str]:
     return champs
 
 
-def trim(string: str) -> str:
+def clean_string(string: str) -> str:
     """ Remove whitespace and illegal characters from a string, and convert it to lowercase. """
-    illegal = [" ", "'", "."]
+    illegal = (" ", "'", ".")
     new_string = ""
     for char in string:
         if char not in illegal:
             new_string += char.lower()
     return new_string
 
+def capitalize_first(string: str) -> str:
+    """ Capitalize the first letter in a string and return the result. """
+    return string[0].upper() + string[1:]
 
 def print_and_write(*args: object, **kwargs) -> None:
     """ Print the input and save it to a log file. """
@@ -111,7 +125,7 @@ def clean_role_name(prompt: str) -> str:
     if name == "":
         return name
     # Remove all illegal characters and whitespace
-    clean_name = trim(name)
+    clean_name = clean_string(name)
 
     roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"],
              ["bottom", "bot", "adc", "adcarry", "b"], ["utility", "support", "sup", "supp"]]

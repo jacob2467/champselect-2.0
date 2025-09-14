@@ -19,7 +19,7 @@ class Connection:
         self.lockfile = u.Lockfile()
 
         # How many seconds to wait before locking in the champ
-        self.lock_in_delay: int = int(u.get_config_option("settings", "lock_in_delay"))
+        self.lock_in_delay: int = int(u.get_config_option_str("settings", "lock_in_delay"))
 
         # Flags
         self.started_queue: bool = False
@@ -27,7 +27,7 @@ class Connection:
         self.has_picked: bool = False
         self.role_checked: bool = False
         self.runes_chosen: bool = False
-        self.should_change_runes: bool = False
+        self.should_modify_runes: bool = False
 
         # Dictionaries of League Champions
         self.all_champs: dict = {}
@@ -54,28 +54,31 @@ class Connection:
         self.parse_lockfile()
         self.setup_endpoints()
 
-        # Check for Bryan
+        # Bryan check
         self.is_bryan: bool = self.get_summoner_id() == self.BRYAN_SUMMONERID
 
     # ----------------
     # Connection Setup
     # ----------------
-    def parse_lockfile(self) -> None:
+    def parse_lockfile(self, wait_time: float = 5) -> None:
         """ Parse the user's lockfile into a dictionary. """
-        l: u.Lockfile = self.lockfile
-        path: str = u.get_lockfile_path()
-        try:
-            with open(path) as f:
-                contents: list[str] = f.read().split(":")
-                l.pid, l.port, l.password, l.protocol = contents[1:5]
+        lockfile_found: bool = False
+        while not lockfile_found:
+            l: u.Lockfile = self.lockfile
+            path: str = u.get_lockfile_path()
+            try:
+                with open(path) as f:
+                    contents: list[str] = f.read().split(":")
+                    l.pid, l.port, l.password, l.protocol = contents[1:5]
+                lockfile_found = True
 
-        except FileNotFoundError:
-            raise FileNotFoundError("Lockfile not found; open league, or specify your installation "
-                                    "directory in your config")
+            except FileNotFoundError:
+                u.print_and_write("Lockfile not found; open league, or specify your installation directory in your "
+                                  "config and restart this program.")
+                time.sleep(wait_time)
 
-        except Exception as e:
-            raise Exception(f"Failed to parse lockfile: {str(e)}")
-
+            except Exception as e:
+                raise Exception(f"Failed to parse lockfile: {e}")
 
     def setup_endpoints(self) -> None:
         """ Set up a dictionary containing various endpoints for the API. """
@@ -99,6 +102,8 @@ class Connection:
             "summoner_info_byid": "/lol-summoner/v1/summoners/",  # GET (+summonerid)
             "champselect_action": "/lol-champ-select/v1/session/actions/"  # PATCH (+actionid)
         }
+        # This endpoint requires the player's summoner id, which requires the current_summoner endpoint
+        # to be initialized already, so initialize it separately
         self.endpoints.update(
             {"all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions-minimal"  # GET
             }
@@ -110,12 +115,12 @@ class Connection:
         """
         response: requests.Response = self.api_get("all_champs")
 
-        # Handle this strang error that only happens on certain accounts
         # TODO: Find a different endpoint for this (?)
+        # Handle this strange error that only happens on certain accounts
         # {'errorCode': 'RPC_ERROR', 'httpStatus': 404, 'implementationDetails': {},
         # 'message': 'Champion data has not yet been received.'}
         if response.status_code == 404:
-            # Fall back to owned champs, which, for some reason, works *better*
+            # Fall back to endpoint for player-owned champs, which, for some reason, breaks less
             response = self.api_get("owned_champs")
             if response.status_code == 404:
                 raise RuntimeError(f"Unable to get list of of champs: {response.json()}")
@@ -134,9 +139,9 @@ class Connection:
 
 
     def get_first_choices(self) -> None:
-        """ Get the user's first choice for picks and bans, as well as the role they're playing. Also ask them if
-         they'd like the script to handle their runes and summoner spells.
-         """
+        """ Get the user's first choice for champion picks and bans, and ask them if they'd like the script to handle
+        their runes and summoner spells.
+        """
         # Pick choice
         self.user_pick = self.get_champ_name_input("Who would you like to play?  ")
 
@@ -144,7 +149,7 @@ class Connection:
         self.user_ban = self.get_champ_name_input("Who would you like to ban?  ")
 
         # Choose whether or not the script should handle runes and summoner spells
-        self.should_change_runes = u.get_bool_input("Would you like the script to handle runes and summoner "
+        self.should_modify_runes = u.get_bool_input("Would you like the script to handle runes and summoner "
                                                     "spells automatically? y/n:  ", True)
 
         # Set intent to user input (intent can change later if first choice is banned, etc.)
@@ -158,7 +163,7 @@ class Connection:
             local_player_data: dict = self.api_get("lobby").json()["localMember"]
             self.user_role = local_player_data["firstPositionPreference"].strip().lower()
         except Exception as e:
-            warnings.warn(f"Unable to find player's role. Error raised: {e}", RuntimeWarning)
+            warnings.warn(f"Unable to find player's role: {e}", RuntimeWarning)
 
     # ------
     # Lobby
@@ -213,7 +218,6 @@ class Connection:
         """ Hover a champion in champselect. """
         if champid is None:
             champid = self.get_champid(self.pick_intent)
-        # u.print_and_write(f"trying to hover champ with id {champid}")
         self.do_champ(mode="hover", champid=champid)
 
 
@@ -221,7 +225,6 @@ class Connection:
         """ Ban a champion in champselect. """
         if champid is None:
             champid = self.get_champid(self.ban_intent)
-        u.print_and_write(f"trying to ban champ with id {champid}")
         self.do_champ(mode="ban", champid=champid)
 
 
@@ -229,66 +232,65 @@ class Connection:
         """ Lock in a champion in champselect. """
         if champid is None:
             champid = self.get_champid(self.pick_intent)
-        u.print_and_write(f"\tTrying to lock {self.pick_intent} (id {champid})")
         self.do_champ(mode="pick", champid=champid)
 
+    def wait_before_locking(self, mode: str):
+        """ Wait to lock in or ban a champ if the user specified a lock-in delay in their config. """
+        if self.lock_in_delay == 0:
+            return
+
+        display_mode: str = "banning" if mode == "ban" else "picking"
+        u.print_and_write(f"\nWaiting {self.lock_in_delay} seconds before {display_mode}...\n")
+
+        start_time: float = time.time()
+        still_waiting: bool = True
+
+        while still_waiting:
+            # TODO: Check # of seconds left on timer, lock in/ban if timer is ending soon
+            time.sleep(1)
+
+            # Check if enough time elapsed
+            if time.time() > start_time + self.lock_in_delay:
+                still_waiting = False
+
+            self.update_champselect()
+
+            # Check if user manually completed the action
+            if (mode == "ban" and self.ban_action["completed"]
+            or mode == "pick" and self.pick_action["completed"]):
+                still_waiting = False
+
+            # Check if someone dodged the lobby
+            if mode == "skip":
+                still_waiting = False
 
     def do_champ(self, **kwargs) -> None:
         """ Pick or ban a champ in champselect.
         Keyword arguments:
-        champid -- the champ to pick/ban (optional)
+        champid -- the champ to pick/ban
         mode -- options are hover, ban, and pick
         """
-        champid: int | None = kwargs.get("champid")
-        mode: str | None = kwargs.get("mode")
+        champid: int = kwargs.get("champid", 0)
+        mode: str = kwargs.get("mode", "pick")
         actionid: int | None = kwargs.get("actionid", None)
 
         # Set up http request
         data = {"championId": champid}
         if actionid is None:
-            if mode == "ban":
-                try:
-                    actionid = self.ban_action["id"]
-                except Exception as e:
-                    warnings.warn(f"Unable to {mode} the specified champion: {e}", RuntimeWarning)
-            else:
-                try:
-                    actionid = self.pick_action["id"]
-                except Exception as e:
-                    warnings.warn(f"Unable to {mode} the specified champion: {e}", RuntimeWarning)
+            try:
+                action = self.ban_action if mode == "ban" else self.pick_action
+                actionid = action["id"]
+
+            except Exception as e:
+                warnings.warn(f"Unable to {mode} the specified champion: {e}", RuntimeWarning)
+
         endpoint = self.endpoints["champselect_action"] + str(actionid)
 
         # Hover the champ in case we're not already
         if mode != "hover":
             self.do_champ(champid=champid, mode="hover", actionid=actionid)
             data["completed"] = True
-            tmp_mode: str = "banning" if mode == "ban" else mode + "ing"
-            u.print_and_write(f"\nWaiting {self.lock_in_delay} seconds before {tmp_mode}...\n")
-
-            start_time: float = time.time()
-            still_waiting: bool = False if self.lock_in_delay == 0 else True
-
-            u.print_and_write(f"{self.pick_action=}")
-            u.print_and_write(f"{self.ban_action=}")
-
-            while still_waiting:
-                # TODO: Check # of seconds left on timer, lock in/ban if timer is ending soon
-                time.sleep(1)
-
-                if time.time() > start_time + self.lock_in_delay:
-                    still_waiting = False
-
-                self.update_champselect()
-
-                if mode == "ban" and self.ban_action["completed"]:
-                    still_waiting = False
-
-                if mode == "pick" and self.pick_action["completed"]:
-                    still_waiting = False
-
-                # If someone dodged the lobby
-                if mode == "skip":
-                    still_waiting = False
+            self.wait_before_locking(mode)
 
         # Lock in the champ and print info
         response = self.api_patch(endpoint, data=data)
@@ -306,8 +308,7 @@ class Connection:
             if "banned" in str(response.json()).lower():
                 # Note: This will break in custom game tournament drafts and in clash - the API returns an error code
                 # of 500 when you try to hover a champ during the ban phase, causing every champ the script tries to
-                # hover to be marked as invalid. However, this script is indended for normal draft, so this shouldn't
-                # be a problem to begin with.
+                # hover to be marked as invalid.
                 self.invalid_picks.append(champid)
 
         else:
@@ -328,7 +329,7 @@ class Connection:
         if name == "":
             return name
         # Remove all illegal characters and whitespace
-        name = u.trim(name)
+        name = u.clean_string(name)
 
         # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
         if "nunu" in name:
@@ -371,11 +372,9 @@ class Connection:
         pick: str = self.pick_intent
         if self.is_valid_pick(pick):
             return pick
-        else:
-            options: list[str] = u.parse_config(self.get_assigned_role())
 
         # If current pick intent isn't valid, loop through user's config to find a champ to pick
-        is_valid = False
+        options: list[str] = u.get_backup_config_champs(self.get_assigned_role())
         for pick in options:
             if self.is_valid_pick(pick):
                 return pick
@@ -408,12 +407,12 @@ class Connection:
 
         # If user doesn't own the champ
         if champ_name not in self.owned_champs:
-            u.print_and_write(error_msg, "unowned")
+            u.print_and_write(error_msg, f"{champ_name} is unowned.")
             return False
 
         # If a player has already PICKED the champ (hovering is ok)
         if champid in self.get_champ_pickids():
-            u.print_and_write(error_msg, "already picked")
+            u.print_and_write(error_msg, f"{champ_name} has already been picked")
             return False
 
 
@@ -421,8 +420,8 @@ class Connection:
         # This does nothing when queuing for gamemodes that don't have assigned roles
         assigned_role = self.get_assigned_role()
         if (len(assigned_role) != 0
-                and (self.user_role != assigned_role and self.user_role != "")
-                and (self.user_pick == champ_name and self.user_pick != "")):
+        and (self.user_role != assigned_role and self.user_role != "")
+        and (self.user_pick == champ_name and self.user_pick != "")):
             u.print_and_write(error_msg, "autofilled")
             return False
 
@@ -430,14 +429,12 @@ class Connection:
 
     def is_valid_ban(self, champ: str) -> bool:
         """ Check if the specified champion can be banned. """
-        # TODO: Fix bug where champ is already banned (Note: I think this is already fixed, but haven't tested yet)
         # Handle empty input - allows user to skip selecting a champion and default to those in the config
         if champ == "":
             return False
 
         champid = self.get_champid(champ)
         champ = self.clean_name(champ)
-        # u.print_and_write(f"\tChecking if {champ} is a valid ban...")
         error_msg = "Invalid ban:"
 
         # If trying to ban the champ the user wants to play
@@ -447,12 +444,12 @@ class Connection:
 
         # If champ is already banned
         if self.is_banned(champid):
-            u.print_and_write(error_msg, "already banned")
+            u.print_and_write(error_msg, f"{champ} is already banned")
             return False
 
         # If a teammate is hovering the champ
         if self.teammate_hovering(champid):
-            u.print_and_write(error_msg, "teammate hovering")
+            u.print_and_write(error_msg, f"teammate already hovering {champ}")
             return False
 
         return True
@@ -470,7 +467,7 @@ class Connection:
             return ban
 
         # If current ban intent isn't valid, loop through user's config to find a champ to ban
-        options = u.parse_config(self.get_assigned_role(), False)
+        options = u.get_backup_config_champs(self.get_assigned_role(), False)
         for ban in options:
             if self.is_valid_ban(ban):
                 return ban
@@ -481,7 +478,6 @@ class Connection:
             # raise a warning instead of an exception
             warnings.warn("Unable to find a valid champion to ban.", RuntimeWarning)
         return ban
-
 
     def get_champ_pickids(self) -> list[int]:
         """ Return a list of champion ids that players have locked in. """
@@ -525,6 +521,7 @@ class Connection:
         """ Get the runepages the player currently has set. """
         response = self.api_get("runes")
         if 200 <= response.status_code <= 299:  # TODO: Find out the actual response code for this...
+            u.print_and_write(f"WRITE THIS SHIT DOWN PLEASE: {response.status_code=}")
             return response.json()
         else:
             raise RuntimeError(f"Unable to get rune pages: {response}")
@@ -539,7 +536,7 @@ class Connection:
 
     def get_runepage(self, champ_name: str) -> tuple[dict, bool]:
         """
-        Figure out which rune page to overwrite or use, and return its contents
+        Figure out which rune page to overwrite or use, and return its contents.
         Returns:
             tuple[dict, bool]: the rune page data (dictionary), and a bool indicating whether it should be overwritten
                 (True) or used as-is (False)
@@ -547,6 +544,7 @@ class Connection:
         to_return: None | tuple[dict, bool] = None
         auto_page_name: str = ""
         prefix = self.RUNEPAGE_PREFIX
+
         # First, check if this script has already created a runepage
         all_pages: list[dict] = self.get_runepages()
 
@@ -605,8 +603,11 @@ class Connection:
             # Full of rune pages - return the id of one to overwrite (the last one)
             page = all_pages[-1]
             u.print_and_write(f"No room for new rune pages - overwriting page named {page["name"]}, " +
-                         f"with id {page["id"]}")
+                              f"with id {page["id"]}")
             return page, True
+
+        else:
+            raise RuntimeError("An unknown error occured while trying to create a runepage.")
 
     def send_runes_summs(self) -> None:
         """ Get the recommended rune page and summoner spells and send them to the client,
@@ -620,7 +621,7 @@ class Connection:
         champid: int = self.api_get("current_champ").json()
         champ_name: str = self.get_champ_name_by_id(champid)
 
-        if not self.runes_chosen and self.should_change_runes:
+        if not self.runes_chosen and self.should_modify_runes:
             # Get the runepage to use
             current_runepage, should_overwrite = self.get_runepage(champ_name)
             endpoint = self.endpoints["send_runes"] + str(current_runepage["id"])
@@ -657,20 +658,25 @@ class Connection:
             except Exception as e:
                 u.print_and_write("An exception occured:", e)
 
+            flash: int = 4
+            ghost: int = 1
+            cleanse: int = 6
+            d: int = 0  # index of left summoner spell (bound to D by default)
+            f: int = 1  # index of right summoner spell (bound to F by default)
+
             # Make sure Bryan always takes ghost/cleanse (he needs it)
             if self.is_bryan:
-                summs[0], summs[1] = 1, 6
+                summs[d], summs[f] = ghost, cleanse
 
-            # Make sure flash is always on F
-            if summs[0] == 4:
-                summs[0], summs[1] = summs[1], 4
-
+            # Make sure flash is always on F (higher winrate fr) https://www.leagueofgraphs.com/stats/flash-d-vs-f
+            if summs[d] == flash:
+                summs[d], summs[f] = summs[f], flash
 
             # Send summoner spells
-            if self.should_change_runes or self.is_bryan:
+            if self.should_modify_runes or self.is_bryan:
                 request_body = {
-                    "spell1Id": summs[0],
-                    "spell2Id": summs[1]
+                    "spell1Id": summs[d],
+                    "spell2Id": summs[f]
                 }
                 self.api_patch("send_summs", request_body)
                 self.runes_chosen = True
@@ -687,7 +693,6 @@ class Connection:
 
     def teammate_hovering(self, champid: int) -> bool:
         """ Check if the given champion is being hovered by a teammate. """
-        # debugprint("teammates hovering id#", champid, ":", champid in self.get_teammate_hovers())
         return champid in self.get_teammate_hoverids()
 
 
@@ -708,7 +713,6 @@ class Connection:
 
     def is_hovering(self) -> bool:
         """ Return a bool indicating whether or not the player is currently hovering a champ. """
-        # print("is_hovering():", "self.pick_action['championId']", self.pick_action["championId"])
         return self.get_current_hoverid() != 0
 
 
@@ -734,28 +738,29 @@ class Connection:
 
     def api_call(self, endpoint, method, data=None, should_print=False) -> requests.Response:
         """ Make an API call with the specified endpoint and method. """
-        # Check if endpoint alias from parameter is in dictionary; if not, use endpoint parameter as the full endpoint
+        # Check if endpoint parameter is an alias for one stored in the endpoints dictionary
         endpoint = self.endpoints.get(endpoint, endpoint)
 
         # Set up request URL
         url, headers = self.get_request_url(endpoint)
 
+
         # Choose proper http method
         match method:
             case "get":
                 request = requests.get
-            case "post":
-                request = requests.post
+            case "post":                    # suppress mypy error
+                request = requests.post     # type: ignore
             case "patch":
-                request = requests.patch
+                request = requests.patch    # type: ignore
             case "put":
-                request = requests.put
+                request = requests.put      # type: ignore
 
         # Send the request
-        if should_print:
+        if should_print:  # debug print
             u.print_and_write(f"Making API call...\n\tEndpoint: {endpoint}")
         result = request(url, headers=headers, json=data, verify=False)
-        if should_print:
+        if should_print:  # debug print
             u.print_and_write(f"\tResult: {result}\n")
         return result
 
@@ -769,7 +774,6 @@ class Connection:
     # --------------
     def get_assigned_role(self) -> str:
         """ Get the name of the user's assigned role. """
-        # TODO: Add "default role" config option? (for gamemodes with no role, use a filler role to get runes)
         # Skip unecessary API calls
         if self.role_checked:
             return self.assigned_role
@@ -783,7 +787,7 @@ class Connection:
         # Can't find user's role
         if len(role) == 0:
             warnings.warn("Unable to get assigned role", RuntimeWarning)
-            role = self.user_role
+            role = self.user_role  # substitute assigned role with the one the user was queuing for
 
         self.assigned_role = role
         return role
@@ -818,7 +822,7 @@ class Connection:
 
 
     def get_summoner_id(self) -> int:
-        """ Get the id number of the user. """
+        """ Get the summoner id of the user. """
         return self.api_get("current_summoner").json()["accountId"]
 
     @staticmethod
@@ -829,7 +833,8 @@ class Connection:
 
     def get_recommended_runepage(self, champid: int, role_name: str) -> dict:
         """ Get the recommended runepage from the client as a dictionary. """
-        return self.api_get(self.get_rune_recommendation_endpoint(champid, role_name)).json()
+        endpoint: str = self.get_rune_recommendation_endpoint(champid, role_name)
+        return self.api_get(endpoint).json()
 
     def get_champselect_phase(self) -> str:
         """ Get the name of the current champselect phase. """
@@ -837,7 +842,7 @@ class Connection:
 
         # If someone dodged, phase will be None, causing an error - return "skip" to handle this
         if phase is None:
-            u.print_and_write("phase is None")
+            u.print_and_write("Champselect phase is 'None' - did someone dodge?")
             return "skip"
         return phase
 
@@ -847,13 +852,13 @@ class Connection:
         if not self.has_picked:
             self.pick_intent = self.decide_pick()
             intent: str = self.pick_intent if self.pick_intent != "" else "None"
-            u.print_and_write(f"\tPick intent: {self.pick_intent}")
+            u.print_and_write(f"\tPick intent: {u.capitalize_first(self.pick_intent)}")
 
         # Update ban intent
         if not self.has_banned:
             self.ban_intent = self.decide_ban()
             intent = self.ban_intent if self.ban_intent != "" else "None"
-            u.print_and_write(f"\tBan intent: {intent}")
+            u.print_and_write(f"\tBan intent: {u.capitalize_first(intent)}")
 
 
     def update_champselect(self) -> None:
