@@ -520,8 +520,7 @@ class Connection:
     def get_runepages(self) -> list[dict]:
         """ Get the runepages the player currently has set. """
         response = self.api_get("runes")
-        if 200 <= response.status_code <= 299:  # TODO: Find out the actual response code for this...
-            u.print_and_write(f"WRITE THIS SHIT DOWN PLEASE: {response.status_code=}")
+        if response.status_code == 200:
             return response.json()
         else:
             raise RuntimeError(f"Unable to get rune pages: {response}")
@@ -851,14 +850,17 @@ class Connection:
         # Update pick intent
         if not self.has_picked:
             self.pick_intent = self.decide_pick()
-            intent: str = self.pick_intent if self.pick_intent != "" else "None"
+            pick_intent: str = self.pick_intent if self.pick_intent != "" else "None"
+            # Only print pick intent if it's different from the last loop iteration
             u.print_and_write(f"\tPick intent: {u.capitalize_first(self.pick_intent)}")
 
         # Update ban intent
         if not self.has_banned:
             self.ban_intent = self.decide_ban()
-            intent = self.ban_intent if self.ban_intent != "" else "None"
-            u.print_and_write(f"\tBan intent: {u.capitalize_first(intent)}")
+            ban_intent: str = self.ban_intent if self.ban_intent != "" else "None"
+            # Only print ban intent if it's different from the last loop iteration
+            u.print_and_write(f"\tBan intent: {u.capitalize_first(ban_intent)}")
+        u.print_and_write()
 
 
     def update_champselect(self) -> None:
