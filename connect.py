@@ -14,7 +14,7 @@ class Connection:
     RUNEPAGE_PREFIX: str = "Blitz:"  # Prefix for the name of rune pages created by this script
     BRYAN_SUMMONERID: int = 2742039436911744
 
-    def __init__(self):
+    def __init__(self, indentation: int = 0):
         # Info stored in lockfile
         self.lockfile = u.Lockfile()
 
@@ -51,6 +51,7 @@ class Connection:
 
         # Setup
         self.endpoints: dict = {}  # dictionary to store commonly used endpoints
+        self.indentation = indentation # amount of tab characters used for certain print statements
         self.parse_lockfile()
         self.setup_endpoints()
 
@@ -376,10 +377,11 @@ class Connection:
         # If current pick intent isn't valid, loop through user's config to find a champ to pick
         options: list[str] = u.get_backup_config_champs(self.get_assigned_role())
         for pick in options:
-            if self.is_valid_pick(pick):
+            is_valid_pick: bool = self.is_valid_pick(pick)
+            if is_valid_pick:
                 return pick
         # Last config option isn't valid
-        if not self.is_valid_pick(pick):
+        if not is_valid_pick:
             raise Exception("Unable to find a valid champion to pick.")
 
         return pick
@@ -407,12 +409,12 @@ class Connection:
 
         # If user doesn't own the champ
         if champ_name not in self.owned_champs:
-            u.print_and_write(error_msg, f"{champ_name} is unowned.")
+            u.print_and_write(error_msg, f"{u.capitalize_first(champ_name)} is unowned.")
             return False
 
         # If a player has already PICKED the champ (hovering is ok)
         if champid in self.get_champ_pickids():
-            u.print_and_write(error_msg, f"{champ_name} has already been picked")
+            u.print_and_write(error_msg, f"{u.capitalize_first(champ_name)} has already been picked")
             return False
 
 
@@ -851,14 +853,14 @@ class Connection:
             self.pick_intent = self.decide_pick()
             pick_intent: str = self.pick_intent if self.pick_intent != "" else "None"
             # Only print pick intent if it's different from the last loop iteration
-            u.print_and_write(f"\tPick intent: {u.capitalize_first(self.pick_intent)}")
+            u.print_and_write(f"{'\t'*self.indentation}Pick intent: {u.capitalize_first(self.pick_intent)}")
 
         # Update ban intent
         if not self.has_banned:
             self.ban_intent = self.decide_ban()
             ban_intent: str = self.ban_intent if self.ban_intent != "" else "None"
             # Only print ban intent if it's different from the last loop iteration
-            u.print_and_write(f"\tBan intent: {u.capitalize_first(ban_intent)}")
+            u.print_and_write(f"{'\t'*self.indentation}Ban intent: {u.capitalize_first(ban_intent)}")
         u.print_and_write()
 
 

@@ -27,7 +27,7 @@ with open("output.log", "w") as file:
 # Wait for client to open if it's not open already
 while not connection_initiated:
     try:
-        c = connect.Connection()
+        c = connect.Connection(int(SHOULD_PRINT))
         connection_initiated = True
     # If the connection isn't successful or the lockfile doesn't exist, the client isn't open yet
     except (requests.exceptions.ConnectionError, FileNotFoundError):
