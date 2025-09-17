@@ -30,11 +30,11 @@ while not connection_initiated:
         c = connect.Connection()
         connection_initiated = True
     # If the connection isn't successful or the lockfile doesn't exist, the client isn't open yet
-    except (requests.exceptions.ConnectionError, FileNotFoundError) as e:
+    except (requests.exceptions.ConnectionError, FileNotFoundError):
         u.print_and_write(MSG_CLIENT_CONNECTION_FAILURE)
         time.sleep(RETRY_RATE)
 
-    except KeyError as e:
+    except KeyError:
         # Client is still loading, try again until it finishes loading
         pass
 
@@ -49,20 +49,19 @@ while not in_game:
 
         # Print current gamestate if it's different from the last one
         if gamestate_has_changed:
-            u.print_and_write(f"\nCurrent gamestate: {gamestate}")
+            u.print_and_write(f"\nCurrent gamestate: {u.map_gamestate_for_display(gamestate)}")
             last_gamestate = gamestate
 
         match gamestate:
             case "Lobby":
                 if gamestate_has_changed:
                     c.start_queue()
-                    # c.reset_after_dodge()  # for testing the script in custom games, unnecessary for real games
 
             case "ReadyCheck":
                 if gamestate_has_changed:
                     c.update_primary_role()
-                    c.accept_match()
                     c.reset_after_dodge()
+                    c.accept_match()
                     champselect_loop_iteration = 1
 
             case "ChampSelect":
@@ -76,7 +75,7 @@ while not in_game:
                 champselect_loop_iteration += 1
                 if SHOULD_PRINT:
                     u.print_and_write(f"\nChampselect loop #{champselect_loop_iteration}:")
-                    u.print_and_write("\tChampselect phase:", phase)
+                    u.print_and_write("\tChampselect phase:", u.map_phase_for_display(phase))
 
                 # Handle each champ select phase separately
                 match phase:
@@ -93,8 +92,6 @@ while not in_game:
             case "InProgress":
                 in_game = True
 
-            case default:
-                pass
     except requests.exceptions.ConnectionError:
         u.print_and_write(MSG_CLIENT_CONNECTION_FAILURE)
         c.parse_lockfile(RETRY_RATE)

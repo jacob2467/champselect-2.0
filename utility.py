@@ -67,6 +67,31 @@ def get_lockfile_path() -> str:
 
     return dir
 
+def map_gamestate_for_display(gamestate: str) -> str:
+    match gamestate:
+        case "None":
+            return "Main Menu"
+        case "Matchmaking":
+            return "In Queue"
+        case "ReadyCheck":
+            return "Ready Check"
+        case "ChampSelect":
+            return "Champselect"
+        case "FINALIZATION":
+            return "Champselect"
+        case default:
+            return gamestate
+
+def map_phase_for_display(phase: str) -> str:
+    match phase:
+        case "PLANNING":
+            return "Planning"
+        case "BAN_PICK":
+            return "Pick/Ban"
+        case "FINALIZATION":
+            return "Loadout Selection"
+        case default:
+            return "None"
 
 def get_backup_config_champs(role: str, picking: bool = True) -> list[str]:
     """ Parse the user's config for backup champs and return it as a list. """

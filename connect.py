@@ -613,9 +613,6 @@ class Connection:
         if the user has opted in to this feature. """
         # Get assigned role
         role_name: str = self.get_assigned_role()
-        # Use mid as a temp role to get runes if the user doesn't have an assigned role
-        if len(role_name) == 0:
-            role_name = "middle"
 
         champid: int = self.api_get("current_champ").json()
         champ_name: str = self.get_champ_name_by_id(champid)
@@ -784,9 +781,11 @@ class Connection:
                 role = player["assignedPosition"]
 
         # Can't find user's role
-        if len(role) == 0:
-            warnings.warn("Unable to get assigned role", RuntimeWarning)
-            role = self.user_role  # substitute assigned role with the one the user was queuing for
+        if not role:
+            # If no role was assigned, default to the role the user was queueing for. If that doesn't exist either,
+            # default to mid
+            role = self.user_role if self.user_role else "middle"
+            warnings.warn(f"Unable to get assigned role, defaulting to {role}", RuntimeWarning)
 
         self.assigned_role = role
         return role
