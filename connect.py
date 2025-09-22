@@ -181,6 +181,7 @@ class Connection:
             warnings.warn(f"Unable to get assigned role, defaulting to {role}", RuntimeWarning)
 
         self.assigned_role = role
+        self.role_checked = True
         return role
 
     def get_session(self) -> dict:
@@ -223,7 +224,7 @@ class Connection:
             "Accept": "application/json"
         }
 
-        url = f"{l.protocol}://{"127.0.0.1"}:{l.port}" + endpoint
+        url = f"{l.protocol}://127.0.0.1:{l.port}{endpoint}"
         return url, headers
 
     # -----------

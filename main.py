@@ -23,7 +23,7 @@ MSG_CLIENT_CONNECTION_FAILURE: str = (f"Failed to connect to the league client -
 connection: c.Connection
 def initialize_connection() -> c.Connection:
     # Clear output file
-    with open("output.log", "w") as file:
+    with open("output.log", "w"):
         pass
 
     # Wait for client to open if it's not open already
@@ -42,7 +42,7 @@ def initialize_connection() -> c.Connection:
 
         except KeyError:
             # Client is still loading, try again until it finishes loading
-            pass
+            time.sleep(RETRY_RATE)
 
 def initialize_connection_vars(con: c.Connection):
     for module in champselect, lobby, userinput:
@@ -60,7 +60,6 @@ def handle_readycheck(gamestate_has_changed: bool):
         connection.update_primary_role()
         lobby.reset_after_dodge()
         lobby.accept_match()
-        champselect_loop_iteration = 1
 
 def handle_champselect(champselect_loop_iteration: int):
     # Wrap in try block to catch KeyError when someone dodges - champselect actions don't exist anymore
@@ -108,6 +107,7 @@ def main_loop() -> None:
                     handle_lobby(gamestate_has_changed)
 
                 case "ReadyCheck":
+                    champselect_loop_iteration = 1
                     handle_readycheck(gamestate_has_changed)
 
                 case "ChampSelect":

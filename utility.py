@@ -125,7 +125,7 @@ def clean_string(string: str) -> str:
 
 def capitalize(string: str) -> str:
     """ Capitalize the first letter in a string and return the result. """
-    return string[0].upper() + string[1:]
+    return string[:1].upper() + string[1:]
 
 def print_and_write(*args: object, **kwargs) -> None:
     """ Print the input and save it to a log file. """
@@ -160,27 +160,6 @@ def clean_role_name(prompt: str) -> str:
             return role[0]
 
     return "invalid"
-
-
-def get_bool_input(prompt: str, default_answer: bool = False) -> bool:
-    """ Get boolean input from the user. """
-    response_str: str = ""
-    while response_str not in ("y", "n"):
-        response_str = input(prompt).lower()
-
-        # Return default answer if user didn't answer
-        if response_str == "":
-            return default_answer
-
-        # Normalize "yes" to "y", "no" to "n"
-        if response_str in ("yes", "no"):
-            response_str = response_str[0]
-
-        # Change prompt after first loop
-        prompt = "Invalid input! Please type y or n:  "
-
-    # After the while loop, response_str is guaranteed to either be "y" or "n"
-    return response_str == "y"
 
 def custom_formatwarning(message, category, *_) -> str:
     """ Create and return a custom warning format, containing only the warning message. """
