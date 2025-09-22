@@ -20,11 +20,12 @@ def accept_match() -> None:
 
 def reset_after_dodge() -> None:
     """ Reset class instance variables after someone dodges a lobby. """
-    connection.started_queue = False
     connection.has_picked = False
     connection.has_banned = False
     connection.runes_chosen = False
     connection.role_checked = False
+    connection.has_printed_pick = False
+    connection.has_printed_ban = False
     connection.pick_intent = connection.user_pick
     connection.ban_intent = connection.user_ban
     connection.assigned_role = connection.user_role

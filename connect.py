@@ -7,7 +7,7 @@ from urllib3.exceptions import InsecureRequestWarning
 import utility as u
 
 # Configure warnings
-warnings.formatwarning = u.custom_formatwarning  # type: ignore
+warnings.formatwarning = u.custom_formatwarning
 warnings.simplefilter('ignore', InsecureRequestWarning)
 
 
@@ -29,6 +29,8 @@ class Connection:
         self.role_checked: bool = False
         self.runes_chosen: bool = False
         self.should_modify_runes: bool = False
+        self.has_printed_pick: bool = False
+        self.has_printed_ban: bool = False
 
         # Dictionaries of League Champions
         self.all_champs: dict[str, int] = {}
@@ -256,12 +258,12 @@ class Connection:
         match method:
             case "get":
                 request = requests.get
-            case "post":                    # suppress mypy error
-                request = requests.post     # type: ignore
+            case "post":
+                request = requests.post
             case "patch":
-                request = requests.patch    # type: ignore
+                request = requests.patch
             case "put":
-                request = requests.put      # type: ignore
+                request = requests.put
 
         # Send the request
         if should_print:  # debug print

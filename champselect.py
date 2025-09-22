@@ -51,6 +51,15 @@ def lock_champ(champid: int | None = None) -> None:
         champid = connection.get_champid(connection.pick_intent)
     do_champ(mode="pick", champid=champid)
 
+def get_actionid(mode: str) -> int | None:
+    try:
+        action = connection.ban_action if mode == "ban" else connection.pick_action
+        return action["id"]
+
+    except Exception as e:
+        warnings.warn(f"Unable to {mode} the specified champion: {e}", RuntimeWarning)
+        return None
+
 def do_champ(**kwargs) -> None:
     """ Pick or ban a champ in champselect.
     Keyword arguments:
@@ -64,12 +73,7 @@ def do_champ(**kwargs) -> None:
     # Set up http request
     data: dict[str, int] = {"championId": champid}
     if actionid is None:
-        try:
-            action = connection.ban_action if mode == "ban" else connection.pick_action
-            actionid = action["id"]
-
-        except Exception as e:
-            warnings.warn(f"Unable to {mode} the specified champion: {e}", RuntimeWarning)
+        actionid = get_actionid(mode)
 
     endpoint = connection.endpoints["champselect_action"] + str(actionid)
 
@@ -97,13 +101,6 @@ def do_champ(**kwargs) -> None:
             # of 500 when you try to hover a champ during the ban phase, causing every champ the script tries to
             # hover to be marked as invalid.
             connection.invalid_picks.add(champid)
-
-    else:
-        match mode:
-            case "ban":
-                connection.has_banned = False
-            case "pick":
-                connection.has_picked = False
 
 def decide_pick() -> str:
     """ Decide what champ the user should play. """
@@ -266,18 +263,29 @@ def update_champ_intent() -> None:
     """ Update instance variables with up-to-date pick, ban, and role intent, and hover the champ to be locked. """
     # Update pick intent
     if not connection.has_picked:
+        last_intent: str = connection.pick_intent
         connection.pick_intent = decide_pick()
-        pick_intent: str = connection.pick_intent if connection.pick_intent != "" else "None"
+
         # Only print pick intent if it's different from the last loop iteration
-        u.print_and_write(f"{'\t' * connection.indentation}Pick intent: {u.capitalize_first(connection.pick_intent)}")
+        if last_intent != connection.pick_intent:
+            connection.has_printed_pick = False
+
+        if not connection.has_printed_pick:
+            u.print_and_write(f"{'\t' * connection.indentation}Pick intent: {u.capitalize(connection.pick_intent)}")
+            connection.has_printed_pick = True
 
     # Update ban intent
     if not connection.has_banned:
+        last_intent: str = connection.ban_intent
         connection.ban_intent = decide_ban()
-        ban_intent: str = connection.ban_intent if connection.ban_intent != "" else "None"
+
         # Only print ban intent if it's different from the last loop iteration
-        u.print_and_write(f"{'\t' * connection.indentation}Ban intent: {u.capitalize_first(ban_intent)}")
-    u.print_and_write()
+        if last_intent != connection.ban_intent:
+            connection.has_printed_ban = False
+
+        if not connection.has_printed_ban:
+            u.print_and_write(f"{'\t' * connection.indentation}Ban intent: {u.capitalize(connection.ban_intent)}")
+            connection.has_printed_ban = True
 
 def update_champselect() -> None:
     """ Update all champselect session data. """
@@ -332,7 +340,6 @@ def get_runepage(champ_name: str) -> tuple[dict, bool]:
             else:
                 auto_page_name = page_name
                 to_return = page, False
-
 
         # If rune page with this script's naming scheme is found (that has *not* been modified by the player)
         elif page_name.startswith(prefix):
@@ -431,13 +438,13 @@ def is_valid_pick(champ_name: str) -> bool:
 
     # If user doesn't own the champ
     if champ_name not in connection.owned_champs:
-        u.print_and_write(error_msg, f"{u.capitalize_first(champ_name)} is unowned.")
+        u.print_and_write(error_msg, f"{u.capitalize(champ_name)} is unowned.")
         connection.invalid_picks.add(champid)
         return False
 
     # If a player has already PICKED the champ (hovering is ok)
     if champid in get_champ_pickids():
-        u.print_and_write(error_msg, f"{u.capitalize_first(champ_name)} has already been picked")
+        u.print_and_write(error_msg, f"{u.capitalize(champ_name)} has already been picked")
         connection.invalid_picks.add(champid)
         return False
 
@@ -488,7 +495,6 @@ def get_champ_pickids() -> list[int]:
         if not is_hovering:
             champids.append(pick)
     return champids
-
 
 def get_teammate_hoverids() -> list[int]:
     """ Return a list of champion ids that teammates are hovering. """

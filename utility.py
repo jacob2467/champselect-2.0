@@ -23,11 +23,11 @@ class Lockfile:
 
 def get_config_option_str(section: str, option: str) -> str:
     """ Get the specified string option from the config file. """
-    return _get_config_option(section, option, False) # type: ignore
+    return _get_config_option(section, option, False)
 
 def get_config_option_bool(section: str, option: str) -> bool:
     """ Get the specified bool option from the config file. """
-    return _get_config_option(section, option, True) # type: ignore
+    return _get_config_option(section, option, True)
 
 def _get_config_option(section: str, option: str, is_bool: bool = False) -> str | bool:
     """ Get and return the value (str or bool) of a config option from the config file. """
@@ -123,7 +123,7 @@ def clean_string(string: str) -> str:
             new_string += char.lower()
     return new_string
 
-def capitalize_first(string: str) -> str:
+def capitalize(string: str) -> str:
     """ Capitalize the first letter in a string and return the result. """
     return string[0].upper() + string[1:]
 

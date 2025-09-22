@@ -53,6 +53,7 @@ def initialize_connection_vars(con: c.Connection):
 def handle_lobby(gamestate_has_changed: bool):
     if gamestate_has_changed:
         lobby.start_queue()
+        lobby.reset_after_dodge()
 
 def handle_readycheck(gamestate_has_changed: bool):
     if gamestate_has_changed:
@@ -122,5 +123,5 @@ def main_loop() -> None:
             connection.parse_lockfile(RETRY_RATE)
 
 if __name__ == "__main__":
-    connection = initialize_connection()
+    initialize_connection()
     main_loop()
