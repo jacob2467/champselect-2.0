@@ -23,11 +23,11 @@ class Lockfile:
 
 def get_config_option_str(section: str, option: str) -> str:
     """ Get the specified string option from the config file. """
-    return _get_config_option(section, option, False) # type: ignore
+    return _get_config_option(section, option, False)
 
 def get_config_option_bool(section: str, option: str) -> bool:
     """ Get the specified bool option from the config file. """
-    return _get_config_option(section, option, True) # type: ignore
+    return _get_config_option(section, option, True)
 
 def _get_config_option(section: str, option: str, is_bool: bool = False) -> str | bool:
     """ Get and return the value (str or bool) of a config option from the config file. """
@@ -123,9 +123,9 @@ def clean_string(string: str) -> str:
             new_string += char.lower()
     return new_string
 
-def capitalize_first(string: str) -> str:
+def capitalize(string: str) -> str:
     """ Capitalize the first letter in a string and return the result. """
-    return string[0].upper() + string[1:]
+    return string[:1].upper() + string[1:]
 
 def print_and_write(*args: object, **kwargs) -> None:
     """ Print the input and save it to a log file. """
@@ -152,37 +152,43 @@ def clean_role_name(prompt: str) -> str:
     # Remove all illegal characters and whitespace
     clean_name = clean_string(name)
 
-    roles = [["top", "t"], ["jungle", "jg", "j"], ["middle", "mid", "m"],
-             ["bottom", "bot", "adc", "adcarry", "b"], ["utility", "support", "sup", "supp"]]
+    roles = [("top", "t"), ("jungle", "jg", "j"), ("middle", "mid", "m"),
+             ("bottom", "bot", "adc", "adcarry", "b"), ("utility", "support", "sup", "supp")]
+
     for role in roles:
         if clean_name in role:
             return role[0]
 
     return "invalid"
 
-
-def get_bool_input(prompt: str, default_answer: bool = False) -> bool:
-    """ Get boolean input from the user. """
-    response_str: str = ""
-    while response_str not in ("y", "n"):
-        response_str = input(prompt).lower()
-
-        # Return default answer if user didn't answer
-        if response_str == "":
-            return default_answer
-
-        # Normalize "yes" to "y", "no" to "n"
-        if response_str in ("yes", "no"):
-            response_str = response_str[0]
-
-        # Change prompt after first loop
-        prompt = "Invalid input! Please type y or n:  "
-
-    # After the while loop, response_str is guaranteed to either be "y" or "n"
-    return response_str == "y"
-
-def custom_formatwarning(message, category, *_):
+def custom_formatwarning(message, category, *_) -> str:
     """ Create and return a custom warning format, containing only the warning message. """
     formatted_msg: str = f"\tWarning: {message}\n"
     print_and_write(formatted_msg, should_print=False)  # don't print the error here because it will be printed anyways
     return formatted_msg
+
+def clean_name(all_champs: dict[str, int], name: str, should_filter=True) -> str:
+    """ Remove whitespace and special characters from a champion's name. Example output:
+    Aurelion Sol -> aurelionsol
+    Bel'Veth -> belveth
+    :param all_champs: champions that have already been processed
+    :param name: the name to clean
+    :param should_filter: if True, return "invalid" when an invalid champion name is passed
+    """
+    if name == "":
+        return name
+    # Remove all illegal characters and whitespace
+    name = clean_string(name)
+
+    # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
+    if "nunu" in name:
+        return "nunu"
+    elif name == "wukong":
+        return "monkeyking"
+
+    # Filter out invalid resulting names
+    if should_filter:
+        if name in all_champs:
+            return name
+        return "invalid"
+    return name

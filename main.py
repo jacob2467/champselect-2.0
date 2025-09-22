@@ -1,12 +1,12 @@
-import connect
-import requests
 import time
-import utility as u
+import requests
 
-connection_initiated: bool = False
-in_game: bool = False
-last_gamestate: str = ""  # Store last gamestate - used to skip redundant API calls and print statements
-champselect_loop_iteration: int = 0  # Keep track of how many loops run during champselect
+import utility as u
+import connect as c
+import champselect
+import lobby
+import userinput
+
 
 # Whether or not to print debug info
 SHOULD_PRINT: bool = u.get_config_option_bool("settings", "print_debug_info")
@@ -20,78 +20,108 @@ UPDATE_INTERVAL: float = float(u.get_config_option_str("settings", "update_inter
 MSG_CLIENT_CONNECTION_FAILURE: str = (f"Failed to connect to the league client - "
                                       f"is it open? Retrying in {RETRY_RATE} seconds...")
 
-# Clear output file
-with open("output.log", "w") as file:
-    pass
-
-# Wait for client to open if it's not open already
-while not connection_initiated:
-    try:
-        c = connect.Connection(int(SHOULD_PRINT))
-        connection_initiated = True
-    # If the connection isn't successful or the lockfile doesn't exist, the client isn't open yet
-    except (requests.exceptions.ConnectionError, FileNotFoundError):
-        u.print_and_write(MSG_CLIENT_CONNECTION_FAILURE)
-        time.sleep(RETRY_RATE)
-
-    except KeyError:
-        # Client is still loading, try again until it finishes loading
+connection: c.Connection
+def initialize_connection() -> c.Connection:
+    # Clear output file
+    with open("output.log", "w"):
         pass
 
-c.populate_champ_table()
-c.get_first_choices()
-while not in_game:
-    time.sleep(UPDATE_INTERVAL)
-    # Wrap the loop in a try block to catch errors when the client closes
+    # Wait for client to open if it's not open already
+    while True:
+        try:
+            connection = c.Connection(int(SHOULD_PRINT))
+            initialize_connection_vars(connection)
+            connection.populate_champ_table()
+            userinput.get_first_choices()
+            return connection
+
+        # If the connection isn't successful or the lockfile doesn't exist, the client isn't open yet
+        except (requests.exceptions.ConnectionError, FileNotFoundError):
+            u.print_and_write(MSG_CLIENT_CONNECTION_FAILURE)
+            time.sleep(RETRY_RATE)
+
+        except KeyError:
+            # Client is still loading, try again until it finishes loading
+            time.sleep(RETRY_RATE)
+
+def initialize_connection_vars(con: c.Connection):
+    for module in champselect, lobby, userinput:
+        module.set_connection(con)
+    global connection
+    connection = con
+
+def handle_lobby(gamestate_has_changed: bool):
+    if gamestate_has_changed:
+        lobby.start_queue()
+        lobby.reset_after_dodge()
+
+def handle_readycheck(gamestate_has_changed: bool):
+    if gamestate_has_changed:
+        connection.update_primary_role()
+        lobby.reset_after_dodge()
+        lobby.accept_match()
+
+def handle_champselect(champselect_loop_iteration: int):
+    # Wrap in try block to catch KeyError when someone dodges - champselect actions don't exist anymore
     try:
-        gamestate: str = c.get_gamestate()
-        gamestate_has_changed: bool = gamestate != last_gamestate
+        champselect.update_champselect()
+        phase = champselect.get_champselect_phase()
+    except KeyError:
+        phase = "skip"
 
-        # Print current gamestate if it's different from the last one
-        if gamestate_has_changed:
-            u.print_and_write(f"\nCurrent gamestate: {u.map_gamestate_for_display(gamestate)}")
-            last_gamestate = gamestate
+    if SHOULD_PRINT:
+        u.print_and_write(f"\nChampselect loop #{champselect_loop_iteration}:")
+        u.print_and_write("\tChampselect phase:", u.map_phase_for_display(phase))
 
-        match gamestate:
-            case "Lobby":
-                if gamestate_has_changed:
-                    c.start_queue()
+    # Handle each champ select phase separately
+    match phase:
+        case "PLANNING":
+            champselect.hover_champ()
+        case "BAN_PICK":
+            champselect.ban_or_pick()
+        case "FINALIZATION":
+            champselect.send_runes_and_summs()
+        case "skip":
+            pass
 
-            case "ReadyCheck":
-                if gamestate_has_changed:
-                    c.update_primary_role()
-                    c.reset_after_dodge()
-                    c.accept_match()
+def main_loop() -> None:
+    champselect_loop_iteration: int = 0  # Keep track of how many loops run during champselect
+    in_game: bool = False
+    gamestate: str = ""
+    last_gamestate: str = ""  # Store last gamestate - used to skip redundant API calls and print statements
+    gamestate_has_changed: bool = False
+    while not in_game:
+        time.sleep(UPDATE_INTERVAL)
+        # Wrap the loop in a try block to catch errors when the client closes
+        try:
+            gamestate = connection.get_gamestate()
+            gamestate_has_changed = gamestate != last_gamestate
+
+            # Print current gamestate if it's different from the last one
+            if gamestate_has_changed:
+                u.print_and_write(f"\nCurrent gamestate: {u.map_gamestate_for_display(gamestate)}")
+                last_gamestate = gamestate
+
+            match gamestate:
+                case "Lobby":
+                    handle_lobby(gamestate_has_changed)
+
+                case "ReadyCheck":
                     champselect_loop_iteration = 1
+                    handle_readycheck(gamestate_has_changed)
 
-            case "ChampSelect":
-                # Wrap in try block to catch KeyError when someone dodges - champselect actions don't exist anymore
-                try:
-                    c.update_champselect()
-                    phase = c.get_champselect_phase()
-                except KeyError:
-                    phase = "skip"
+                case "ChampSelect":
+                    champselect_loop_iteration += 1
+                    handle_champselect(champselect_loop_iteration)
 
-                champselect_loop_iteration += 1
-                if SHOULD_PRINT:
-                    u.print_and_write(f"\nChampselect loop #{champselect_loop_iteration}:")
-                    u.print_and_write("\tChampselect phase:", u.map_phase_for_display(phase))
+                # End loop if a game starts
+                case "InProgress":
+                    in_game = True
 
-                # Handle each champ select phase separately
-                match phase:
-                    case "PLANNING":
-                        c.hover_champ()
-                    case "BAN_PICK":
-                        c.ban_or_pick()
-                    case "FINALIZATION":
-                        c.send_runes_summs()
-                    case "skip":
-                        pass
+        except requests.exceptions.ConnectionError:
+            u.print_and_write(MSG_CLIENT_CONNECTION_FAILURE)
+            connection.parse_lockfile(RETRY_RATE)
 
-            # End loop if a game starts
-            case "InProgress":
-                in_game = True
-
-    except requests.exceptions.ConnectionError:
-        u.print_and_write(MSG_CLIENT_CONNECTION_FAILURE)
-        c.parse_lockfile(RETRY_RATE)
+if __name__ == "__main__":
+    initialize_connection()
+    main_loop()
