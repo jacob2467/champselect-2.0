@@ -20,7 +20,7 @@ UPDATE_INTERVAL: float = float(u.get_config_option_str("settings", "update_inter
 MSG_CLIENT_CONNECTION_FAILURE: str = (f"Failed to connect to the league client - "
                                       f"is it open? Retrying in {RETRY_RATE} seconds...")
 
-connection: c.Connection
+
 def initialize_connection() -> c.Connection:
     # Clear output file
     with open("output.log", "w"):
@@ -30,9 +30,8 @@ def initialize_connection() -> c.Connection:
     while True:
         try:
             connection = c.Connection(int(SHOULD_PRINT))
-            initialize_connection_vars(connection)
             connection.populate_champ_table()
-            userinput.get_first_choices()
+            userinput.get_first_choices(connection)
             return connection
 
         # If the connection isn't successful or the lockfile doesn't exist, the client isn't open yet
@@ -44,28 +43,22 @@ def initialize_connection() -> c.Connection:
             # Client is still loading, try again until it finishes loading
             time.sleep(RETRY_RATE)
 
-def initialize_connection_vars(con: c.Connection):
-    for module in champselect, lobby, userinput:
-        module.set_connection(con)
-    global connection
-    connection = con
-
-def handle_lobby(gamestate_has_changed: bool):
+def handle_lobby(connection: c.Connection, gamestate_has_changed: bool):
     if gamestate_has_changed:
-        lobby.start_queue()
-        lobby.reset_after_dodge()
+        lobby.start_queue(connection)
+        lobby.reset_after_dodge(connection)
 
-def handle_readycheck(gamestate_has_changed: bool):
+def handle_readycheck(connection: c.Connection, gamestate_has_changed: bool):
     if gamestate_has_changed:
         connection.update_primary_role()
-        lobby.reset_after_dodge()
-        lobby.accept_match()
+        lobby.reset_after_dodge(connection)
+        lobby.accept_match(connection)
 
-def handle_champselect(champselect_loop_iteration: int):
+def handle_champselect(connection: c.Connection, champselect_loop_iteration: int):
     # Wrap in try block to catch KeyError when someone dodges - champselect actions don't exist anymore
     try:
-        champselect.update_champselect()
-        phase = champselect.get_champselect_phase()
+        champselect.update_champselect(connection)
+        phase = champselect.get_champselect_phase(connection)
     except KeyError:
         phase = "skip"
 
@@ -76,11 +69,11 @@ def handle_champselect(champselect_loop_iteration: int):
     # Handle each champ select phase separately
     match phase:
         case "PLANNING":
-            champselect.hover_champ()
+            champselect.hover_champ(connection)
         case "BAN_PICK":
-            champselect.ban_or_pick()
+            champselect.ban_or_pick(connection)
         case "FINALIZATION":
-            champselect.send_runes_and_summs()
+            champselect.send_runes_and_summs(connection)
         case "skip":
             pass
 
@@ -90,6 +83,7 @@ def main_loop() -> None:
     gamestate: str = ""
     last_gamestate: str = ""  # Store last gamestate - used to skip redundant API calls and print statements
     gamestate_has_changed: bool = False
+    connection: c.Connection = initialize_connection()
     while not in_game:
         time.sleep(UPDATE_INTERVAL)
         # Wrap the loop in a try block to catch errors when the client closes
@@ -104,15 +98,15 @@ def main_loop() -> None:
 
             match gamestate:
                 case "Lobby":
-                    handle_lobby(gamestate_has_changed)
+                    handle_lobby(connection, gamestate_has_changed)
 
                 case "ReadyCheck":
                     champselect_loop_iteration = 1
-                    handle_readycheck(gamestate_has_changed)
+                    handle_readycheck(connection, gamestate_has_changed)
 
                 case "ChampSelect":
                     champselect_loop_iteration += 1
-                    handle_champselect(champselect_loop_iteration)
+                    handle_champselect(connection, champselect_loop_iteration)
 
                 # End loop if a game starts
                 case "InProgress":
@@ -123,5 +117,4 @@ def main_loop() -> None:
             connection.parse_lockfile(RETRY_RATE)
 
 if __name__ == "__main__":
-    initialize_connection()
     main_loop()
