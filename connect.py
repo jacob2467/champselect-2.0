@@ -69,27 +69,6 @@ class Connection:
     # ----------------
     # Connection Setup
     # ----------------
-<<<<<<< Updated upstream
-    def parse_lockfile(self, wait_time: float = 5) -> None:
-        """ Parse the user's lockfile into a dictionary. """
-        lockfile_found: bool = False
-        while not lockfile_found:
-            l: u.Lockfile = self.lockfile
-            path: str = u.get_lockfile_path()
-            try:
-                with open(path) as f:
-                    contents: list[str] = f.read().split(":")
-                    l.pid, l.port, l.password, l.protocol = contents[1:5]
-                lockfile_found = True
-
-            except FileNotFoundError:
-                u.print_and_write("Lockfile not found; open league, or specify your installation directory in your "
-                                  "config and restart this program.")
-                time.sleep(wait_time)
-
-            except Exception as e:
-                raise Exception(f"Failed to parse lockfile: {e}")
-=======
     @staticmethod
     def parse_lockfile(wait_time: float = 5) -> u.Lockfile:
         """
@@ -118,8 +97,6 @@ class Connection:
             raise lockfile_err
 
         return lockfile
-
->>>>>>> Stashed changes
 
     def setup_endpoints(self) -> None:
         """ Set up a dictionary containing various endpoints for the API. """
@@ -259,13 +236,6 @@ class Connection:
         mapid = 11  # mapid for summoner's rift
         return f"/lol-perks/v1/recommended-pages/champion/{champid}/position/{position}/map/{mapid}"
 
-<<<<<<< Updated upstream
-    def get_request_url(self, endpoint: str) -> tuple[str, dict[str, str]]:
-        """ Get the url to send http reqeusts to, and header data to send with it. """
-        l = self.lockfile
-        https_auth = f"Basic {b64encode(f"riot:{l.password}".encode()).decode()}"
-        headers = {
-=======
     @staticmethod
     def get_request_url(lockfile: u.Lockfile) -> str:
         """
@@ -280,7 +250,6 @@ class Connection:
         """
         https_auth = f"Basic {b64encode(f"riot:{lockfile.password}".encode()).decode()}"
         return {
->>>>>>> Stashed changes
             "Authorization": https_auth,
             "Accept": "application/json"
         }
@@ -288,17 +257,11 @@ class Connection:
     # -----------
     # API Methods
     # -----------
-<<<<<<< Updated upstream
-
-    def api_get(self, endpoint) -> requests.Response:
-        """ Send an HTTP GET request. """
-=======
     def api_get(self, endpoint: str) -> requests.Response:
         """
         Send an HTTP GET request.
         :param endpoint: the endpoint to use
         """
->>>>>>> Stashed changes
         return self.api_call(endpoint, "get")
 
     def api_post(self, endpoint, data=None) -> requests.Response:
