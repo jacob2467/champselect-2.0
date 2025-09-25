@@ -1,4 +1,4 @@
-import time
+import sys
 from base64 import b64encode
 import warnings
 import requests
@@ -11,13 +11,16 @@ warnings.formatwarning = u.custom_formatwarning
 warnings.simplefilter('ignore', InsecureRequestWarning)
 
 
+MSG_LOCKFILE_PARSING_ERR: str = ("Unable to connect to the League of Legends client. If it's open, try updating your "
+"game directory in the config file (config.ini) and restart the program.")
+
 class Connection:
     RUNEPAGE_PREFIX: str = "Blitz:"  # Prefix for the name of rune pages created by this script
     BRYAN_SUMMONERID: int = 2742039436911744
 
     def __init__(self, indentation: int = 0):
         # Info stored in lockfile
-        self.lockfile = u.Lockfile()
+        # self.lockfile = u.Lockfile()
 
         # How many seconds to wait before locking in the champ
         self.lock_in_delay: int = int(u.get_config_option_str("settings", "lock_in_delay"))
@@ -55,7 +58,9 @@ class Connection:
         # Setup
         self.endpoints: dict = {}  # dictionary to store commonly used endpoints
         self.indentation = indentation # amount of tab characters used for certain print statements
-        self.parse_lockfile()
+        self.request_url: str
+        self.http_headers: dict[str, str]
+        self.request_url, self.http_headers = self.setup_http_requests()
         self.setup_endpoints()
 
         # Bryan check
@@ -64,6 +69,7 @@ class Connection:
     # ----------------
     # Connection Setup
     # ----------------
+<<<<<<< Updated upstream
     def parse_lockfile(self, wait_time: float = 5) -> None:
         """ Parse the user's lockfile into a dictionary. """
         lockfile_found: bool = False
@@ -83,6 +89,37 @@ class Connection:
 
             except Exception as e:
                 raise Exception(f"Failed to parse lockfile: {e}")
+=======
+    @staticmethod
+    def parse_lockfile(wait_time: float = 5) -> u.Lockfile:
+        """
+        Parse the user's lockfile to be used to connect to the LCU API.
+        :param wait_time: number of seconds to wait between failed attmepts to parse the lockfile
+        """
+        # Keep trying until lockfile is found
+        lockfile_err: Exception | None = None
+        lockfile: u.Lockfile = u.Lockfile()
+        path: str = u.get_lockfile_path()
+        try:
+            with open(path) as f:
+                contents: list[str] = f.read().split(":")
+                lockfile.pid, lockfile.port, lockfile.password, lockfile.protocol = contents[1:5]
+            lockfile_found = True
+
+        except FileNotFoundError:
+            sys.tracebacklimit = 0
+            u.print_and_write(MSG_LOCKFILE_PARSING_ERR, should_print=False)
+            lockfile_err = Exception(MSG_LOCKFILE_PARSING_ERR)
+
+        except Exception as e:
+            raise Exception(f"Error while parsing lockfile: {e}")
+
+        if lockfile_err:
+            raise lockfile_err
+
+        return lockfile
+
+>>>>>>> Stashed changes
 
     def setup_endpoints(self) -> None:
         """ Set up a dictionary containing various endpoints for the API. """
@@ -209,30 +246,59 @@ class Connection:
         endpoint: str = self.get_rune_recommendation_endpoint(champid, role_name)
         return self.api_get(endpoint).json()
 
+    def setup_http_requests(self) -> tuple[str, dict[str, str]]:
+        """
+        Set up the request URL and HTTP header data for API calls.
+        """
+        lockfile = self.parse_lockfile()
+        return self.get_request_url(lockfile), self.get_http_headers(lockfile)
+
     @staticmethod
     def get_rune_recommendation_endpoint(champid: int, position: str) -> str:
         """ Get the endpoint used to get recommended runes. """
         mapid = 11  # mapid for summoner's rift
         return f"/lol-perks/v1/recommended-pages/champion/{champid}/position/{position}/map/{mapid}"
 
+<<<<<<< Updated upstream
     def get_request_url(self, endpoint: str) -> tuple[str, dict[str, str]]:
         """ Get the url to send http reqeusts to, and header data to send with it. """
         l = self.lockfile
         https_auth = f"Basic {b64encode(f"riot:{l.password}".encode()).decode()}"
         headers = {
+=======
+    @staticmethod
+    def get_request_url(lockfile: u.Lockfile) -> str:
+        """
+        Get the url to send http reqeusts to.
+        """
+        return f"{lockfile.protocol}://127.0.0.1:{lockfile.port}"
+
+    @staticmethod
+    def get_http_headers(lockfile: u.Lockfile) -> dict[str, str]:
+        """
+        Get a dictionary containing http auth header data. monkeysexpoop
+        """
+        https_auth = f"Basic {b64encode(f"riot:{lockfile.password}".encode()).decode()}"
+        return {
+>>>>>>> Stashed changes
             "Authorization": https_auth,
             "Accept": "application/json"
         }
 
-        url = f"{l.protocol}://127.0.0.1:{l.port}{endpoint}"
-        return url, headers
-
     # -----------
     # API Methods
     # -----------
+<<<<<<< Updated upstream
 
     def api_get(self, endpoint) -> requests.Response:
         """ Send an HTTP GET request. """
+=======
+    def api_get(self, endpoint: str) -> requests.Response:
+        """
+        Send an HTTP GET request.
+        :param endpoint: the endpoint to use
+        """
+>>>>>>> Stashed changes
         return self.api_call(endpoint, "get")
 
     def api_post(self, endpoint, data=None) -> requests.Response:
@@ -253,7 +319,8 @@ class Connection:
         endpoint = self.endpoints.get(endpoint, endpoint)
 
         # Set up request URL
-        url, headers = self.get_request_url(endpoint)
+        url = self.request_url + endpoint
+        headers = self.http_headers
 
         # Choose proper http method
         match method:
