@@ -16,21 +16,37 @@ if not config_contents:
 
 @dataclass
 class Lockfile:
+    """
+    A Class to store information about the Lockfile used to allow access to the LCU API.
+    """
     pid: str = ""
     port: str = ""
     password: str = ""
     protocol: str = "https"
 
 def get_config_option_str(section: str, option: str) -> str:
-    """ Get the specified string option from the config file. """
+    """
+    Get the specified string option from the config file.
+    :param section: the config section to read from
+    :param option: the option in the config section to read the value of
+    """
     return _get_config_option(section, option, False)
 
 def get_config_option_bool(section: str, option: str) -> bool:
-    """ Get the specified bool option from the config file. """
+    """
+    Get the specified bool option from the config file.
+    :param section: the config section to read from
+    :param option: the option in the config section to read the value of
+    """
     return _get_config_option(section, option, True)
 
-def _get_config_option(section: str, option: str, is_bool: bool = False) -> str | bool:
-    """ Get and return the value (str or bool) of a config option from the config file. """
+def _get_config_option(section: str, option: str, is_bool: bool=False) -> str | bool:
+    """
+    Get and return the value (str or bool) of a config option from the config file.
+    :param section: the config section to read from
+    :param option: the option in the config section to read the value of
+    :param is_bool: a bool indicating whether to interpret the config option as a bool (True) or as a str (False)
+    """
     try:
         value: str | bool
         if is_bool:
@@ -48,7 +64,9 @@ def _get_config_option(section: str, option: str, is_bool: bool = False) -> str 
         raise RuntimeError(f"An unknown error occurred while reading {config_name}: {e}")
 
 def get_lockfile_path() -> str:
-    """ Get the path to the user's lockfile. """
+    """
+    Get the path to the user's lockfile.
+    """
     config_dir: str = get_config_option_str("settings", "directory")
 
     # Use directory specified in config if it exists
@@ -68,6 +86,10 @@ def get_lockfile_path() -> str:
     return dir
 
 def map_gamestate_for_display(gamestate: str) -> str:
+    """
+    Map the League client's gamestate to a more readable format to be displayed to the user, e.g. "None" -> "Main Menu"
+    :param gamestate: the gamestate to be displayed
+    """
     match gamestate:
         case "None":
             return "Main Menu"
@@ -83,6 +105,10 @@ def map_gamestate_for_display(gamestate: str) -> str:
             return gamestate
 
 def map_phase_for_display(phase: str) -> str:
+    """
+    Map the Champselect phase to a more readable format to be displayed to the user, e.g. "BAN_PICK" -> "Pick/Ban"
+    :param phase: the phase to be displayed
+    """
     match phase:
         case "PLANNING":
             return "Planning"
@@ -94,7 +120,11 @@ def map_phase_for_display(phase: str) -> str:
             return "None"
 
 def get_backup_config_champs(role: str, picking: bool = True) -> list[str]:
-    """ Parse the user's config for backup champs and return it as a list. """
+    """
+    Parse the user's config for backup champs and return it as a list.
+    :param role: the role (position) the user is playing
+    :param picking: a bool indicating whether to look for champions to pick (True) or champions to ban (False)
+    """
     champs: list[str] = []
     if len(role) == 0:
         warnings.warn(f"Unable to find backup champions - the user wasn't assigned a role", RuntimeWarning)
@@ -115,7 +145,10 @@ def get_backup_config_champs(role: str, picking: bool = True) -> list[str]:
 
 
 def clean_string(string: str) -> str:
-    """ Remove whitespace and illegal characters from a string, and convert it to lowercase. """
+    """
+    Remove whitespace and illegal characters from a string, and convert it to lowercase.
+    :param string: the string to clean
+    """
     illegal = (" ", "'", ".")
     new_string = ""
     for char in string:
@@ -124,11 +157,20 @@ def clean_string(string: str) -> str:
     return new_string
 
 def capitalize(string: str) -> str:
-    """ Capitalize the first letter in a string and return the result. """
+    """
+    Capitalize the first letter in a string and return the result.
+    :param string: the string to capitalize
+    """
     return string[:1].upper() + string[1:]
 
 def print_and_write(*args: object, **kwargs) -> None:
-    """ Print the input and save it to a log file. """
+    """
+    Print the input and save it to a log file.
+    :param args: the items to print
+
+    Keyword Arguments:
+        * `should_print` - a bool indicating whether or not to print the output (if False, only write to file)
+    """
     text: str = " ".join(str(arg) for arg in args)
 
     should_print: bool = kwargs.get("should_print", True)
@@ -139,30 +181,10 @@ def print_and_write(*args: object, **kwargs) -> None:
     with open("output.log", "a") as file:
         file.write(text + "\n")
 
-
-def clean_role_name(prompt: str) -> str:
-    """ Convert various role naming conventions to the format used by the game. Example output:
-    mid -> middle
-    supp -> utility
-    jg -> jungle
+def custom_formatwarning(message: str, _category, *_) -> str:
     """
-    name: str = input(prompt)
-    if name == "":
-        return name
-    # Remove all illegal characters and whitespace
-    clean_name = clean_string(name)
-
-    roles = [("top", "t"), ("jungle", "jg", "j"), ("middle", "mid", "m"),
-             ("bottom", "bot", "adc", "adcarry", "b"), ("utility", "support", "sup", "supp")]
-
-    for role in roles:
-        if clean_name in role:
-            return role[0]
-
-    return "invalid"
-
-def custom_formatwarning(message, category, *_) -> str:
-    """ Create and return a custom warning format, containing only the warning message. """
+    Create and return a custom warning format, containing only the warning message.
+    """
     formatted_msg: str = f"\tWarning: {message}\n"
     print_and_write(formatted_msg, should_print=False)  # don't print the error here because it will be printed anyways
     return formatted_msg

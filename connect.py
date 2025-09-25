@@ -12,6 +12,10 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 
 
 class Connection:
+    """
+    A Class to manage a connection to the Leauge client. Contains instance variables to keep track of the state
+    of the connection, and methods used to make API calls.
+    """
     RUNEPAGE_PREFIX: str = "Blitz:"  # Prefix for the name of rune pages created by this script
     BRYAN_SUMMONERID: int = 2742039436911744
 
@@ -65,7 +69,10 @@ class Connection:
     # Connection Setup
     # ----------------
     def parse_lockfile(self, wait_time: float = 5) -> None:
-        """ Parse the user's lockfile into a dictionary. """
+        """
+        Parse the user's lockfile into a dictionary.
+        :param wait_time: number of seconds to wait between failed attmepts to parse the lockfile
+        """
         lockfile_found: bool = False
         while not lockfile_found:
             l: u.Lockfile = self.lockfile
@@ -77,15 +84,17 @@ class Connection:
                 lockfile_found = True
 
             except FileNotFoundError:
-                u.print_and_write("Lockfile not found; open league, or specify your installation directory in your "
-                                  "config and restart this program.")
+                u.print_and_write("Unable to connect to the League of Legends client. If it's open, try updating your"
+                                  "game directory in the config file (config.ini) and restart the program.")
                 time.sleep(wait_time)
 
             except Exception as e:
-                raise Exception(f"Failed to parse lockfile: {e}")
+                raise Exception(f"Error while parsing lockfile: {e}")
 
     def setup_endpoints(self) -> None:
-        """ Set up a dictionary containing various endpoints for the API. """
+        """
+        Set up a dictionary containing various endpoints for the API.
+        """
         self.endpoints = {
             "gamestate": "/lol-gameflow/v1/gameflow-phase",  # GET
             "lobby": "/lol-lobby/v2/lobby",  # GET
@@ -108,13 +117,14 @@ class Connection:
         }
         # This endpoint requires the player's summoner id, which requires the current_summoner endpoint
         # to be initialized already, so initialize it separately
-        self.endpoints.update(
-            {"all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions-minimal"  # GET
+        self.endpoints.update({
+            "all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions-minimal"  # GET
             }
         )
 
     def populate_champ_table(self) -> None:
-        """ Get a list of all champions in the game and another of all that the player owns, and store them
+        """
+        Get a list of all champions in the game and another of all that the player owns, and store them
         in a dictionary along with their id numbers.
         """
         response: requests.Response = self.api_get("all_champs")
@@ -142,7 +152,9 @@ class Connection:
             self.owned_champs[champ_name] = champid
 
     def update_primary_role(self) -> None:
-        """ Update the primary role that the user is queueing for. """
+        """
+        Check what role the user is queueing for, and update the Connection object accordingly.
+        """
         try:
             local_player_data: dict = self.api_get("lobby").json()["localMember"]
             self.user_role = local_player_data["firstPositionPreference"].strip().lower()
@@ -153,7 +165,9 @@ class Connection:
     # Getter methods
     # --------------
     def get_runepages(self) -> list[dict]:
-        """ Get the runepages the player currently has set. """
+        """
+        Get a list of rune pages the player currently has set.
+        """
         response = self.api_get("runes")
         if response.status_code == 200:
             return response.json()
@@ -161,7 +175,9 @@ class Connection:
         raise RuntimeError(f"Unable to get rune pages: {response}")
 
     def get_assigned_role(self) -> str:
-        """ Get the name of the user's assigned role. """
+        """
+        Get the name of the user's assigned role.
+        """
         # Skip unecessary API calls
         if self.role_checked:
             return self.assigned_role
@@ -185,38 +201,60 @@ class Connection:
         return role
 
     def get_session(self) -> dict:
-        """ Get the current champselect session info. """
+        """
+        Get the current champselect session info.
+        """
         return self.api_get("champselect_session").json()
 
     def get_champid(self, champ: str) -> int:
-        """ Get the id of the champion with the given name. """
+        """
+        Get the id number of a champion.
+        :param champ: the name of the champion
+        """
         return self.all_champs[u.clean_name(self.all_champs, champ)]
 
     def get_gamestate(self) -> str:
-        """ Get the current state of the game (Lobby, ChampSelect, etc.) """
+        """
+        Get the current state of the game (Lobby, ChampSelect, etc.)
+        """
         return self.api_get("gamestate").json()
 
     def get_localcellid(self) -> int:
-        """ Get the cell id of the user. """
+        """
+        Get the cell id of the user.
+        """
         return self.session["localPlayerCellId"]
 
     def get_summoner_id(self) -> int:
-        """ Get the summoner id of the user. """
+        """
+        Get the summoner id of the user.
+        """
         return self.api_get("current_summoner").json()["accountId"]
 
-    def get_recommended_runepage(self, champid: int, role_name: str) -> dict:
-        """ Get the recommended runepage from the client as a dictionary. """
-        endpoint: str = self.get_rune_recommendation_endpoint(champid, role_name)
+    def get_recommended_runepage(self, champid: int, position: str) -> dict:
+        """
+        Get the recommended runepage from the client as a dictionary.
+        :param champid: the id of the champion being played
+        :param position: the name of the position being played
+        """
+        endpoint: str = self.get_rune_recommendation_endpoint(champid, position)
         return self.api_get(endpoint).json()
 
     @staticmethod
     def get_rune_recommendation_endpoint(champid: int, position: str) -> str:
-        """ Get the endpoint used to get recommended runes. """
+        """
+        Get the endpoint used to get recommended runes.
+        :param champid: the id of the champion being played
+        :param position: the name of the position being played
+        """
         mapid = 11  # mapid for summoner's rift
         return f"/lol-perks/v1/recommended-pages/champion/{champid}/position/{position}/map/{mapid}"
 
     def get_request_url(self, endpoint: str) -> tuple[str, dict[str, str]]:
-        """ Get the url to send http reqeusts to, and header data to send with it. """
+        """
+        Get the url to send http reqeusts to, and header data to send with it.
+        :param endpoint: the endpoint to access
+        """
         l = self.lockfile
         https_auth = f"Basic {b64encode(f"riot:{l.password}".encode()).decode()}"
         headers = {
@@ -231,24 +269,45 @@ class Connection:
     # API Methods
     # -----------
 
-    def api_get(self, endpoint) -> requests.Response:
-        """ Send an HTTP GET request. """
+    def api_get(self, endpoint: str) -> requests.Response:
+        """
+        Send an HTTP GET request.
+        :param endpoint: the endpoint to use
+        """
         return self.api_call(endpoint, "get")
 
-    def api_post(self, endpoint, data=None) -> requests.Response:
-        """ Send an HTTP POST request. """
+    def api_post(self, endpoint: str, data: dict=None) -> requests.Response:
+        """
+        Send an HTTP POST request.
+        :param endpoint: the endpoint to use
+        :param data: (optional) data to be sent with the request
+        """
         return self.api_call(endpoint, "post", data)
 
-    def api_put(self, endpoint, data=None) -> requests.Response:
-        """ Send an HTTP PUT request. """
+    def api_put(self, endpoint: str, data: dict=None) -> requests.Response:
+        """
+        Send an HTTP PUT request.
+        :param endpoint: the endpoint to use
+        :param data: (optional) data to be sent with the request
+        """
         return self.api_call(endpoint, "put", data)
 
-    def api_patch(self, endpoint, data=None) -> requests.Response:
-        """ Send an HTTP PATCH request. """
+    def api_patch(self, endpoint, data: dict=None) -> requests.Response:
+        """
+        Send an HTTP PATCH request.
+        :param endpoint: the endpoint to use
+        :param data: (optional) data to be sent with the request
+        """
         return self.api_call(endpoint, "patch", data)
 
-    def api_call(self, endpoint, method, data=None, should_print=False) -> requests.Response:
-        """ Make an API call with the specified endpoint and method. """
+    def api_call(self, endpoint: str, method: str, data: dict=None, should_print: bool=False) -> requests.Response:
+        """
+        Make an API call with the specified endpoint and method.
+        :param endpoint: the endpoint to use
+        :param method: the HTTP method to use
+        :param data: (optional) data to be sent with the request
+        :param should_print: (optional) a bool indicating whether or not to print debug info
+        """
         # Check if endpoint parameter is an alias for one stored in the endpoints dictionary, otherwise use as-is
         endpoint = self.endpoints.get(endpoint, endpoint)
 

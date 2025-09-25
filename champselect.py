@@ -7,12 +7,17 @@ import connect as c
 connection: c.Connection
 
 def set_connection(con: c.Connection):
-    """ Set up the global connection variable for this module. """
+    """
+    Set up the global connection variable for this module.
+    :param con: the Connection object to set up
+    """
     global connection
     connection = con
 
 def ban_or_pick() -> None:
-    """ Decide whether to pick or ban based on gamestate, then call the corresponding method. """
+    """
+    Decide whether to pick or ban based on gamestate, then call the corresponding method.
+    """
     # User's turn to pick
     if not connection.has_picked and is_currently_picking():
         lock_champ()
@@ -32,26 +37,38 @@ def ban_or_pick() -> None:
 
 
 def hover_champ(champid: int | None = None) -> None:
-    """ Hover a champion in champselect. """
+    """
+    Hover a champion in champselect.
+    :param champid: (optional) the id number of the champion to hover
+    """
     if champid is None:
         champid = connection.get_champid(connection.pick_intent)
     do_champ(mode="hover", champid=champid)
 
 
 def ban_champ(champid: int | None = None) -> None:
-    """ Ban a champion in champselect. """
+    """
+    Ban a champion in champselect.
+    :param champid: (optional) the id number of the champion to hover
+    """
     if champid is None:
         champid = connection.get_champid(connection.ban_intent)
     do_champ(mode="ban", champid=champid)
 
 
 def lock_champ(champid: int | None = None) -> None:
-    """ Lock in a champion in champselect. """
+    """
+    Lock in a champion in champselect.
+    :param champid: (optional) the id number of the champion to hover
+    """
     if champid is None:
         champid = connection.get_champid(connection.pick_intent)
     do_champ(mode="pick", champid=champid)
 
 def get_actionid(mode: str) -> int | None:
+    """
+    Get the user's actionid from the current Champselect action.
+    """
     try:
         action = connection.ban_action if mode == "ban" else connection.pick_action
         return action["id"]
@@ -62,9 +79,10 @@ def get_actionid(mode: str) -> int | None:
 
 def do_champ(**kwargs) -> None:
     """ Pick or ban a champ in champselect.
+    
     Keyword arguments:
-    champid -- the champ to pick/ban
-    mode -- options are hover, ban, and pick
+        * `champid` - the champ to pick/ban
+        * `mode` - options are hover, ban, and pick
     """
     champid: int = kwargs.get("champid", 0)
     mode: str = kwargs.get("mode", "pick")
