@@ -11,9 +11,6 @@ import lobby
 # Whether or not to print debug info
 SHOULD_PRINT: bool = u.get_config_option_bool("settings", "print_debug_info")
 
-# How many seconds to wait after a failed attempt to connect to the client
-RETRY_RATE: int = 5
-
 # How many seconds to wait before re-running the main loop
 UPDATE_INTERVAL: float = float(u.get_config_option_str("settings", "update_interval"))
 
@@ -32,12 +29,8 @@ def initialize_connection() -> c.Connection:
             return connection
 
         # If the connection isn't successful or the lockfile doesn't exist, the client isn't open yet
-        except (requests.exceptions.ConnectionError, FileNotFoundError):
+        except (requests.exceptions.ConnectionError, FileNotFoundError, KeyError):
             u.exit_with_error(c.MSG_CLIENT_CONNECTION_ERR)
-
-        except KeyError:
-            # Client is still loading, try again until it finishes loading
-            time.sleep(RETRY_RATE)
 
 
 def handle_lobby(connection: c.Connection) -> None:
