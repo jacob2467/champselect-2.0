@@ -132,7 +132,8 @@ def get_backup_config_champs(position: str, picking: bool = True) -> list[str]:
     """
     champs: list[str] = []
     if len(position) == 0:
-        warnings.warn(f"Unable to find backup champions - the user wasn't assigned a role", RuntimeWarning)
+        warnings.warn(f"Unable to find backup champions - the user wasn't assigned a role",
+                      RuntimeWarning, stacklevel=2)
         return champs
 
     section_name: str = "pick" if picking else "ban"
