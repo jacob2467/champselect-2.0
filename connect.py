@@ -14,6 +14,10 @@ MSG_CLIENT_CONNECTION_ERR: str = ("Unable to connect to the League of Legends cl
 "game directory in the config file (config.ini), and then restart the program.")
 
 class Connection:
+    """
+    A Class to manage a connection to the Leauge client. Contains instance variables to keep track of the state
+    of the connection, and methods used to make API calls.
+    """
     RUNEPAGE_PREFIX: str = "Blitz:"  # Prefix for the name of rune pages created by this script
     BRYAN_SUMMONERID: int = 2742039436911744
 
@@ -144,7 +148,9 @@ class Connection:
 
 
     def update_primary_role(self) -> None:
-        """ Update the primary role that the user is queueing for. """
+        """
+        Check what role the user is queueing for, and update the Connection object accordingly.
+        """
         try:
             local_player_data: dict = self.api_get("lobby").json()["localMember"]
             self.user_role = local_player_data["firstPositionPreference"].strip().lower()
@@ -164,7 +170,9 @@ class Connection:
 
 
     def get_assigned_role(self) -> str:
-        """ Get the name of the user's assigned role. """
+        """
+        Get the name of the user's assigned role.
+        """
         # Skip unecessary API calls
         if self.role_checked:
             return self.assigned_role
@@ -189,17 +197,24 @@ class Connection:
 
 
     def get_session(self) -> dict:
-        """ Get the current champselect session info. """
+        """
+        Get the current champselect session info.
+        """
         return self.api_get("champselect_session").json()
 
 
     def get_champid(self, champ: str) -> int:
-        """ Get the id of the champion with the given name. """
+        """
+        Get the id number of a champion.
+        :param champ: the name of the champion
+        """
         return self.all_champs[u.clean_name(self.all_champs, champ)]
 
 
     def get_gamestate(self) -> str:
-        """ Get the current state of the game (Lobby, ChampSelect, etc.) """
+        """
+        Get the current state of the game (Lobby, ChampSelect, etc.)
+        """
         return self.api_get("gamestate").json()
 
 
@@ -209,7 +224,9 @@ class Connection:
 
 
     def get_summoner_id(self) -> int:
-        """ Get the summoner id of the user. """
+        """
+        Get the summoner id of the user.
+        """
         return self.api_get("current_summoner").json()["accountId"]
 
 

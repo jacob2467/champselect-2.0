@@ -4,6 +4,7 @@ import time
 import utility as u
 import connect as c
 
+
 def ban_or_pick(connection: c.Connection) -> None:
     """ Decide whether to pick or ban based on gamestate, then call the corresponding method. """
     # User's turn to pick

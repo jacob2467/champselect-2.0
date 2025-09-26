@@ -17,6 +17,9 @@ if not config_contents:
 
 @dataclass
 class Lockfile:
+    """
+    A Class to store information about the Lockfile used to allow access to the LCU API.
+    """
     pid: str = ""
     port: str = ""
     password: str = ""
@@ -67,7 +70,9 @@ def _get_config_option(section: str, option: str, is_bool: bool = False) -> str 
 
 
 def get_lockfile_path() -> str:
-    """ Get the path to the user's lockfile. """
+    """
+    Get the path to the user's lockfile.
+    """
     config_dir: str = get_config_option_str("settings", "directory")
 
     # Use directory specified in config if it exists
@@ -89,7 +94,7 @@ def get_lockfile_path() -> str:
 
 
 def map_gamestate_for_display(gamestate: str) -> str:
-    """ Format the current gamestate to be displayed to the user. """
+    """ Map the League client's gamestate to a more readable format to be displayed to the user, e.g. "None" -> "Main Menu" """
     match gamestate:
         case "None":
             return "Main Menu"
@@ -106,7 +111,7 @@ def map_gamestate_for_display(gamestate: str) -> str:
 
 
 def map_phase_for_display(phase: str) -> str:
-    """ Format the current Champselect phase to be displayed to the user. """
+    """ Map the Champselect phase to a more readable format to be displayed to the user, e.g. "BAN_PICK" -> "Pick/Ban" """
     match phase:
         case "PLANNING":
             return "Planning"
@@ -145,7 +150,10 @@ def get_backup_config_champs(position: str, picking: bool = True) -> list[str]:
 
 
 def clean_string(string: str) -> str:
-    """ Remove whitespace and illegal characters from a string, and convert it to lowercase. """
+    """
+    Remove whitespace and illegal characters from a string, and convert it to lowercase.
+    :param string: the string to clean
+    """
     illegal = (" ", "'", ".")
     new_string = ""
     for char in string:
