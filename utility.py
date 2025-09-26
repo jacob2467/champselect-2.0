@@ -1,8 +1,8 @@
-""" A collection of static utility methods. """
-import os
+from dataclasses import dataclass
 import configparser
 import warnings
-from dataclasses import dataclass
+import sys
+import os
 
 config_name = "config.ini"
 
@@ -14,6 +14,7 @@ config_contents = config.read(config_name)
 if not config_contents:
     raise RuntimeError(f"Unable to parse {config_name} - does it exist?")
 
+
 @dataclass
 class Lockfile:
     pid: str = ""
@@ -21,23 +22,40 @@ class Lockfile:
     password: str = ""
     protocol: str = "https"
 
+
 def get_config_option_str(section: str, option: str) -> str:
-    """ Get the specified string option from the config file. """
+    """
+    Get an option from the user's config.
+    Args:
+        section: the config section to read from
+        option: the config option to read from
+    """
     return _get_config_option(section, option, False)
 
+
 def get_config_option_bool(section: str, option: str) -> bool:
-    """ Get the specified bool option from the config file. """
+    """
+    Get an option from the user's config.
+    Args:
+        section: the config section to read from
+        option: the config option to read from
+    """
     return _get_config_option(section, option, True)
 
+
 def _get_config_option(section: str, option: str, is_bool: bool = False) -> str | bool:
-    """ Get and return the value (str or bool) of a config option from the config file. """
+    """
+    Get an option from the user's config.
+    Args:
+        section: the config section to read from
+        option: the config option to read from
+        is_bool: flag indicating whether or not to interpret the config option as a bool
+    """
     try:
-        value: str | bool
         if is_bool:
-            value = config.getboolean(section, option)
-        else:
-            value = config.get(section, option)
-        return value
+            return config.getboolean(section, option)
+
+        return config.get(section, option)
 
     except configparser.NoSectionError as e:
         raise RuntimeError(f"Invalid config section '{section}': {e}")
@@ -47,27 +65,31 @@ def _get_config_option(section: str, option: str, is_bool: bool = False) -> str 
     except Exception as e:
         raise RuntimeError(f"An unknown error occurred while reading {config_name}: {e}")
 
+
 def get_lockfile_path() -> str:
     """ Get the path to the user's lockfile. """
     config_dir: str = get_config_option_str("settings", "directory")
 
     # Use directory specified in config if it exists
-    if config_dir != "":
-        dir = config_dir
-    else:  # Use default filepaths
-        osx = "/Applications/League of Legends.app/Contents/LoL/lockfile"
-        windows = "C:\\Riot Games\\League of Legends\\lockfile"
-        # league can't be played on linux anymore because rito
+    if config_dir:
+        return config_dir
 
-        match os.name:
-            case "nt":
-                dir = windows
-            case "posix":
-                dir = osx
+    # If directory not specified in config, use defaults
+    osx = "/Applications/League of Legends.app/Contents/LoL/lockfile"
+    windows = "C:\\Riot Games\\League of Legends\\lockfile"
+    # league can't be played on linux anymore because rito
 
-    return dir
+    match os.name:
+        case "nt":
+            return windows
+        case "posix":
+            return osx
+        case _:
+            raise RuntimeError("Unsupported OS")
+
 
 def map_gamestate_for_display(gamestate: str) -> str:
+    """ Format the current gamestate to be displayed to the user. """
     match gamestate:
         case "None":
             return "Main Menu"
@@ -79,10 +101,12 @@ def map_gamestate_for_display(gamestate: str) -> str:
             return "Champselect"
         case "FINALIZATION":
             return "Champselect"
-        case default:
+        case _:
             return gamestate
 
+
 def map_phase_for_display(phase: str) -> str:
+    """ Format the current Champselect phase to be displayed to the user. """
     match phase:
         case "PLANNING":
             return "Planning"
@@ -90,18 +114,24 @@ def map_phase_for_display(phase: str) -> str:
             return "Pick/Ban"
         case "FINALIZATION":
             return "Loadout Selection"
-        case default:
+        case _:
             return "None"
 
-def get_backup_config_champs(role: str, picking: bool = True) -> list[str]:
-    """ Parse the user's config for backup champs and return it as a list. """
+
+def get_backup_config_champs(position: str, picking: bool = True) -> list[str]:
+    """
+    Parse the user's config for backup champs and return it as a list.
+    Args:
+        position: the position the user is playing
+        picking: (optional) a flag indicating whether the user is picking (True) or banning (False)
+    """
     champs: list[str] = []
-    if len(role) == 0:
+    if len(position) == 0:
         warnings.warn(f"Unable to find backup champions - the user wasn't assigned a role", RuntimeWarning)
         return champs
 
     section_name: str = "pick" if picking else "ban"
-    section_name += f"_{role}"
+    section_name += f"_{position}"
 
     option_index: int = 1
     config_section = config[section_name]
@@ -123,15 +153,15 @@ def clean_string(string: str) -> str:
             new_string += char.lower()
     return new_string
 
+
 def capitalize(string: str) -> str:
-    """ Capitalize the first letter in a string and return the result. """
+    """ Capitalize the first letter in a string. """
     return string[:1].upper() + string[1:]
 
-def print_and_write(*args: object, **kwargs) -> None:
+
+def print_and_write(*args: object, should_print: bool = True) -> None:
     """ Print the input and save it to a log file. """
     text: str = " ".join(str(arg) for arg in args)
-
-    should_print: bool = kwargs.get("should_print", True)
 
     if should_print:
         print(text)
@@ -140,42 +170,26 @@ def print_and_write(*args: object, **kwargs) -> None:
         file.write(text + "\n")
 
 
-def clean_role_name(prompt: str) -> str:
-    """ Convert various role naming conventions to the format used by the game. Example output:
-    mid -> middle
-    supp -> utility
-    jg -> jungle
-    """
-    name: str = input(prompt)
-    if name == "":
-        return name
-    # Remove all illegal characters and whitespace
-    clean_name = clean_string(name)
-
-    roles = [("top", "t"), ("jungle", "jg", "j"), ("middle", "mid", "m"),
-             ("bottom", "bot", "adc", "adcarry", "b"), ("utility", "support", "sup", "supp")]
-
-    for role in roles:
-        if clean_name in role:
-            return role[0]
-
-    return "invalid"
-
-def custom_formatwarning(message, category, *_) -> str:
+def custom_formatwarning(message, *_) -> str:
     """ Create and return a custom warning format, containing only the warning message. """
     formatted_msg: str = f"\tWarning: {message}\n"
     print_and_write(formatted_msg, should_print=False)  # don't print the error here because it will be printed anyways
     return formatted_msg
 
-def clean_name(all_champs: dict[str, int], name: str, should_filter=True) -> str:
-    """ Remove whitespace and special characters from a champion's name. Example output:
-    Aurelion Sol -> aurelionsol
-    Bel'Veth -> belveth
-    :param all_champs: champions that have already been processed
-    :param name: the name to clean
-    :param should_filter: if True, return "invalid" when an invalid champion name is passed
+
+def clean_name(all_champs: dict[str, int], name: str, should_filter: bool = True) -> str:
     """
-    if name == "":
+    Remove whitespace and special characters from a champion's name.
+    Example output:
+        Aurelion Sol -> aurelionsol
+        Bel'Veth -> belveth
+
+    Args:
+        all_champs: champions that have already been processed
+        name: the name to clean
+        should_filter: if True, return "invalid" when an invalid champion name is passed
+    """
+    if not name:
         return name
     # Remove all illegal characters and whitespace
     name = clean_string(name)
@@ -186,9 +200,14 @@ def clean_name(all_champs: dict[str, int], name: str, should_filter=True) -> str
     elif name == "wukong":
         return "monkeyking"
 
+    if not should_filter:
+        return name
+
     # Filter out invalid resulting names
-    if should_filter:
-        if name in all_champs:
-            return name
-        return "invalid"
-    return name
+    return name if name in all_champs else "invalid"
+
+
+def exit_with_error(err_msg: str, exitcode: int = 1) -> None:
+    """ Exit the program with the specified error message. """
+    sys.stderr.write(err_msg)
+    sys.exit(exitcode)

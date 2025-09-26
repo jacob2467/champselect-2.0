@@ -5,31 +5,31 @@ import utility as u
 import connect as c
 
 def ban_or_pick(connection: c.Connection) -> None:
-    """
-    Decide whether to pick or ban based on gamestate, then call the corresponding method.
-    """
+    """ Decide whether to pick or ban based on gamestate, then call the corresponding method. """
     # User's turn to pick
     if not connection.has_picked and is_currently_picking(connection):
         lock_champ(connection)
+        return
 
     # User's turn to ban
     elif not connection.has_banned and is_currently_banning(connection):
         ban_champ(connection)
         # Re-hover pick intent after the ban
         hover_champ(connection)
+        return
 
     # Not user's turn to do anything
-    else:
-        # Make sure we're always showing our intent
-        champid: int = connection.get_champid(connection.pick_intent)
-        if not connection.has_picked and champid != get_current_hoverid(connection):
-            hover_champ(connection, champid)
+    # Make sure we're always showing our intent
+    champid: int = connection.get_champid(connection.pick_intent)
+    if not connection.has_picked and champid != get_current_hoverid(connection):
+        hover_champ(connection, champid)
 
 
 def hover_champ(connection: c.Connection, champid: int | None = None) -> None:
     """
     Hover a champion in champselect.
-    :param champid: (optional) the id number of the champion to hover
+    Args:
+        champid: (optional) the id number of the champion to hover
     """
     if champid is None:
         champid = connection.get_champid(connection.pick_intent)
@@ -39,7 +39,8 @@ def hover_champ(connection: c.Connection, champid: int | None = None) -> None:
 def ban_champ(connection: c.Connection, champid: int | None = None) -> None:
     """
     Ban a champion in champselect.
-    :param champid: (optional) the id number of the champion to hover
+    Args:
+        champid: (optional) the id number of the champion to ban
     """
     if champid is None:
         champid = connection.get_champid(connection.ban_intent)
@@ -49,16 +50,16 @@ def ban_champ(connection: c.Connection, champid: int | None = None) -> None:
 def lock_champ(connection: c.Connection, champid: int | None = None) -> None:
     """
     Lock in a champion in champselect.
-    :param champid: (optional) the id number of the champion to hover
+    Args:
+        champid: (optional) the id number of the champion to lock
     """
     if champid is None:
         champid = connection.get_champid(connection.pick_intent)
     do_champ(connection, mode="pick", champid=champid)
 
+
 def get_actionid(connection: c.Connection, mode: str) -> int | None:
-    """
-    Get the user's actionid from the current Champselect action.
-    """
+    """ Get the user's actionid from the current Champselect action. """
     try:
         action = connection.ban_action if mode == "ban" else connection.pick_action
         return action["id"]
@@ -67,23 +68,21 @@ def get_actionid(connection: c.Connection, mode: str) -> int | None:
         warnings.warn(f"Unable to {mode} the specified champion: {e}", RuntimeWarning)
         return None
 
-def do_champ(connection: c.Connection, **kwargs) -> None:
-    """ Pick or ban a champ in champselect.
-    
-    Keyword arguments:
-        * `champid` - the champ to pick/ban
-        * `mode` - options are hover, ban, and pick
-    """
-    champid: int = kwargs.get("champid", 0)
-    mode: str = kwargs.get("mode", "pick")
-    actionid: int | None = kwargs.get("actionid", None)
 
+def do_champ(connection: c.Connection, champid: int = 0, mode: str = "pick", actionid: int | None = None) -> None:
+    """
+    Pick or ban a champ in champselect.
+    Args:
+        champid: (optional) the id number of the champion
+        mode: (optional) the mode to use (options are pick, ban, or hover)
+        actionid: (optional) the actionid of the Champselect action to use
+    """
     # Set up http request
     data: dict[str, int] = {"championId": champid}
     if actionid is None:
         actionid = get_actionid(connection, mode)
 
-    endpoint = connection.endpoints["champselect_action"] + str(actionid)
+    endpoint: str = connection.endpoints["champselect_action"] + str(actionid)
 
     # Hover the champ in case we're not already
     if mode != "hover":
@@ -110,8 +109,9 @@ def do_champ(connection: c.Connection, **kwargs) -> None:
             # hover to be marked as invalid.
             connection.invalid_picks.add(champid)
 
+
 def decide_pick(connection: c.Connection) -> str:
-    """ Decide what champ the user should play. """
+    """ Decide what champion the user should pick. """
     # Make sure Bryan plays his favorite champ
     if connection.is_bryan:
         return "yuumi"
@@ -129,13 +129,13 @@ def decide_pick(connection: c.Connection) -> str:
             return pick
     # Last config option isn't valid
     if not is_valid:
-        raise Exception("Unable to find a valid champion to pick.")
+        raise RuntimeError("Unable to find a valid champion to pick.")
 
     return pick
 
 
 def decide_ban(connection: c.Connection) -> str:
-    """ Decide what champ the user should ban. """
+    """ Decide what champion the user should ban. """
     # Make sure Bryan bans his least favorite champ
     if connection.is_bryan:
         return "kayn"
@@ -158,7 +158,8 @@ def decide_ban(connection: c.Connection) -> str:
         warnings.warn("Unable to find a valid champion to ban.", RuntimeWarning)
     return ban
 
-def wait_before_locking(connection: c.Connection, mode: str):
+
+def wait_before_locking(connection: c.Connection, mode: str) -> None:
     """ Wait to lock in or ban a champ if the user specified a lock-in delay in their config. """
     if connection.lock_in_delay == 0:
         return
@@ -188,15 +189,16 @@ def wait_before_locking(connection: c.Connection, mode: str):
         if mode == "skip":
             still_waiting = False
 
+
 def send_runes_and_summs(connection: c.Connection) -> None:
-    """ Get the recommended rune page and summoner spells and send them to the client,
-    if the user has opted in to this feature. """
+    """ Get the recommended rune page and summoner spells and send them to the client. """
     # Get assigned role
     role_name: str = connection.get_assigned_role()
 
     champid: int = connection.api_get("current_champ").json()
     champ_name: str = get_champ_name_by_id(connection, champid)
 
+    ##### Get runes to be sent #####
     if not connection.runes_chosen and connection.should_modify_runes:
         # Get the runepage to use
         current_runepage, should_overwrite = get_runepage(connection, champ_name)
@@ -225,14 +227,13 @@ def send_runes_and_summs(connection: c.Connection) -> None:
         else:  # use existing rune page
             request_body = current_runepage
 
-        summs = recommended_runepage["summonerSpellIds"]
-
+        ##### Send the chosen runes #####
         response = connection.api_put(endpoint, request_body)
         try:
             if response.status_code == 400:
                 u.print_and_write("Error code:", response.json())
         except Exception as e:
-            u.print_and_write("An exception occured:", e)
+            u.print_and_write("An exception occured while trying to send runes:", e)
 
         flash: int = 4
         ghost: int = 1
@@ -240,6 +241,7 @@ def send_runes_and_summs(connection: c.Connection) -> None:
         d: int = 0  # index of left summoner spell (bound to D by default)
         f: int = 1  # index of right summoner spell (bound to F by default)
 
+        summs = recommended_runepage["summonerSpellIds"]
         # Make sure Bryan always takes ghost/cleanse (he needs it)
         if connection.is_bryan:
             summs[d], summs[f] = ghost, cleanse
@@ -248,7 +250,7 @@ def send_runes_and_summs(connection: c.Connection) -> None:
         if summs[d] == flash:
             summs[d], summs[f] = summs[f], flash
 
-        # Send summoner spells
+        ##### Send summoner spells #####
         if connection.should_modify_runes or connection.is_bryan:
             request_body = {
                 "spell1Id": summs[d],
@@ -256,6 +258,7 @@ def send_runes_and_summs(connection: c.Connection) -> None:
             }
             connection.api_patch("send_summs", request_body)
             connection.runes_chosen = True
+
 
 def get_champselect_phase(connection: c.Connection) -> str:
     """ Get the name of the current champselect phase. """
@@ -267,9 +270,10 @@ def get_champselect_phase(connection: c.Connection) -> str:
         return "skip"
     return phase
 
+
 def update_champ_intent(connection: c.Connection) -> None:
     """ Update instance variables with up-to-date pick, ban, and role intent, and hover the champ to be locked. """
-    # Update pick intent
+    ##### Update pick intent #####
     if not connection.has_picked:
         last_intent: str = connection.pick_intent
         connection.pick_intent = decide_pick(connection)
@@ -282,7 +286,7 @@ def update_champ_intent(connection: c.Connection) -> None:
             u.print_and_write(f"{'\t' * connection.indentation}Pick intent: {u.capitalize(connection.pick_intent)}")
             connection.has_printed_pick = True
 
-    # Update ban intent
+    ##### Update ban intent #####
     if not connection.has_banned:
         last_intent: str = connection.ban_intent
         connection.ban_intent = decide_ban(connection)
@@ -294,6 +298,7 @@ def update_champ_intent(connection: c.Connection) -> None:
         if not connection.has_printed_ban:
             u.print_and_write(f"{'\t' * connection.indentation}Ban intent: {u.capitalize(connection.ban_intent)}")
             connection.has_printed_ban = True
+
 
 def update_champselect(connection: c.Connection) -> None:
     """ Update all champselect session data. """
@@ -312,6 +317,7 @@ def update_champselect(connection: c.Connection) -> None:
 
         update_champ_intent(connection)
 
+
 def get_champ_name_by_id(connection: c.Connection, target_id: int) -> str:
     """ Find the champion with the specified id number and return their name as a string. """
     for name, id in connection.all_champs.items():
@@ -320,15 +326,16 @@ def get_champ_name_by_id(connection: c.Connection, target_id: int) -> str:
     warnings.warn(f"Unable to find champion name with id {target_id}")
     return "unknown"
 
+
 def get_runepage(connection: c.Connection, champ_name: str) -> tuple[dict, bool]:
     """
-    Figure out which rune page to overwrite or use, and return its contents.
+    Figure out which runepage to overwrite or use.
     Returns:
-        tuple[dict, bool]: the rune page data (dictionary), and a bool indicating whether it should be overwritten
+        a tuple containing the runepage data (dictionary), and a bool indicating whether it should be overwritten
             (True) or used as-is (False)
     """
     to_return: None | tuple[dict, bool] = None
-    auto_page_name: str = ""
+    auto_page_name: str
     prefix = connection.RUNEPAGE_PREFIX
 
     # First, check if this script has already created a runepage
@@ -394,38 +401,46 @@ def get_runepage(connection: c.Connection, champ_name: str) -> tuple[dict, bool]
     else:
         raise RuntimeError("An unknown error occured while trying to create a runepage.")
 
+
 def get_banned_champids(connection: c.Connection) -> list[int]:
     """ Get a list of all champion ids that have been banned. """
     return connection.session["bans"]["myTeamBans"] + connection.session["bans"]["theirTeamBans"]
+
 
 def is_banned(connection: c.Connection, champid: int) -> bool:
     """ Check if the given champion is banned. """
     return champid in get_banned_champids(connection)
 
+
 def teammate_hovering(connection: c.Connection, champid: int) -> bool:
     """ Check if the given champion is being hovered by a teammate. """
     return champid in get_teammate_hoverids(connection)
+
 
 def get_current_hoverid(connection: c.Connection) -> int:
     """ Get the id number of the champ the player is currently hovering. """
     return connection.pick_action.get("championId", 0)
 
+
 def is_currently_picking(connection: c.Connection) -> bool:
     """ Return a bool indicating whether or not the user is currently picking. """
     return connection.pick_action.get("isInProgress", False)
+
 
 def is_currently_banning(connection: c.Connection) -> bool:
     """ Return a bool indicating whether or not the user is currently banning. """
     return connection.ban_action.get("isInProgress", False)
 
+
 def is_hovering(connection: c.Connection) -> bool:
     """ Return a bool indicating whether or not the player is currently hovering a champ. """
     return get_current_hoverid(connection) != 0
 
+
 def is_valid_pick(connection: c.Connection, champ_name: str) -> bool:
     """ Check if the given champion can be picked. """
     # Handle empty input - allows user to skip selecting a champion and default to those in the config
-    if champ_name == "":
+    if not champ_name:
         return False
 
     champ_name = u.clean_name(connection.all_champs, champ_name)
@@ -461,18 +476,20 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> bool:
     # This does nothing when queuing for gamemodes that don't have assigned roles
     assigned_role = connection.get_assigned_role()
     if (len(assigned_role) != 0  # assigned role exists
-            and (connection.user_role != assigned_role and connection.user_role != "")  # and role user queued for doesn't match
-            and (connection.user_pick == champ_name and connection.user_pick != "")):  # and champ user picked is the pick in question
+            # and role user queued for doesn't match
+            and (connection.user_role != assigned_role and connection.user_role)
+            # and champ user picked is the pick in question
+            and (connection.user_pick == champ_name and connection.user_pick)):
         u.print_and_write(error_msg, "autofilled")
         connection.invalid_picks.add(champid)
         return False
-
     return True
+
 
 def is_valid_ban(connection: c.Connection, champ: str) -> bool:
     """ Check if the specified champion can be banned. """
     # Handle empty input - allows user to skip selecting a champion and default to those in the config
-    if champ == "":
+    if not champ:
         return False
 
     champid = connection.get_champid(champ)
@@ -496,25 +513,28 @@ def is_valid_ban(connection: c.Connection, champ: str) -> bool:
 
     return True
 
+
 def get_champ_pickids(connection: c.Connection) -> list[int]:
     """ Return a list of champion ids that players have locked in. """
     champids: list[int] = []
-    for pick, is_enemy, is_hovering in get_all_player_champids(connection):
+    for champ, is_enemy, is_hovering in get_all_player_champids(connection):
         if not is_hovering:
-            champids.append(pick)
+            champids.append(champ)
     return champids
+
 
 def get_teammate_hoverids(connection: c.Connection) -> list[int]:
     """ Return a list of champion ids that teammates are hovering. """
     champids: list[int] = []
-    for pick, is_enemy, is_hovering in get_all_player_champids(connection):
+    for champ, is_enemy, is_hovering in get_all_player_champids(connection):
         if not is_enemy and is_hovering:
-            champids.append(pick)
-    # u.print_and_write(f"Current teammate hovers: {champids}")
+            champids.append(champ)
     return champids
 
+
 def get_all_player_champids(connection: c.Connection) -> list[tuple[int, bool, bool]]:
-    """ Return a list of tuples. Each tuple contains a player's champ id, a bool indicating whether they are on the
+    """
+    Return a list of tuples. Each tuple contains a player's champ id, a bool indicating whether they are on the
     enemy team, and a bool hovering (True) or have already picked (False) the champion with the specified ID.
     """
     champids: list[tuple[int, bool, bool]] = []
