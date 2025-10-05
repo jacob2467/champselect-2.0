@@ -59,17 +59,6 @@ def lock_champ(connection: c.Connection, champid: int | None = None) -> None:
     do_champ(connection, mode="pick", champid=champid)
 
 
-def get_actionid(connection: c.Connection, mode: str) -> int | None:
-    """ Get the user's actionid from the current Champselect action. """
-    try:
-        action = connection.ban_action if mode == "ban" else connection.pick_action
-        return action["id"]
-
-    except Exception as e:
-        warnings.warn(f"Unable to {mode} the specified champion: {e}", RuntimeWarning)
-        return None
-
-
 def do_champ(connection: c.Connection, champid: int = 0, mode: str = "pick", actionid: int | None = None) -> None:
     """
     Pick or ban a champ in champselect.
@@ -197,7 +186,7 @@ def send_runes_and_summs(connection: c.Connection) -> None:
     role_name: str = connection.get_assigned_role()
 
     champid: int = connection.api_get("current_champ").json()
-    champ_name: str = get_champ_name_by_id(connection, champid)
+    champ_name: str = connection.get_champ_name_by_id(champid)
 
     ##### Get runes to be sent #####
     if not connection.runes_chosen and connection.should_modify_runes:
@@ -261,6 +250,17 @@ def send_runes_and_summs(connection: c.Connection) -> None:
             connection.runes_chosen = True
 
 
+def get_actionid(connection: c.Connection, mode: str) -> int | None:
+    """ Get the user's actionid from the current Champselect action. """
+    try:
+        action = connection.ban_action if mode == "ban" else connection.pick_action
+        return action["id"]
+
+    except Exception as e:
+        warnings.warn(f"Unable to {mode} the specified champion: {e}", RuntimeWarning)
+        return None
+
+
 def get_champselect_phase(connection: c.Connection) -> str:
     """ Get the name of the current champselect phase. """
     phase = connection.session["timer"]["phase"]
@@ -270,62 +270,6 @@ def get_champselect_phase(connection: c.Connection) -> str:
         u.print_and_write("Champselect phase is 'None' - did someone dodge?")
         return "skip"
     return phase
-
-
-def update_champ_intent(connection: c.Connection) -> None:
-    """ Update instance variables with up-to-date pick, ban, and role intent, and hover the champ to be locked. """
-    ##### Update pick intent #####
-    if not connection.has_picked:
-        last_intent: str = connection.pick_intent
-        connection.pick_intent = decide_pick(connection)
-
-        # Only print pick intent if it's different from the last loop iteration
-        if last_intent != connection.pick_intent:
-            connection.has_printed_pick = False
-
-        if not connection.has_printed_pick:
-            u.print_and_write(f"{'\t' * connection.indentation}Pick intent: {u.capitalize(connection.pick_intent)}")
-            connection.has_printed_pick = True
-
-    ##### Update ban intent #####
-    if not connection.has_banned:
-        last_intent: str = connection.ban_intent
-        connection.ban_intent = decide_ban(connection)
-
-        # Only print ban intent if it's different from the last loop iteration
-        if last_intent != connection.ban_intent:
-            connection.has_printed_ban = False
-
-        if not connection.has_printed_ban:
-            u.print_and_write(f"{'\t' * connection.indentation}Ban intent: {u.capitalize(connection.ban_intent)}")
-            connection.has_printed_ban = True
-
-
-def update_champselect(connection: c.Connection) -> None:
-    """ Update all champselect session data. """
-    connection.session = connection.get_session()
-    if get_champselect_phase(connection) != "FINALIZATION":  # skip unnecessary API calls
-        connection.all_actions = connection.session["actions"]
-        # Look at each action, and return the one with the corresponding cellid
-        for action_group in connection.all_actions:
-            for action in action_group:
-                if action["actorCellId"] == connection.get_localcellid():
-                    if action["type"] == "ban":
-                        connection.ban_action = action
-
-                    elif action["type"] == "pick":
-                        connection.pick_action = action
-
-        update_champ_intent(connection)
-
-
-def get_champ_name_by_id(connection: c.Connection, target_id: int) -> str:
-    """ Find the champion with the specified id number and return their name as a string. """
-    for name, id in connection.all_champs.items():
-        if id == target_id:
-            return name
-    warnings.warn(f"Unable to find champion name with id {target_id}")
-    return "unknown"
 
 
 def get_runepage(connection: c.Connection, champ_name: str) -> tuple[dict, bool]:
@@ -401,41 +345,6 @@ def get_runepage(connection: c.Connection, champ_name: str) -> tuple[dict, bool]
 
     else:
         raise RuntimeError("An unknown error occured while trying to create a runepage.")
-
-
-def get_banned_champids(connection: c.Connection) -> list[int]:
-    """ Get a list of all champion ids that have been banned. """
-    return connection.session["bans"]["myTeamBans"] + connection.session["bans"]["theirTeamBans"]
-
-
-def is_banned(connection: c.Connection, champid: int) -> bool:
-    """ Check if the given champion is banned. """
-    return champid in get_banned_champids(connection)
-
-
-def teammate_hovering(connection: c.Connection, champid: int) -> bool:
-    """ Check if the given champion is being hovered by a teammate. """
-    return champid in get_teammate_hoverids(connection)
-
-
-def get_current_hoverid(connection: c.Connection) -> int:
-    """ Get the id number of the champ the player is currently hovering. """
-    return connection.pick_action.get("championId", 0)
-
-
-def is_currently_picking(connection: c.Connection) -> bool:
-    """ Return a bool indicating whether or not the user is currently picking. """
-    return connection.pick_action.get("isInProgress", False)
-
-
-def is_currently_banning(connection: c.Connection) -> bool:
-    """ Return a bool indicating whether or not the user is currently banning. """
-    return connection.ban_action.get("isInProgress", False)
-
-
-def is_hovering(connection: c.Connection) -> bool:
-    """ Return a bool indicating whether or not the player is currently hovering a champ. """
-    return get_current_hoverid(connection) != 0
 
 
 def is_valid_pick(connection: c.Connection, champ_name: str) -> bool:
@@ -515,6 +424,41 @@ def is_valid_ban(connection: c.Connection, champ: str) -> bool:
     return True
 
 
+def is_banned(connection: c.Connection, champid: int) -> bool:
+    """ Check if the given champion is banned. """
+    return champid in get_banned_champids(connection)
+
+
+def teammate_hovering(connection: c.Connection, champid: int) -> bool:
+    """ Check if the given champion is being hovered by a teammate. """
+    return champid in get_teammate_hoverids(connection)
+
+
+def is_currently_picking(connection: c.Connection) -> bool:
+    """ Return a bool indicating whether or not the user is currently picking. """
+    return connection.pick_action.get("isInProgress", False)
+
+
+def is_currently_banning(connection: c.Connection) -> bool:
+    """ Return a bool indicating whether or not the user is currently banning. """
+    return connection.ban_action.get("isInProgress", False)
+
+
+def is_hovering(connection: c.Connection) -> bool:
+    """ Return a bool indicating whether or not the player is currently hovering a champ. """
+    return get_current_hoverid(connection) != 0
+
+
+def get_banned_champids(connection: c.Connection) -> list[int]:
+    """ Get a list of all champion ids that have been banned. """
+    return connection.session["bans"]["myTeamBans"] + connection.session["bans"]["theirTeamBans"]
+
+
+def get_current_hoverid(connection: c.Connection) -> int:
+    """ Get the id number of the champ the player is currently hovering. """
+    return connection.pick_action.get("championId", 0)
+
+
 def get_champ_pickids(connection: c.Connection) -> list[int]:
     """ Return a list of champion ids that players have locked in. """
     champids: list[int] = []
@@ -551,3 +495,50 @@ def get_all_player_champids(connection: c.Connection) -> list[tuple[int, bool, b
                     # If the action isn't completed, they're still hovering
                     champids.append((champid, not action["isAllyAction"], not action["completed"]))
     return champids
+
+
+def update_champ_intent(connection: c.Connection) -> None:
+    """ Update instance variables with up-to-date pick, ban, and role intent, and hover the champ to be locked. """
+    ##### Update pick intent #####
+    if not connection.has_picked:
+        last_intent: str = connection.pick_intent
+        connection.pick_intent = decide_pick(connection)
+
+        # Only print pick intent if it's different from the last loop iteration
+        if last_intent != connection.pick_intent:
+            connection.has_printed_pick = False
+
+        if not connection.has_printed_pick:
+            u.print_and_write(f"{'\t' * connection.indentation}Pick intent: {u.capitalize(connection.pick_intent)}")
+            connection.has_printed_pick = True
+
+    ##### Update ban intent #####
+    if not connection.has_banned:
+        last_intent: str = connection.ban_intent
+        connection.ban_intent = decide_ban(connection)
+
+        # Only print ban intent if it's different from the last loop iteration
+        if last_intent != connection.ban_intent:
+            connection.has_printed_ban = False
+
+        if not connection.has_printed_ban:
+            u.print_and_write(f"{'\t' * connection.indentation}Ban intent: {u.capitalize(connection.ban_intent)}")
+            connection.has_printed_ban = True
+
+
+def update_champselect(connection: c.Connection) -> None:
+    """ Update all champselect session data. """
+    connection.session = connection.get_session()
+    if get_champselect_phase(connection) != "FINALIZATION":  # skip unnecessary API calls
+        connection.all_actions = connection.session["actions"]
+        # Look at each action, and return the one with the corresponding cellid
+        for action_group in connection.all_actions:
+            for action in action_group:
+                if action["actorCellId"] == connection.get_localcellid():
+                    if action["type"] == "ban":
+                        connection.ban_action = action
+
+                    elif action["type"] == "pick":
+                        connection.pick_action = action
+
+        update_champ_intent(connection)
