@@ -4,6 +4,8 @@ import time
 import utility as u
 import connect as c
 
+TAB_CHARACTER = '\t'
+
 
 def ban_or_pick(connection: c.Connection) -> None:
     """ Decide whether to pick or ban based on gamestate, then call the corresponding method. """
@@ -328,7 +330,7 @@ def get_runepage(connection: c.Connection, champ_name: str) -> tuple[dict, bool]
     response = connection.api_post("runes", request_body)
     if response.status_code == 200:
         # Success - the runepage was created successfully. Now return its data
-        u.print_and_write(f"Success! Created a rune page with id {response.json()["id"]}")
+        u.print_and_write(f"Success! Created a rune page with id {response.json()['id']}")
         return response.json(), True
 
     # No empty rune page slots
@@ -339,8 +341,8 @@ def get_runepage(connection: c.Connection, champ_name: str) -> tuple[dict, bool]
 
         # Full of rune pages - return the id of one to overwrite (the last one)
         page = all_pages[-1]
-        u.print_and_write(f"No room for new rune pages - overwriting page named {page["name"]}, " +
-                          f"with id {page["id"]}")
+        u.print_and_write(f"No room for new rune pages - overwriting page named {page['name']}, " +
+                          f"with id {page['id']}")
         return page, True
 
     else:
@@ -509,7 +511,7 @@ def update_champ_intent(connection: c.Connection) -> None:
             connection.has_printed_pick = False
 
         if not connection.has_printed_pick:
-            u.print_and_write(f"{'\t' * connection.indentation}Pick intent: {u.capitalize(connection.pick_intent)}")
+            u.print_and_write(f"{TAB_CHARACTER * connection.indentation}Pick intent: {u.capitalize(connection.pick_intent)}")
             connection.has_printed_pick = True
 
     ##### Update ban intent #####
@@ -522,7 +524,7 @@ def update_champ_intent(connection: c.Connection) -> None:
             connection.has_printed_ban = False
 
         if not connection.has_printed_ban:
-            u.print_and_write(f"{'\t' * connection.indentation}Ban intent: {u.capitalize(connection.ban_intent)}")
+            u.print_and_write(f"{TAB_CHARACTER * connection.indentation}Ban intent: {u.capitalize(connection.ban_intent)}")
             connection.has_printed_ban = True
 
 
