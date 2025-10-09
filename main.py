@@ -1,10 +1,12 @@
 import requests
 import time
+import os
 
 import utility as u
 import connect as c
 import champselect
 import userinput
+import runes
 import lobby
 
 
@@ -14,11 +16,16 @@ SHOULD_PRINT: bool = u.get_config_option_bool("settings", "print_debug_info")
 # How many seconds to wait before re-running the main loop
 UPDATE_INTERVAL: float = float(u.get_config_option_str("settings", "update_interval"))
 
+LOGFILE: str = "output.log"
+
+MSG_ATTEMPT_RECONNECT: str = "Unable to connect to the League of Legends client. Retrying..."
 
 def initialize_connection() -> c.Connection:
     """ Initialize a connection to the League client. """
-    # Clear output file
-    with open("output.log", "w"):
+    # Remove old log file if it exists
+    try:
+        os.remove(LOGFILE)
+    except FileNotFoundError:
         pass
 
     # Wait for client to open if it's not open already
@@ -63,12 +70,12 @@ def handle_champselect(connection: c.Connection, champselect_loop_iteration: int
         case "BAN_PICK":
             champselect.ban_or_pick(connection)
         case "FINALIZATION":
-            champselect.send_runes_and_summs(connection)
+            runes.send_runes_and_summs(connection)
         case "skip":
             pass
 
 
-def main_loop() -> None:
+def main() -> None:
     in_game: bool = False
     last_gamestate: str = ""  # Store last gamestate - used to skip redundant API calls and print statements
     champselect_loop_iteration: int = 0  # Keep track of how many loops run during champselect
@@ -104,8 +111,7 @@ def main_loop() -> None:
                     in_game = True
 
         except requests.exceptions.ConnectionError:
-            u.print_and_write(c.MSG_CLIENT_CONNECTION_ERR)
-            connection.parse_lockfile()
+            u.exit_with_error("Error: lost connection to the League Client.")
 
 if __name__ == "__main__":
-    main_loop()
+    main()

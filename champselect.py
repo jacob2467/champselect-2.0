@@ -6,27 +6,23 @@ import connect as c
 
 TAB_CHARACTER = '\t'
 
-
 def ban_or_pick(connection: c.Connection) -> None:
     """ Decide whether to pick or ban based on gamestate, then call the corresponding method. """
     # User's turn to pick
-    if not connection.has_picked and is_currently_picking(connection):
+    if is_currently_picking(connection):
         lock_champ(connection)
         return
 
     # User's turn to ban
-    elif not connection.has_banned and is_currently_banning(connection):
+    elif is_currently_banning(connection):
         ban_champ(connection)
         # Re-hover pick intent after the ban
         hover_champ(connection)
         return
 
-    # Not user's turn to do anything
-    # Make sure we're always showing our intent
-    champid: int = connection.get_champid(connection.pick_intent)
-    if not connection.has_picked and champid != get_current_hoverid(connection):
-        hover_champ(connection, champid)
-
+    # Not user's turn to do anything, but still make sure we're always showing our intent
+    else:
+        hover_champ(connection)
 
 def hover_champ(connection: c.Connection, champid: int | None = None) -> None:
     """
@@ -36,8 +32,12 @@ def hover_champ(connection: c.Connection, champid: int | None = None) -> None:
     """
     if champid is None:
         champid = connection.get_champid(connection.pick_intent)
-    do_champ(connection, mode="hover", champid=champid)
 
+    # Skip redundant API calls
+    if connection.has_picked or champid == get_current_hoverid(connection):
+        return
+
+    do_champ(connection, mode="hover", champid=champid)
 
 def ban_champ(connection: c.Connection, champid: int | None = None) -> None:
     """
@@ -47,6 +47,7 @@ def ban_champ(connection: c.Connection, champid: int | None = None) -> None:
     """
     if champid is None:
         champid = connection.get_champid(connection.ban_intent)
+
     do_champ(connection, mode="ban", champid=champid)
 
 
@@ -58,6 +59,7 @@ def lock_champ(connection: c.Connection, champid: int | None = None) -> None:
     """
     if champid is None:
         champid = connection.get_champid(connection.pick_intent)
+
     do_champ(connection, mode="pick", champid=champid)
 
 
@@ -69,6 +71,10 @@ def do_champ(connection: c.Connection, champid: int = 0, mode: str = "pick", act
         mode: (optional) the mode to use (options are pick, ban, or hover)
         actionid: (optional) the actionid of the Champselect action to use
     """
+    # Skip redundant API calls
+    if connection.has_picked and mode != "ban":
+        return
+
     # Set up http request
     data: dict[str, int] = {"championId": champid}
     if actionid is None:
@@ -181,77 +187,6 @@ def wait_before_locking(connection: c.Connection, mode: str) -> None:
         if mode == "skip":
             still_waiting = False
 
-
-def send_runes_and_summs(connection: c.Connection) -> None:
-    """ Get the recommended rune page and summoner spells and send them to the client. """
-    # Get assigned role
-    role_name: str = connection.get_assigned_role()
-
-    champid: int = connection.api_get("current_champ").json()
-    champ_name: str = connection.get_champ_name_by_id(champid)
-
-    ##### Get runes to be sent #####
-    if not connection.runes_chosen and connection.should_modify_runes:
-        # Get the runepage to use
-        current_runepage, should_overwrite = get_runepage(connection, champ_name)
-        endpoint = connection.endpoints["send_runes"] + str(current_runepage["id"])
-
-        # Get recommended runes and summs
-        recommended_runepage: dict = connection.get_recommended_runepage(champid, role_name)[0]
-
-        if should_overwrite:
-            # Set the name for the rune page
-            if role_name == "utility":
-                role_name = "support"
-            name = f"{connection.RUNEPAGE_PREFIX} {champ_name} {role_name} runes"
-            runes = recommended_runepage["perks"]
-            request_body: dict = {
-                "current": True,
-                "isTemporary": False,
-                "id": current_runepage["id"],
-                "order": 0,
-                "name": name,
-                "primaryStyleId": recommended_runepage["primaryPerkStyleId"],
-                "selectedPerkIds": [rune["id"] for rune in runes],
-                "subStyleId": recommended_runepage["secondaryPerkStyleId"]
-            }
-
-        else:  # use existing rune page
-            request_body = current_runepage
-
-        ##### Send the chosen runes #####
-        response = connection.api_put(endpoint, request_body)
-        try:
-            if response.status_code == 400:
-                u.print_and_write("Error code:", response.json())
-        except Exception as e:
-            u.print_and_write("An exception occured while trying to send runes:", e)
-
-        flash: int = 4
-        ghost: int = 1
-        cleanse: int = 6
-        d: int = 0  # index of left summoner spell (bound to D by default)
-        f: int = 1  # index of right summoner spell (bound to F by default)
-
-        summs = recommended_runepage["summonerSpellIds"]
-        # Make sure Bryan always takes ghost/cleanse (he needs it)
-        if connection.is_bryan:
-            summs[d], summs[f] = ghost, cleanse
-
-        # Make sure flash is always on F (higher winrate fr) https://www.leagueofgraphs.com/stats/flash-d-vs-f
-        if summs[d] == flash:
-            summs[d], summs[f] = summs[f], flash
-
-        ##### Send summoner spells #####
-        if connection.should_modify_runes or connection.is_bryan:
-            request_body = {
-                "spell1Id": summs[d],
-                "spell2Id": summs[f]
-            }
-            connection.api_patch("send_summs", request_body)
-            connection.runes_chosen = True
-
-
 def get_actionid(connection: c.Connection, mode: str) -> int | None:
     """ Get the user's actionid from the current Champselect action. """
     try:
@@ -260,7 +195,7 @@ def get_actionid(connection: c.Connection, mode: str) -> int | None:
 
     except Exception as e:
         warnings.warn(f"Unable to {mode} the specified champion: {e}", RuntimeWarning)
-        return None
+        return
 
 
 def get_champselect_phase(connection: c.Connection) -> str:
@@ -272,82 +207,6 @@ def get_champselect_phase(connection: c.Connection) -> str:
         u.print_and_write("Champselect phase is 'None' - did someone dodge?")
         return "skip"
     return phase
-
-
-def get_runepage(connection: c.Connection, champ_name: str) -> tuple[dict, bool]:
-    """
-    Figure out which runepage to overwrite or use.
-    Returns:
-        a tuple containing the runepage data (dictionary), and a bool indicating whether it should be overwritten
-            (True) or used as-is (False)
-    """
-    to_return: None | tuple[dict, bool] = None
-    auto_page_name: str
-    prefix = connection.RUNEPAGE_PREFIX
-
-    # First, check if this script has already created a runepage
-    all_pages: list[dict] = connection.get_runepages()
-
-    for page in all_pages:
-        page_name: str = page["name"]
-        clean_page_name: str = u.clean_name(connection.all_champs, page_name, False)
-
-        # If rune page with champ name is found
-        if champ_name in clean_page_name:
-            # If rune page was user-created
-            if not page_name.startswith(prefix):
-                u.print_and_write(f"Runepage '{page_name}' has '{champ_name}' in it. Using this runepage...")
-                return page, False
-            # If the page was created by this script, keep looking for a user-created one
-            else:
-                auto_page_name = page_name
-                to_return = page, False
-
-        # If rune page with this script's naming scheme is found (that has *not* been modified by the player)
-        elif page_name.startswith(prefix):
-            auto_page_name = page_name
-            # don't return here, because we might find a user-created rune page in a future iteration of this
-            # loop that contains the champ's name
-            to_return = page, True
-
-    # If we found a page created by this script, return it now
-    if to_return is not None:
-        # If the runepage is being overwritten
-        if to_return[1]:
-            u.print_and_write(f"Runepage '{auto_page_name}' was created by this script - overwriting...")
-        # Using rune page without modifying (it has the user's champ name in it already, could have been modified
-        # by the user, so leave it alone)
-        return to_return
-
-    # No pages have been created by this script - try to create a new one
-    u.print_and_write("No runepage created by this script was found. Trying to create a new one...")
-    request_body = {
-        "current": True,
-        "isTemporary": False,
-        "name": "temp",
-        "order": 0,
-    }
-    response = connection.api_post("runes", request_body)
-    if response.status_code == 200:
-        # Success - the runepage was created successfully. Now return its data
-        u.print_and_write(f"Success! Created a rune page with id {response.json()['id']}")
-        return response.json(), True
-
-    # No empty rune page slots
-    elif response.status_code == 400:
-        response_msg: str = response.json()["message"]
-        if response_msg != "Max pages reached":
-            raise RuntimeError(f"An error occured while trying to create a rune page: {response_msg}")
-
-        # Full of rune pages - return the id of one to overwrite (the last one)
-        page = all_pages[-1]
-        u.print_and_write(f"No room for new rune pages - overwriting page named {page['name']}, " +
-                          f"with id {page['id']}")
-        return page, True
-
-    else:
-        raise RuntimeError("An unknown error occured while trying to create a runepage.")
-
 
 def is_valid_pick(connection: c.Connection, champ_name: str) -> bool:
     """ Check if the given champion can be picked. """
@@ -387,7 +246,7 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> bool:
     # If the user got assigned a role other than the one they queued for, disregard the champ they picked
     # This does nothing when queuing for gamemodes that don't have assigned roles
     assigned_role = connection.get_assigned_role()
-    if (len(assigned_role) != 0  # assigned role exists
+    if (len(assigned_role) != 0  # assigned role exists (so we're not in a gamemode that doesn't have assigned roles)
             # and role user queued for doesn't match
             and (connection.user_role != assigned_role and connection.user_role)
             # and champ user picked is the pick in question
@@ -438,11 +297,17 @@ def teammate_hovering(connection: c.Connection, champid: int) -> bool:
 
 def is_currently_picking(connection: c.Connection) -> bool:
     """ Return a bool indicating whether or not the user is currently picking. """
+    # Skip redundant API calls if we've already picked
+    if connection.has_picked:
+        return False
     return connection.pick_action.get("isInProgress", False)
 
 
 def is_currently_banning(connection: c.Connection) -> bool:
     """ Return a bool indicating whether or not the user is currently banning. """
+    # Skip redundant API calls if we've already banned
+    if connection.has_banned:
+        return False
     return connection.ban_action.get("isInProgress", False)
 
 

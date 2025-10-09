@@ -94,7 +94,7 @@ class Connection:
 
 
     def setup_endpoints(self) -> None:
-        """ Set up a dictionary containing various API endpoints. """
+        """ Set up a dictionary containing aliases tovarious API endpoints. """
         self.endpoints = {
             "gamestate": "/lol-gameflow/v1/gameflow-phase",  # GET
             "lobby": "/lol-lobby/v2/lobby",  # GET
@@ -158,15 +158,6 @@ class Connection:
     # --------------
     # Getter methods
     # --------------
-    def get_runepages(self) -> list[dict]:
-        """ Get a list of the runepages the player currently has set. """
-        response = self.api_get("runes")
-        if response.status_code == 200:
-            return response.json()
-
-        raise RuntimeError(f"Unable to get rune pages: {response}")
-
-
     def get_assigned_role(self) -> str:
         """ Get the name of the user's assigned role. """
         # Skip unecessary API calls
@@ -217,16 +208,6 @@ class Connection:
         return self.api_get("current_summoner").json()["accountId"]
 
 
-    def get_recommended_runepage(self, champid: int, position: str) -> dict:
-        """
-        Get the recommended runepage from the client.
-        Args:
-            champid: the id number of the champion to get runes for
-            position: the position the user is playing
-        """
-        endpoint: str = self.get_rune_recommendation_endpoint(champid, position)
-        return self.api_get(endpoint).json()
-
     def get_champ_name_by_id(self, target_id: int) -> str:
         """ Find the champion with the specified id number and return their name as a string. """
         for name, id in self.all_champs.items():
@@ -240,19 +221,6 @@ class Connection:
         """ Set up the request URL and HTTP header data for API calls. """
         lockfile = self.parse_lockfile()
         return self.get_request_url(lockfile), self.get_http_headers(lockfile)
-
-
-    @staticmethod
-    def get_rune_recommendation_endpoint(champid: int, position: str) -> str:
-        """
-        Get the endpoint used to get recommended runes.
-        Args:
-            champid: the id number of the champion to get runes for
-            position: the position the user is playing
-        """
-        mapid = 11  # mapid for summoner's rift
-        return f"/lol-perks/v1/recommended-pages/champion/{champid}/position/{position}/map/{mapid}"
-
 
     @staticmethod
     def get_request_url(lockfile: u.Lockfile) -> str:
