@@ -111,7 +111,8 @@ def main() -> None:
                     in_game = True
 
         except requests.exceptions.ConnectionError:
-            u.exit_with_error("Error: lost connection to the League Client.")
+            u.print_and_write(c.MSG_CLIENT_CONNECTION_ERR)
+            connection.parse_lockfile()
 
 if __name__ == "__main__":
     main()
