@@ -4,15 +4,18 @@ import warnings
 import sys
 import os
 
-config_name = "config.ini"
+CONFIG = "config.ini"
+LOGFILE = "output.log"
+
+TAB_CHARACTER = '\t'
 
 # Read config
 config = configparser.ConfigParser()
-config_contents = config.read(config_name)
+config_contents = config.read(CONFIG)
 
 # Check for empty/missing config
 if not config_contents:
-    raise RuntimeError(f"Unable to parse {config_name} - does it exist?")
+    raise RuntimeError(f"Unable to parse {CONFIG} - does it exist?")
 
 
 @dataclass
@@ -64,7 +67,7 @@ def _get_config_option(section: str, option: str, is_bool: bool = False) -> str 
         raise RuntimeError(f"Invalid config option '{option}': {e}")
 
     except Exception as e:
-        raise RuntimeError(f"An unknown error occurred while reading {config_name}: {e}")
+        raise RuntimeError(f"An unknown error occurred while reading {CONFIG}: {e}")
 
 
 def get_lockfile_path() -> str:
@@ -98,9 +101,7 @@ def map_gamestate_for_display(gamestate: str) -> str:
             return "In Queue"
         case "ReadyCheck":
             return "Ready Check"
-        case "ChampSelect":
-            return "Champselect"
-        case "FINALIZATION":
+        case "ChampSelect" | "FINALIZATION":
             return "Champselect"
         case _:
             return gamestate
@@ -118,6 +119,16 @@ def map_phase_for_display(phase: str) -> str:
         case _:
             return "None"
 
+def map_role_for_display(role: str) -> str:
+    match role:
+        case "middle":
+            return "Mid"
+        case "utility":
+            return "Support"
+        case "bottom":
+            return "ADC"
+        case _:
+            return capitalize(role)
 
 def get_backup_config_champs(position: str, picking: bool = True) -> list[str]:
     """
@@ -161,21 +172,25 @@ def capitalize(string: str) -> str:
     return string[:1].upper() + string[1:]
 
 
-def print_and_write(*args: object, should_print: bool = True) -> None:
-    """ Print the input and save it to a log file. """
-    text: str = " ".join(str(arg) for arg in args)
+def print_and_write(*args, **kwargs) -> None:
+    """ Print the input and save it to the log file. """
+    indentation: str = TAB_CHARACTER * kwargs.pop("indentation", 0)
+    print(indentation, end="")
+    print(*args, **kwargs)
+    log(*args, **kwargs)
 
-    if should_print:
-        print(text)
 
-    with open("output.log", "a") as file:
-        file.write(text + "\n")
-
+def log(*args, **kwargs):
+    """ Write the input to the log file. """
+    with open(LOGFILE, "a") as file:
+        indentation: str = TAB_CHARACTER * kwargs.pop("indentation", 0)
+        print(indentation, end="", file=file)
+        print(*args, **kwargs, file=file)
 
 def custom_formatwarning(message, *_) -> str:
     """ Create and return a custom warning format, containing only the warning message. """
     formatted_msg: str = f"\tWarning: {message}\n"
-    print_and_write(formatted_msg, should_print=False)  # don't print the error here because it will be printed anyways
+    log(formatted_msg)  # don't print the error here because it will be printed anyways
     return formatted_msg
 
 

@@ -1,7 +1,7 @@
 import subprocess
 import warnings
 
-package_names: list[str] = ["requests"]
+package_names: list[str] = ["requests", "flask", "flask-cors"]
 
 for name in package_names:
     try:

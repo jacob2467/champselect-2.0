@@ -13,6 +13,9 @@ import lobby
 # Whether or not to print debug info
 SHOULD_PRINT: bool = u.get_config_option_bool("settings", "print_debug_info")
 
+# Whether or not to automatically start the queue
+START_QUEUE: bool = u.get_config_option_bool("settings", "start_queue")
+
 # How many seconds to wait before re-running the main loop
 UPDATE_INTERVAL: float = float(u.get_config_option_str("settings", "update_interval"))
 
@@ -41,7 +44,8 @@ def initialize_connection() -> c.Connection:
 
 
 def handle_lobby(connection: c.Connection) -> None:
-    lobby.start_queue(connection)
+    if START_QUEUE:
+        lobby.start_queue(connection)
     lobby.reset_after_dodge(connection)
 
 
@@ -75,11 +79,13 @@ def handle_champselect(connection: c.Connection, champselect_loop_iteration: int
             pass
 
 
-def main() -> None:
+def main(connection: c.Connection = None) -> None:
     in_game: bool = False
     last_gamestate: str = ""  # Store last gamestate - used to skip redundant API calls and print statements
     champselect_loop_iteration: int = 0  # Keep track of how many loops run during champselect
-    connection: c.Connection = initialize_connection()
+
+    if connection is None:
+        connection: c.Connection = initialize_connection()
     while not in_game:
         time.sleep(UPDATE_INTERVAL)
         # Wrap the loop in a try block to catch errors when the client closes
@@ -111,7 +117,6 @@ def main() -> None:
                     in_game = True
 
         except requests.exceptions.ConnectionError:
-            u.print_and_write(c.MSG_CLIENT_CONNECTION_ERR)
             connection.parse_lockfile()
 
 if __name__ == "__main__":

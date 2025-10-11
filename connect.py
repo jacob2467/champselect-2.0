@@ -147,25 +147,30 @@ class Connection:
             self.owned_champs[champ_name] = champ["id"]
 
 
-    def update_primary_role(self) -> None:
-        """ Check what role the user is queueing for. """
+    def update_primary_role(self) -> str:
+        """ Check what role the user is queueing for, update the Connection accordingly, and also return the role. """
         try:
             local_player_data: dict = self.api_get("lobby").json()["localMember"]
             self.user_role = local_player_data["firstPositionPreference"].strip().lower()
         except Exception as e:
             warnings.warn(f"Unable to find player's role: {e}", RuntimeWarning)
+        finally:
+            return self.user_role
 
     # --------------
     # Getter methods
     # --------------
-    def get_assigned_role(self) -> str:
+    def get_assigned_role(self, default: str = "middle") -> str:
         """ Get the name of the user's assigned role. """
         # Skip unecessary API calls
         if self.role_checked:
             return self.assigned_role
 
         role: str = ""
-        my_team = self.session["myTeam"]
+        try:
+            my_team = self.session["myTeam"]
+        except KeyError:
+            return self.user_role if self.user_role else ""
         my_id = self.get_summoner_id()
         for player in my_team:
             if player["summonerId"] == my_id:
@@ -174,8 +179,8 @@ class Connection:
         # Can't find user's role
         if not role:
             # If no role was assigned, default to the role the user was queueing for. If that doesn't exist either,
-            # default to mid
-            role = self.user_role if self.user_role else "middle"
+            # use the specified default
+            role = self.user_role if self.user_role else default
             warnings.warn(f"Unable to get assigned role, defaulting to {role}", RuntimeWarning)
 
         self.assigned_role = role
@@ -215,6 +220,17 @@ class Connection:
                 return name
         warnings.warn(f"Unable to find champion name with id {target_id}")
         return "unknown"
+
+
+    def champ_exists(self, name: str) -> str:
+        """
+        Check whether or not the champion with the specified name exists.
+        Returns:
+            - if the champion exists, their properly-formatted name
+            - otherwise, an empty string
+        """
+        result = u.clean_name(self.all_champs, name)
+        return result if result != "invalid" else ""
 
 
     def setup_http_requests(self) -> tuple[str, dict[str, str]]:
