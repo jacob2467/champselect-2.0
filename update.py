@@ -112,8 +112,7 @@ def delete_folder(folder_path: str):
 
 def main():
     should_update = check_for_update()
-    # if should_update:
-    if True:
+    if should_update:
         download_update_zip()
         unzip()
         copy_update()
