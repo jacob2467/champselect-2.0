@@ -4,6 +4,14 @@ import subprocess
 package_names: list[str] = ["requests"]
 
 def install_dependencies():
+    """
+    Ensure all package names listed in package_names are installed; install any that are missing.
+    
+    Iterates over package_names, skips packages that are already importable, and attempts to install missing packages using the system pip command.
+    
+    Raises:
+        RuntimeError: If installation of a package fails.
+    """
     for package in package_names:
         # Skip installing if the module is already installed
         if importlib.util.find_spec(package) is not None:

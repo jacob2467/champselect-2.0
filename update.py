@@ -27,10 +27,13 @@ ignored = {
 
 def check_for_update() -> tuple[bool, str]:
     """
-    Check if the script needs to be updated.
+    Determine whether a newer version of the script is available.
+    
+    Checks the latest remote version and compares it to the local version stored in the version file; if the local version file is missing, an update is required.
+    
     Returns:
-        - a bool indicating whether or not the script needs to be updated
-        - the version of the script the user currently has
+        should_update (bool): `true` if the local installation should be updated, `false` otherwise.
+        version (str): The latest remote version identifier (commit SHA).
     """
     version = get_version()
 
@@ -46,7 +49,15 @@ def check_for_update() -> tuple[bool, str]:
 
 
 def get_version():
-    """ Check the most recent version of the script. """
+    """
+    Retrieve the latest commit SHA for the repository branch used by the updater.
+    
+    Returns:
+        str: The SHA of the most recent commit from the remote version endpoint.
+    
+    Raises:
+        RuntimeError: If the remote version endpoint does not return a successful (200) response.
+    """
     response = requests.get(version_url)
 
     if response.status_code == 200:
@@ -57,7 +68,12 @@ def get_version():
 
 
 def download_update():
-    """ Download the most recent version of the script and store it as a zip file. """
+    """
+    Download the repository archive for the configured branch and save it as the update zip file in the outdated directory.
+    
+    Raises:
+        RuntimeError: If the HTTP request to download the archive does not return status code 200.
+    """
     response = requests.get(download_url)
 
     if response.status_code != 200:
@@ -69,14 +85,22 @@ def download_update():
 
 
 def unzip():
-    """ Unzip the downloaded zip archive. """
+    """
+    Extract the downloaded update archive into the temporary updated directory.
+    
+    Unpacks the repository archive located in the outdated directory into the configured updated directory so the new files are available for installation.
+    """
     full_zip_path: str = os.path.join(outdated_dir, update_zip)
     full_output_path: str = os.path.join(outdated_dir, updated_dir_name)
     shutil.unpack_archive(full_zip_path, full_output_path)
 
 
 def install_update():
-    """ Copy the updated files to the script's install location. """
+    """
+    Synchronize the current install directory with the unpacked update by removing removed files and copying new or changed files.
+    
+    Removes any files or directories in the installation directory that are not present in the update (excluding entries listed in `ignored`), copies files and directories from the update into the installation location (preserving directory structure and replacing existing entries), and removes the temporary update directory named by `updated_dir_name`.
+    """
     outdated_files = os.listdir(outdated_dir)
 
     updated_files = os.listdir(updated_dir)
@@ -111,12 +135,22 @@ def install_update():
 
 
 def update_version_info(version: str):
-    """ Update the file storing the script's current version. """
+    """
+    Write the given version string to the local version tracking file, overwriting any existing contents.
+    
+    Parameters:
+        version (str): Version identifier to record (e.g., commit SHA).
+    """
     with open(os.path.join(outdated_dir, version_file), 'w') as file:
         file.write(version)
 
 
 def main():
+    """
+    Coordinate the self-update workflow for the script.
+    
+    Performs a version check and, if an update is available, downloads the latest archive, unpacks and installs the update, updates stored version information, and ensures required dependencies are installed. If no update is needed, reports that the script is up to date. Side effects include console output and modifying the local installation files.
+    """
     print("Checking for updates...\n")
     should_update, current_version = check_for_update()
     if should_update:
