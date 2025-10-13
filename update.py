@@ -1,20 +1,22 @@
+import dependencies
 import requests
 import shutil
 import os
 
 owner: str = "jacob2467"
 repo: str = "champselect-2.0"
+branch: str = "main"
 version_file: str = "version.txt"
 update_zip: str = "update.zip"
 
 outdated_dir, download_script_name = os.path.split(__file__)
 
 updated_dir_name: str = "update"
-updated_dir: str = os.path.join(outdated_dir, "update")
+updated_dir: str = os.path.join(outdated_dir, updated_dir_name, f"{repo}-{branch}")
 
 config: str = "config.ini"
 
-download_url: str = f"https://github.com/{owner}/{repo}/archive/refs/heads/main.zip"
+download_url: str = f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.zip"
 version_url: str = f"https://api.github.com/repos/{owner}/{repo}/commits?per_page=1"
 
 
@@ -121,6 +123,7 @@ def main():
         unzip()
         install_update()
         update_version_info(current_version)
+        dependencies.install_dependencies()
 
 
 if __name__ == "__main__":

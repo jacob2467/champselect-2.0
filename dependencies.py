@@ -6,7 +6,7 @@ package_names: list[str] = ["requests"]
 def install_dependencies():
     for package in package_names:
         # Skip installing if the module is already installed
-        if importlib.util.find_spec(package) is None:
+        if importlib.util.find_spec(package) is not None:
             continue
 
         try:
