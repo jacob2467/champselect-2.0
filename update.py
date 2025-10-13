@@ -47,7 +47,7 @@ def check_for_update() -> tuple[bool, str]:
 
 def get_version():
     """ Check the most recent version of the script. """
-    response = requests.get(version_url)
+    response = requests.get(version_url, timeout=10)
 
     if response.status_code == 200:
         return response.json()[0]['sha']
@@ -55,10 +55,9 @@ def get_version():
         raise RuntimeError("Unable to find the most recent version of the script.")
 
 
-
 def download_update():
     """ Download the most recent version of the script and store it as a zip file. """
-    response = requests.get(download_url)
+    response = requests.get(download_url, timeout=30)
 
     if response.status_code != 200:
         raise RuntimeError("Unable to download the most recent version of the script.")
@@ -102,6 +101,7 @@ def install_update():
         full_dest = os.path.join(outdated_dir, file)
 
         if os.path.isdir(full_src):
+            shutil.rmtree(full_dest, ignore_errors=True)
             shutil.copytree(full_src, full_dest)
         else:
             shutil.copy2(full_src, full_dest)
