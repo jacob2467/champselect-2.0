@@ -13,7 +13,7 @@ config_contents = config.read(config_name)
 
 # Backup config
 config_template = configparser.ConfigParser()
-config_template_contents = config.read(config_template_name)
+config_template_contents = config_template.read(config_template_name)
 
 # Check for empty/missing config
 if not config_contents:
