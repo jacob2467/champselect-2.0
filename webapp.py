@@ -25,11 +25,6 @@ def run_on_thread(func, *args, **kwargs):
     thread = threading.Thread(target=func, args=args, kwargs=kwargs)
     thread.start()
 
-def replace_empty(string: str, replace_with: str = "None"):
-    if not string:
-        return replace_with
-    return string
-
 # Note that this function is not decorated with @ensure_connection because it should only be called from inside
 # other functions that are.
 def _get_gamestate():
@@ -62,8 +57,9 @@ def ensure_connection(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
+        # TODO: Fix this - will return success if script terminates, as long as it was up at some point
         if not state.has_started or state.connection is None:
-            return build_failure_response(body="Not connected to League client")
+            return build_failure_response(body="Not connected to League client", status=404)
 
         return func(*args, **kwargs)
     return wrapper
@@ -92,16 +88,8 @@ def get_gamestate():
 @ensure_connection
 def get_status():
     return flask.jsonify({
-        "success": True,
-        "statusText": "",
-        "gamestate": _get_gamestate(),
-        "role": u.map_role_for_display(_get_role()[1]),
-        "champ": _get_champ()[1],
-        "ban": _get_ban()[1],
-        "replacerunes": state.connection.should_modify_runes,
+        "success": state.has_started,
     }), 200
-
-    return build_success_response(body=str(status))
 
 def _get_role():
     match _get_gamestate():
@@ -109,10 +97,10 @@ def _get_role():
             return False, "User not in champselect or in queue"
 
         case "Lobby" | "In Queue" | "Ready Check":
-            return True, replace_empty(state.connection.update_primary_role())
+            return True, u.map_role_for_display(state.connection.update_primary_role())
 
         case "Champselect":
-            return True, replace_empty(state.connection.get_assigned_role())
+            return True, u.map_role_for_display(state.connection.get_assigned_role())
 
         case _:
             return False, "Unable to process the request"
@@ -127,7 +115,7 @@ def get_role():
 
 
 def _get_champ():
-    return True, replace_empty(state.connection.pick_intent)
+    return True, state.connection.pick_intent
 
 
 @api.route("/status/champ", methods=["GET"])
@@ -140,15 +128,7 @@ def get_champ():
 
 
 def _get_ban():
-    match _get_gamestate():
-        case "Main Menu":
-            return False, "User not in champselect or in queue"
-
-        case "Lobby" | "In Queue" | "Ready Check" | "Champselect":
-            return False, replace_empty(state.connection.ban_intent)
-
-        case _:
-            return False, "Unable to process the request"
+    return True, state.connection.ban_intent
 
 
 @api.route("/status/ban", methods=["GET"])

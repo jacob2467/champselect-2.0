@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html>
     <form>
+        <!-- Script status -->
+        <label for="scriptstatus">Script status:&nbsp</label>
+        <label id="scriptstatus"> Not running </label> <br> <br>
+
         <!-- Pick intent -->
         <label for="pick-intent-input">Pick intent:&nbsp</label>
-        <label for="pick-intent-input" id="pick-intent"> None </label> <br>
+        <label for="pick-intent-input" id="pick-intent"> </label> <br>
         <input id="pick-intent-input" placeholder="Champ to pick..."> <br> <br>
 
         <!-- Ban intent -->
         <label for="ban-intent-input">Ban intent:&nbsp</label>
-        <label for="ban-intent-input" id="ban-intent"> None </label> <br>
+        <label for="ban-intent-input" id="ban-intent"> </label> <br>
         <input id="ban-intent-input" placeholder="Champ to ban..."> <br> <br>
 
         <!-- Whether or not to replace runes/summs -->
@@ -16,10 +20,10 @@
         <input type="checkbox" id="setrunes"> <br> <br>
 
         <label for="gamestate">Gamestate:&nbsp</label>
-        <label id="gamestate"> None </label> <br> <br>
+        <label id="gamestate"> </label> <br> <br>
 
         <label for="role">Role:&nbsp</label>
-        <label id="role"> None </label> <br> <br>
+        <label id="role"> </label> <br> <br>
 
         <button id="startbutton"> Start bot </button> <br> <br>
     </form>
@@ -27,6 +31,7 @@
 
     <script src="javascript.js"></script>
     <script>
+        let scriptStarted = false;
 
         // Set up buttons
         let start = document.getElementById("startbutton");
@@ -39,67 +44,15 @@
         let banDisplay = document.getElementById("ban-intent");
         let gamestateDisplay = document.getElementById("gamestate");
         let roleDisplay = document.getElementById("role");
+        let statusDisplay = document.getElementById("scriptstatus");
 
-
-        start.addEventListener("click", async (event) => {
-            event.preventDefault();
-
-            console.log("Attempting to start bot...");
-
-            let success = await startBot();
-            start.disabled = true;
-            if (! success) {
-                setTimeout(() => {
-                    start.disabled = false;
-                }, 3000);
-            }
-
-        })
-
-        pickInput.addEventListener("blur", async (event) => {
-            event.preventDefault();
-
-            let name = event.target.value;
-
-            if (name === "") {
-                return;
-            }
-
-            console.log(`Attempting to set pick intent to ${name} ...`);
-
-            let success = await setPickIntent(name);
-
-            if (success) {
-                pickDisplay.textContent = capitalize(name);
-                pickDisplay.value = "";
-            }
-        })
-
-        banInput.addEventListener("blur", async (event) => {
-            event.preventDefault();
-
-            let name = event.target.value;
-
-            if (name === "") {
-                return;
-            }
-
-            console.log(`Attempting to set ban intent to ${name} ...`);
-
-            let success = await setBanIntent(name);
-
-            if (success) {
-                banDisplay.textContent = capitalize(name);
-                banDisplay.value = "";
-            }
-        })
-
-        runeCheckbox.addEventListener("change", (event) => {
-            setRunesPreference(event.target.checked);
-        })
+        setUpDisplay();
 
         setInterval(async () => {
-            await update();
+            // Only try to update once the script has been started
+            if (scriptStarted) {
+                await updateStatus();
+            }
         }, 3000);
     </script>
 </html>
