@@ -117,13 +117,18 @@ def update_version_info(version: str):
 
 
 def main():
+    print("Checking for updates...\n")
     should_update, current_version = check_for_update()
     if should_update:
+        print("Script is out of date. Downloading update...\n")
         download_update()
         unzip()
         install_update()
         update_version_info(current_version)
+        print("Update successfully installed! Checking dependencies...\n")
         dependencies.install_dependencies()
+    else:
+        print("Script is already up to date!")
 
 
 if __name__ == "__main__":

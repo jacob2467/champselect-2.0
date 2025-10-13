@@ -7,10 +7,12 @@ def install_dependencies():
     for package in package_names:
         # Skip installing if the module is already installed
         if importlib.util.find_spec(package) is not None:
+            print(f"Package '{package}' is already installed - skipping...\n")
             continue
+        else:
+            print(f"Package '{package}' not found - attempting to install...\n")
 
         try:
-            print(f"\nInstalling package '{package}'...\n")
             subprocess.run(["pip3", "install", package])
         except Exception:
             try:
