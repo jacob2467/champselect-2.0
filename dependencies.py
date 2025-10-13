@@ -13,7 +13,8 @@ def install_dependencies():
             print(f"Package '{package}' not found - attempting to install...\n")
 
         try:
-            subprocess.run(["pip3", "install", package])
+            subprocess.run(["pip3", "install", package], check=True)
+                subprocess.run(["pip", "install", package], check=True)
         except Exception:
             try:
                 subprocess.run(["pip", "install", package])
