@@ -5,13 +5,19 @@ import sys
 import os
 
 config_name = "config.ini"
+config_template_name = "config-template.ini"
 
 # Read config
 config = configparser.ConfigParser()
 config_contents = config.read(config_name)
 
+# Backup config
+config_template = configparser.ConfigParser()
+config_template_contents = config.read(config_template_name)
+
 # Check for empty/missing config
 if not config_contents:
+    # TODO: Copy template config here instead of raising an error
     raise RuntimeError(f"Unable to parse {config_name} - does it exist?")
 
 
@@ -44,13 +50,14 @@ def get_config_option_bool(section: str, option: str) -> bool:
     return _get_config_option(section, option, True)
 
 
-def _get_config_option(section: str, option: str, is_bool: bool = False) -> str | bool:
+def _get_config_option(section: str, option: str, is_bool: bool = False, *, config=config) -> str | bool:
     """
     Get an option from the user's config.
     Args:
         section: the config section to read from
         option: the config option to read from
         is_bool: flag indicating whether or not to interpret the config option as a bool
+        config: (optional) the config to read from
     """
     try:
         if is_bool:
@@ -59,9 +66,18 @@ def _get_config_option(section: str, option: str, is_bool: bool = False) -> str 
         return config.get(section, option)
 
     except configparser.NoSectionError as e:
-        raise RuntimeError(f"Invalid config section '{section}': {e}")
+        # Check config template for the section if it doesn't exist in user's config
+        if config != config_template:
+            return _get_config_option(section, option, is_bool, config=config_template)
+        else:
+            raise RuntimeError(f"Invalid config section '{section}': {e}")
+
     except configparser.NoOptionError as e:
-        raise RuntimeError(f"Invalid config option '{option}': {e}")
+        # Check config template for the option if it doesn't exist in user's config
+        if config != config_template:
+            return _get_config_option(section, option, is_bool, config=config_template)
+        else:
+            raise RuntimeError(f"Invalid config option '{option}': {e}")
 
     except Exception as e:
         raise RuntimeError(f"An unknown error occurred while reading {config_name}: {e}")

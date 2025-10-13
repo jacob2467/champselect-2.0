@@ -1,18 +1,26 @@
+import importlib.util
 import subprocess
-import warnings
 
 package_names: list[str] = ["requests"]
 
-for name in package_names:
-    try:
-        print(f"\nInstalling package '{name}'...\n")
-        subprocess.run(["pip", "install", name])
-    except Exception as e:
-        warnings.warn(f"Unable to install {name} - trying pip3 instead of pip (works on some OSX installations)")
-        try:
-            subprocess.run(["pip", "install", name])
-        except Exception as e:
-            raise RuntimeError(f"Unable to install {name}: {e}")
-    print(f"\nSuccessfully installed package '{name}'!\n")
+def install_dependencies():
+    for package in package_names:
+        # Skip installing if the module is already installed
+        if importlib.util.find_spec(package) is not None:
+            print(f"Package '{package}' is already installed - skipping...\n")
+            continue
+        else:
+            print(f"Package '{package}' not found - attempting to install...\n")
 
-input("Press any key to continue...")
+        try:
+            subprocess.run(["pip3", "install", package], check=True)
+        except Exception:
+            try:
+                subprocess.run(["pip", "install", package], check=True)
+            except Exception as e:
+                raise RuntimeError(f"Unable to install package '{package}' due to an error: {e}")
+        print(f"\nSuccessfully installed package '{package}'!\n")
+
+if __name__ == "__main__":
+    install_dependencies()
+    input("Press any key to continue...")
