@@ -10,8 +10,6 @@ import connect as c
 import champselect
 import main_loop
 
-MSG_CHAMP_DOESNT_EXIST: str = "Specified champion doesn't exist"
-
 api = flask.Flask(__name__)
 CORS(api)
 
@@ -42,9 +40,12 @@ def empty_success_response():
         "statusText": "",
     }), 200
 
-def build_response(*, success, statusText, status, **kwargs):
-    # I want success, statusText, and status to be mandatory, so leave them as named parameters
-    return flask.jsonify(success, statusText, status, kwargs)
+def build_response(**kwargs):
+    if "status" in kwargs:
+        status = kwargs.pop("status")
+    else:
+        raise SyntaxError(f"Function {build_response} called without a status code argument.")
+    return flask.jsonify(kwargs), status
 
 def ensure_connection(func):
     """
@@ -72,8 +73,7 @@ def script_is_running():
         return False
     return state.script_thread.is_alive()
 
-@api.route("/start", methods=["GET", "POST"])
-@ensure_connection
+@api.route("/start", methods=["POST"])
 def start():
     """ Start the script, if it hasn't been started already. If it has, do nothing, returning a failure response. """
     if script_is_running():
@@ -83,119 +83,163 @@ def start():
             status=409,
         )
 
-    state.connection = c.Connection()
-    run_on_thread(main_loop.main_loop, state.connection)
-    # OK to assume the connection was successful - if it wasn't, the next API call will return an error anyways
-    # This is kind of terrible and confusing, but the alternative is to add an awkward timeout, or
+    try:
+        state.connection = c.Connection()
+        run_on_thread(main_loop.main_loop, state.connection)
+    except Exception as e:
+        return build_response(
+            success=False,
+            statusText=str(e),
+            status=500,
+        )
+
     return empty_success_response()
 
 
 @api.route("/status/gamestate", methods=["GET"])
 @ensure_connection
 def get_gamestate():
-    return empty_success_response(body=_get_gamestate())
+    try:
+        gamestate: str = u.map_gamestate_for_display(state.connection.get_gamestate())
+    except Exception as e:
+        return build_response(
+            success=False,
+            statusText=f"Unable to get gamestate due to an error: {e}",
+            status=400
+        )
+
+    return build_response(
+        success=True,
+        statusText=gamestate,
+        status=200,
+    )
+
 
 @api.route("/status", methods=["GET"])
 @ensure_connection
 def get_status():
-    return flask.jsonify({
-        "success": script_is_running()
-    }), 200
+    if script_is_running():
+        return build_response(
+            success=True,
+            statusText="Script is running!",
+            status=200,
+        )
 
-def _get_role():
-    match _get_gamestate():
-        case "Main Menu":
-            return False, "User not in champselect or in queue."
+    return build_response(
+        success=False,
+        statusText="Script is not running.",
+        status=400,
+    )
 
-        case "Lobby" | "In Queue" | "Ready Check":
-            return True, u.map_role_for_display(state.connection.update_primary_role())
-
-        case "Champselect":
-            return True, u.map_role_for_display(state.connection.get_assigned_role())
-
-        case _:
-            return False, "Unable to process the request."
 
 @api.route("/status/role", methods=["GET"])
 @ensure_connection
 def get_role():
-    success, body = _get_role()
-    if success:
-        return empty_success_response(body=body)
-    return build_failure_response(body=body)
+    """ Get the user's role. """
+    gamestate: str = u.map_gamestate_for_display(state.connection.get_gamestate())
+    match gamestate:
+        case "Lobby" | "In Queue" | "Ready Check":
+            role = u.map_role_for_display(state.connection.update_primary_role())
 
+        case "Champselect":
+            role = u.map_role_for_display(state.connection.get_assigned_role())
 
-def _get_champ():
-    return True, state.connection.pick_intent
+        case _:
+            return build_response(
+                success=False,
+                statusText=f"Unable to get role: user doesn't have a role in gamestate {gamestate}",
+                status=400,
+            )
+
+    return build_response(
+        success=True,
+        statusText=role,
+        status=200
+    )
 
 
 @api.route("/status/champ", methods=["GET"])
 @ensure_connection
 def get_champ():
-    success, body = _get_champ()
-    if success:
-        return empty_success_response(body=body)
-    return build_failure_response(body=body)
-
-
-def _get_ban():
-    return True, state.connection.ban_intent
+    champ: str = state.connection.pick_intent or state.connection.user_pick or ""
+    return build_response(
+        success=True,
+        statusText=champ,
+        status=200
+    )
 
 
 @api.route("/status/ban", methods=["GET"])
 @ensure_connection
 def get_ban():
-    success, body = _get_ban()
-    if success:
-        return empty_success_response(body=body)
-    return build_failure_response(body=body)
+    ban: str = state.connection.ban_intent or state.connection.user_ban or ""
+    return build_response(
+        success=True,
+        statusText=ban,
+        status=200
+    )
 
 
 @api.route("/data/pick", methods=["POST"])
 @ensure_connection
 def set_pick():
-    data = flask.request.json
-    if champ := state.connection.champ_exists(data["champ"]):
-        is_valid, reason = champselect.is_valid_pick(state.connection, champ)
-        state.connection.user_pick = champ
+    desired_champ: str = flask.request.json['champ']
+    champ = state.connection.champ_exists(desired_champ)
+    if not champ:
+        return build_response(
+            success=False,
+            statusText=f"Champion '{desired_champ}' does not exist.",
+            status=400,
+        )
 
-        # Note: Potentially confusing - sets user's desired pick regardless of gamestate, but will return a failure
-        # code if that champ isn't pickable *right now*
-        if is_valid:
-            state.connection.pick_intent = champ
-            return empty_success_response()
+    is_valid, reason = champselect.is_valid_pick(state.connection, champ)
+    state.connection.user_pick = champ
+    if is_valid:
+        state.connection.pick_intent = champ
+        return empty_success_response()
 
-        # Invalid pick
-        return build_failure_response(body=reason)
-
-    # Champ doesn't exist
-    return build_failure_response(body=MSG_CHAMP_DOESNT_EXIST)
+    # Invalid pick
+    return build_response(
+        success=False,
+        statusText=reason,
+        status=400
+    )
 
 
 @api.route("/data/ban", methods=["POST"])
 @ensure_connection
 def set_ban():
-    data = flask.request.json
-    if champ := state.connection.champ_exists(data["champ"]):
-        is_valid, reason = champselect.is_valid_ban(state.connection, champ)
-        state.connection.user_ban = champ
+    desired_ban: str = flask.request.json['champ']
+    ban = state.connection.champ_exists(desired_ban)
+    if not ban:
+        return build_response(
+            success=False,
+            statusText=f"Champion '{ban}' does not exist.",
+            status=400,
+        )
 
-        # Note: Potentially confusing - sets user's desired ban regardless of gamestate, but will return a failure
-        # code if that champ isn't bannable *right now*
-        if is_valid:
-            state.connection.ban_intent = champ
-            return empty_success_response()
+    is_valid, reason = champselect.is_valid_ban(state.connection, ban)
+    state.connection.user_ban = ban
+    if is_valid:
+        state.connection.ban_intent = ban
+        return empty_success_response()
 
-        # Invalid ban
-        return build_failure_response(body=reason)
-
-    # Champ doesn't exist
-    return build_failure_response(body=MSG_CHAMP_DOESNT_EXIST)
+    # Invalid pick
+    return build_response(
+        success=False,
+        statusText=reason,
+        status=400
+    )
 
 @api.route("/status/runespreference", methods=["GET"])
 @ensure_connection
 def get_runes_preference():
-    return empty_success_response(body=state.connection.should_modify_runes)
+    return build_response(
+        success=True,
+        statusText=state.connection.should_modify_runes,
+        status=200
+    )
+
 
 @api.route("/data/runespreference", methods=["POST"])
 @ensure_connection
@@ -204,8 +248,12 @@ def set_runes_preference():
         state.connection.should_modify_runes = bool(flask.request.json["setrunes"])
         return empty_success_response()
     except KeyError:
-        body = "Invalid data parameter: POST request should contain a 'setrunes' key."
-        return build_failure_response(body=body)
+        statusText = "Invalid data parameter: POST request should contain a 'setrunes' key."
+        return build_response(
+            success=False,
+            statusText=statusText,
+            status=400
+        )
 
 if __name__ == "__main__":
     api.run()
