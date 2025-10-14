@@ -35,33 +35,33 @@ def _get_gamestate():
     return u.map_gamestate_for_display(state.connection.get_gamestate())
 
 
-def build_response(success: bool, body: Any, status: int):
-    """ Build an API response in JSON format. """
+def empty_success_response():
+    """ Build an empty success response. """
     return flask.jsonify({
-        "success": success,
-        "statusText": body,
-    }), status
+        "success": True,
+        "statusText": "",
+    }), 200
 
-
-def build_success_response(*, success: bool = True, body: Any = "", status: int = 200):
-    """ Build an API response in JSON format, with default values for an empty success response. """
-    return build_response(success, body, status)
-
-
-def build_failure_response(*, success: bool = False, body: Any = "", status: int = 400):
-    """ Build an API response in JSON format, with default values for an empty failure response. """
-    return build_response(success, body, status)
-
+def build_response(*, success, statusText, status, **kwargs):
+    # I want success, statusText, and status to be mandatory, so leave them as named parameters
+    return flask.jsonify(success, statusText, status, kwargs)
 
 def ensure_connection(func):
     """
     Wrapper function to ensure that a connection to the League client has already been established before trying to
-    communicate with it. If it hasn't, instead return an error message.
+    communicate with it.
+    Returns:
+        - the return value of the function, if the client is connected
+        - a JSON response with an error message, if the client is not connected
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
         if not script_is_running():
-            return build_failure_response(body="Not connected to League client", status=404)
+            return build_response(
+                success=False,
+                statusText="Not connected to League client",
+                status=404,
+            )
 
         return func(*args, **kwargs)
     return wrapper
@@ -77,18 +77,23 @@ def script_is_running():
 def start():
     """ Start the script, if it hasn't been started already. If it has, do nothing, returning a failure response. """
     if script_is_running():
-        body = "A connection to the League client has already been established."
-        return build_failure_response(body=body)
+        return build_response(
+            success=False,
+            statusText="A connection to the League client has already been established.",
+            status=409,
+        )
 
     state.connection = c.Connection()
     run_on_thread(main.main, state.connection)
-    return build_success_response()
+    # OK to assume the connection was successful - if it wasn't, the next API call will return an error anyways
+    # This is kind of terrible and confusing, but the alternative is to add an awkward timeout, or
+    return empty_success_response()
 
 
 @api.route("/status/gamestate", methods=["GET"])
 @ensure_connection
 def get_gamestate():
-    return build_success_response(body=_get_gamestate())
+    return empty_success_response(body=_get_gamestate())
 
 @api.route("/status", methods=["GET"])
 @ensure_connection
@@ -116,7 +121,7 @@ def _get_role():
 def get_role():
     success, body = _get_role()
     if success:
-        return build_success_response(body=body)
+        return empty_success_response(body=body)
     return build_failure_response(body=body)
 
 
@@ -129,7 +134,7 @@ def _get_champ():
 def get_champ():
     success, body = _get_champ()
     if success:
-        return build_success_response(body=body)
+        return empty_success_response(body=body)
     return build_failure_response(body=body)
 
 
@@ -142,7 +147,7 @@ def _get_ban():
 def get_ban():
     success, body = _get_ban()
     if success:
-        return build_success_response(body=body)
+        return empty_success_response(body=body)
     return build_failure_response(body=body)
 
 
@@ -158,7 +163,7 @@ def set_pick():
         # code if that champ isn't pickable *right now*
         if is_valid:
             state.connection.pick_intent = champ
-            return build_success_response()
+            return empty_success_response()
 
         # Invalid pick
         return build_failure_response(body=reason)
@@ -179,7 +184,7 @@ def set_ban():
         # code if that champ isn't bannable *right now*
         if is_valid:
             state.connection.ban_intent = champ
-            return build_success_response()
+            return empty_success_response()
 
         # Invalid ban
         return build_failure_response(body=reason)
@@ -190,14 +195,14 @@ def set_ban():
 @api.route("/status/runespreference", methods=["GET"])
 @ensure_connection
 def get_runes_preference():
-    return build_success_response(body=state.connection.should_modify_runes)
+    return empty_success_response(body=state.connection.should_modify_runes)
 
 @api.route("/data/runespreference", methods=["POST"])
 @ensure_connection
 def set_runes_preference():
     try:
         state.connection.should_modify_runes = bool(flask.request.json["setrunes"])
-        return build_success_response()
+        return empty_success_response()
     except KeyError:
         body = "Invalid data parameter: POST request should contain a 'setrunes' key."
         return build_failure_response(body=body)

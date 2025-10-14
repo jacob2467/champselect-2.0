@@ -1,5 +1,7 @@
+from configparser import NoSectionError, NoOptionError
 import requests
 import time
+import sys
 import os
 
 import utility as u
@@ -23,6 +25,27 @@ LOGFILE: str = "output.log"
 
 MSG_ATTEMPT_RECONNECT: str = "Unable to connect to the League of Legends client. Retrying..."
 
+def handle_error(original_err: Exception, err_msg: str = "", exit_code: int = 1):
+    """
+    If this file was run as a script, write the error message to stderr and then clean exit with sys.exit() for
+    user-facing errors. No stacktrace, no exception chaining. If this file was *not* run as a script, just raise
+    the original exception, and let it (potentially) be caught elsewhere.
+    """
+    if __name__ != "__main__":
+        raise original_err
+
+    # Special treatment for certain exception types
+    if isinstance(original_err, (NoSectionError, NoOptionError)):
+        sys.stderr.write("Error while parsing config: ")
+
+    # Use original error message if none was provided
+    if not err_msg:
+        err_msg = str(original_err)
+
+    sys.stderr.write(err_msg)
+    sys.exit(exit_code)
+
+
 def initialize_connection() -> c.Connection:
     """ Initialize a connection to the League client. """
     # Remove old log file if it exists
@@ -39,8 +62,8 @@ def initialize_connection() -> c.Connection:
             return connection
 
         # If the connection isn't successful or the lockfile doesn't exist, the client isn't open yet
-        except (requests.exceptions.ConnectionError, FileNotFoundError, KeyError):
-            u.exit_with_error(c.MSG_CLIENT_CONNECTION_ERR)
+        except (requests.exceptions.ConnectionError, KeyError) as e:
+            handle_error(e, c.MSG_CLIENT_CONNECTION_ERR)
 
 
 def handle_lobby(connection: c.Connection) -> None:
@@ -79,13 +102,11 @@ def handle_champselect(connection: c.Connection, champselect_loop_iteration: int
             pass
 
 
-def main(connection: c.Connection = None) -> None:
+def main(connection: c.Connection) -> None:
     in_game: bool = False
     last_gamestate: str = ""  # Store last gamestate - used to skip redundant API calls and print statements
     champselect_loop_iteration: int = 0  # Keep track of how many loops run during champselect
 
-    if connection is None:
-        connection: c.Connection = initialize_connection()
     while not in_game:
         time.sleep(UPDATE_INTERVAL)
         # Wrap the loop in a try block to catch errors when the client closes
@@ -120,4 +141,8 @@ def main(connection: c.Connection = None) -> None:
             connection.parse_lockfile()
 
 if __name__ == "__main__":
-    main()
+    try:
+        connection: c.Connection = initialize_connection()
+        main(connection)
+    except Exception as e:
+        handle_error(e)
