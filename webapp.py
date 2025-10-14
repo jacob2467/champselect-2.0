@@ -8,7 +8,7 @@ import flask
 import utility as u
 import connect as c
 import champselect
-import main
+import main_loop
 
 MSG_CHAMP_DOESNT_EXIST: str = "Specified champion doesn't exist"
 
@@ -84,7 +84,7 @@ def start():
         )
 
     state.connection = c.Connection()
-    run_on_thread(main.main, state.connection)
+    run_on_thread(main_loop.main_loop, state.connection)
     # OK to assume the connection was successful - if it wasn't, the next API call will return an error anyways
     # This is kind of terrible and confusing, but the alternative is to add an awkward timeout, or
     return empty_success_response()
