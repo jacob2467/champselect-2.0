@@ -141,6 +141,7 @@ async function getRole() {
 async function updateStatus() {
     let isRunning = await getStatus();
 
+    // TODO: Make some of these API calls conditional based on gamestate, etc.; reduce noise
     if (isRunning) {
         pickDisplay.textContent = await getPick();
         banDisplay.textContent = await getBan();
@@ -148,6 +149,8 @@ async function updateStatus() {
         roleDisplay.textContent = await getRole();
         statusDisplay.textContent = "Running!";
     } else {
+    // TODO: Re-enable start button if script is no longer running
+    // TODO: Make script stay alive while game is running, but reduce polling rate (?)
         pickDisplay.textContent = "";
         banDisplay.textContent = "";
         gamestateDisplay.textContent = "";
