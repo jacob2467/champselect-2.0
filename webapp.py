@@ -2,6 +2,7 @@ from flask_cors import CORS
 from functools import wraps
 from typing import Any
 import threading
+import requests
 import flask
 
 import utility as u
@@ -16,13 +17,15 @@ CORS(api)
 
 class BotState:
     def __init__(self):
-        self.has_started = False
         self.connection = None
+        self.script_thread = None
 state: BotState = BotState()
 
 
 def run_on_thread(func, *args, **kwargs):
+    """ Spawn a new thread and run the target on it. """
     thread = threading.Thread(target=func, args=args, kwargs=kwargs)
+    state.script_thread = thread
     thread.start()
 
 # Note that this function is not decorated with @ensure_connection because it should only be called from inside
@@ -57,44 +60,47 @@ def ensure_connection(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # TODO: Fix this - will return success if script terminates, as long as it was up at some point
-        if not state.has_started or state.connection is None:
+        if not script_is_running():
             return build_failure_response(body="Not connected to League client", status=404)
 
         return func(*args, **kwargs)
     return wrapper
 
+def script_is_running():
+    """ Check whether or not the script is running. """
+    if state.script_thread is None:
+        return False
+    return state.script_thread.is_alive()
 
 @api.route("/start", methods=["GET", "POST"])
+@ensure_connection
 def start():
     """ Start the script, if it hasn't been started already. If it has, do nothing, returning a failure response. """
-    if not state.has_started:
-        state.connection = c.Connection()
-        run_on_thread(main.main, state.connection)
-        state.has_started = True
-        return build_success_response()
+    if script_is_running():
+        body = "A connection to the League client has already been established."
+        return build_failure_response(body=body)
 
-    body = "A connection to the League client has already been established."
-    return build_failure_response(body=body)
+    state.connection = c.Connection()
+    run_on_thread(main.main, state.connection)
+    return build_success_response()
 
 
 @api.route("/status/gamestate", methods=["GET"])
 @ensure_connection
 def get_gamestate():
-    gamestate = _get_gamestate()
-    return build_success_response(body=gamestate)
+    return build_success_response(body=_get_gamestate())
 
 @api.route("/status", methods=["GET"])
 @ensure_connection
 def get_status():
     return flask.jsonify({
-        "success": state.has_started,
+        "success": script_is_running()
     }), 200
 
 def _get_role():
     match _get_gamestate():
         case "Main Menu":
-            return False, "User not in champselect or in queue"
+            return False, "User not in champselect or in queue."
 
         case "Lobby" | "In Queue" | "Ready Check":
             return True, u.map_role_for_display(state.connection.update_primary_role())
@@ -103,7 +109,7 @@ def _get_role():
             return True, u.map_role_for_display(state.connection.get_assigned_role())
 
         case _:
-            return False, "Unable to process the request"
+            return False, "Unable to process the request."
 
 @api.route("/status/role", methods=["GET"])
 @ensure_connection

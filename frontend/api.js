@@ -5,7 +5,7 @@
  * @param data (optional) the data to send with the HTTP request
  */
 async function apiCall(endpoint, method, data) {
-    let fullEndpoint = "http://127.0.0.1:5000/" + endpoint
+    let fullEndpoint = "http://127.0.0.1:5000/" + endpoint;
 
     return await (await fetch(fullEndpoint, {
         method: method,
@@ -39,7 +39,7 @@ async function get(endpoint, data) {
 async function startScript() {
     let response = await post("start");
     if (! response['success']) {
-        console.log(`Unable to start the bot: ${response['statusText']}`)
+        console.log(`Unable to start the bot: ${response['statusText']}`);
         if (await getStatus()) {
             return true;
         }
@@ -54,7 +54,7 @@ async function startScript() {
  * Set the champion pick intent.
  * @param champ the name of the champion to pick
  */
-async function setPickIntent(champ) {
+async function setPick(champ) {
     let response = await post("data/pick", {champ: champ});
     if (! response['success']) {
         console.log(`Unable to set pick intent: ${response['statusText']}`)
@@ -62,34 +62,6 @@ async function setPickIntent(champ) {
     return response['success'];
 }
 
-
-/**
- * Set the champion ban intent.
- * @param champ the name of the champion to ban
- */
-async function setBanIntent(champ) {
-    let response = await post("data/ban", {champ: champ});
-    if (! response['success']) {
-        console.log(`Unable to set ban intent: ${response['statusText']}`)
-    }
-    return response['success'];
-}
-
-
-/**
- * Set the user's preference for whether or not their runes should be changed by the script.
- */
-async function setRunesPreference(preference) {
-    await post("data/runespreference", {setrunes: preference});
-}
-
-
-/**
- * Capitalize the first character in a string.
- */
-function capitalize(name) {
-    return name.charAt(0).toUpperCase() + name.slice(1)
-}
 
 /**
  * Get the curret pick intent from the client.
@@ -102,6 +74,7 @@ async function getPick() {
     return "None";
 }
 
+
 /**
  * Get the curret ban intent from the client.
  */
@@ -113,12 +86,24 @@ async function getBan() {
     return "None";
 }
 
+
 /**
- * Check if the script is currently running.
+ * Set the champion ban intent.
+ * @param champ the name of the champion to ban
  */
-async function getStatus() {
-    let response = await get('status');
+async function setBan(champ) {
+    let response = await post("data/ban", {champ: champ});
+    if (! response['success']) {
+        console.log(`Unable to set ban intent: ${response['statusText']}`)
+    }
     return response['success'];
+}
+
+/**
+ * Set the user's preference for whether or not their runes should be changed by the script.
+ */
+async function setRunesPreference(preference) {
+    await post("data/runespreference", {setrunes: preference});
 }
 
 /**
@@ -144,7 +129,7 @@ async function getRole() {
 }
 
 /**
- * Update the status of the program.
+ * Update the status display of the program.
  */
 async function updateStatus() {
     let isRunning = await getStatus();
@@ -165,60 +150,16 @@ async function updateStatus() {
 }
 
 /**
- * Set up elements for the HTML display.
+ * Check if the script is currently running.
  */
-function setUpDisplay() {
-    // Start script when button is clicked
-    start.addEventListener("click", async (event) => {
-        event.preventDefault();
+async function getStatus() {
+    let response = await get('status');
+    return response['success'];
+}
 
-        let success = await startScript();
-        start.disabled = true;
-        // If unable to start the script, re-enable the start buton after a timeout
-        if (! success) {
-            setTimeout(() => {
-                start.disabled = false;
-            }, 3000);
-        }
-        scriptStarted = true;
-    })
-
-    // Take input for the desired pick
-    pickInput.addEventListener("blur", async (event) => {
-        event.preventDefault();
-
-        // Do nothing if the user leaves the text box blank
-        let name = event.target.value;
-        if (name === "") {
-            return;
-        }
-
-        let success = await setPickIntent(name);
-        if (success) {
-            pickInput.value = "";
-            pickDisplay.textContent = capitalize(name);
-        }
-    })
-
-    // Take input for the desired ban
-    banInput.addEventListener("blur", async (event) => {
-        event.preventDefault();
-
-        // Do nothing if the user leaves the text box blank
-        let name = event.target.value;
-        if (name === "") {
-            return;
-        }
-
-        let success = await setBanIntent(name);
-        if (success) {
-            banInput.value = "";
-            banDisplay.textContent = capitalize(name);
-        }
-    })
-
-    // Allow the user to enable or disable rune changing
-    runeCheckbox.addEventListener("change", (event) => {
-        void setRunesPreference(event.target.checked);
-    })
+/**
+ * Capitalize the first character in a string.
+ */
+function capitalize(name) {
+    return name.charAt(0).toUpperCase() + name.slice(1)
 }
