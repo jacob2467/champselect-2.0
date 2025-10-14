@@ -38,15 +38,29 @@ async function get(endpoint, data) {
  */
 async function startScript() {
     let response = await post("start");
+    console.log(response);
     if (! response['success']) {
-        console.log(`Unable to start the bot: ${response['statusText']}`);
+        console.log(response['statusText']);
         if (await getStatus()) {
             return true;
         }
     } else {
-        console.log("Successfully started the bot!");
+        console.log("Successfully started the script!");
     }
     return response['success'];
+}
+
+
+/**
+ * Get the curret pick intent from the client. If unable to get the pick intent, return an empty string.
+ */
+async function getPick() {
+    let pickResponse = await get("status/champ");
+    if (pickResponse['success']) {
+        return capitalize(pickResponse['statusText']);
+    } else {
+        return "";
+    }
 }
 
 
@@ -64,26 +78,15 @@ async function setPick(champ) {
 
 
 /**
- * Get the curret pick intent from the client.
- */
-async function getPick() {
-    let pickResponse = await get("status/champ");
-    if (pickResponse['success']) {
-        return capitalize(pickResponse['statusText']);
-    }
-    return "None";
-}
-
-
-/**
- * Get the curret ban intent from the client.
+ * Get the curret ban intent from the client. If unable to get the ban intent, return an empty string.
  */
 async function getBan() {
     let banResponse = await get("status/ban");
     if (banResponse['success']) {
         return capitalize(banResponse['statusText']);
+    } else {
+        return ""
     }
-    return "None";
 }
 
 
@@ -99,6 +102,7 @@ async function setBan(champ) {
     return response['success'];
 }
 
+
 /**
  * Set the user's preference for whether or not their runes should be changed by the script.
  */
@@ -106,15 +110,17 @@ async function setRunesPreference(preference) {
     await post("data/runespreference", {setrunes: preference});
 }
 
+
 /**
- * Get the current gamestate.
+ * Get the current gamestate. If unable to, return an empty string instead.
  */
 async function getGamestate() {
     let response = await get('status/gamestate');
     if (response['success']) {
         return response['statusText'];
+    } else {
+        return "";
     }
-    return "None";
 }
 
 /**
@@ -124,8 +130,9 @@ async function getRole() {
     let response = await get('status/role');
     if (response['success']) {
         return response['statusText'];
+    } else {
+
     }
-    return "None";
 }
 
 /**
@@ -149,6 +156,7 @@ async function updateStatus() {
     }
 }
 
+
 /**
  * Check if the script is currently running.
  */
@@ -157,9 +165,13 @@ async function getStatus() {
     return response['success'];
 }
 
+
 /**
  * Capitalize the first character in a string.
  */
 function capitalize(name) {
+    if (name.length === 0) {
+        return "";
+    }
     return name.charAt(0).toUpperCase() + name.slice(1)
 }

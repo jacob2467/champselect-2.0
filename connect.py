@@ -4,6 +4,7 @@ import warnings
 import requests
 
 import utility as u
+import champselect_exceptions
 
 # Configure warnings
 warnings.formatwarning = u.custom_formatwarning
@@ -11,7 +12,7 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 
 
 MSG_CLIENT_CONNECTION_ERR: str = ("Unable to connect to the League of Legends client. If it's open, try updating your "
-"game directory in the config file (config.ini), and then restart the program.")
+f"game directory in the config file ({u.CONFIG}), and then restart the program.")
 
 class Connection:
     """
@@ -22,9 +23,6 @@ class Connection:
     BRYAN_SUMMONERID: int = 2742039436911744
 
     def __init__(self, indentation: int = 0):
-        # Info stored in lockfile
-        # self.lockfile = u.Lockfile()
-
         # How many seconds to wait before locking in the champ
         self.lock_in_delay: int = int(u.get_config_option_str("settings", "lock_in_delay"))
 
@@ -83,9 +81,7 @@ class Connection:
                 lockfile.pid, lockfile.port, lockfile.password, lockfile.protocol = contents[1:5]
 
         except FileNotFoundError:
-            # Create the error here, but avoid raising it inside this block.
-            # Done this way to avoid the "During handling of the above exception..." message.
-            u.exit_with_error(MSG_CLIENT_CONNECTION_ERR)
+            raise champselect_exceptions.ClientConnectionError(MSG_CLIENT_CONNECTION_ERR)
 
         except Exception as e:
             raise Exception(f"Error while parsing lockfile: {e}")

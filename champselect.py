@@ -4,6 +4,7 @@ import time
 from champselect_action import ChampselectAction
 import utility as u
 import connect as c
+import champselect_exceptions
 
 def ban_or_pick(connection: c.Connection) -> None:
     """ Decide whether to pick or ban based on gamestate, then call the corresponding method. """
@@ -183,7 +184,7 @@ def decide_pick(connection: c.Connection) -> str:
 
     # Last config option isn't valid
     if not is_valid:
-        u.exit_with_error("Unable to find a valid champion to pick.")
+        raise champselect_exceptions.ChampionError("Unable to find a valid champion to pick.")
 
     return pick
 

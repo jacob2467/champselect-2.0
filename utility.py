@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 import configparser
 import warnings
-import sys
 import os
 
 CONFIG = "config.ini"
@@ -15,7 +14,7 @@ config_contents = config.read(CONFIG)
 
 # Check for empty/missing config
 if not config_contents:
-    raise RuntimeError(f"Unable to parse {CONFIG} - does it exist?")
+    raise FileNotFoundError(f"Unable to parse {CONFIG} - does it exist?")
 
 
 @dataclass
@@ -61,13 +60,8 @@ def _get_config_option(section: str, option: str, is_bool: bool = False) -> str 
 
         return config.get(section, option)
 
-    except configparser.NoSectionError as e:
-        raise RuntimeError(f"Invalid config section '{section}': {e}")
-    except configparser.NoOptionError as e:
-        raise RuntimeError(f"Invalid config option '{option}': {e}")
-
     except Exception as e:
-        raise RuntimeError(f"An unknown error occurred while reading {CONFIG}: {e}")
+        raise type(e)(f"An unknown error occurred while reading {CONFIG}: {e}")
 
 
 def get_lockfile_path() -> str:
@@ -79,6 +73,7 @@ def get_lockfile_path() -> str:
         return config_dir
 
     # If directory not specified in config, use defaults
+    # Hardcoding these is fine. More readable than os.path.join(), and I'm handling each OS separately anyways.
     osx = "/Applications/League of Legends.app/Contents/LoL/lockfile"
     windows = "C:\\Riot Games\\League of Legends\\lockfile"
     # league can't be played on linux anymore because rito
@@ -222,9 +217,3 @@ def clean_name(all_champs: dict[str, int], name: str, should_filter: bool = True
 
     # Filter out invalid resulting names
     return name if name in all_champs else "invalid"
-
-
-def exit_with_error(err_msg: str, exitcode: int = 1) -> None:
-    """ Exit the program with the specified error message. """
-    sys.stderr.write(err_msg)
-    sys.exit(exitcode)
