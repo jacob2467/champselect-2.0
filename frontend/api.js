@@ -34,20 +34,22 @@ async function get(endpoint, data) {
 
 
 /**
- * Start the script.
+ * Attempt to start the script, and return a bool indicating whether it's running or not.
  */
 async function startScript() {
     let response = await post("start");
-    console.log(response);
+    let isRunning;
     if (! response['success']) {
         console.log(response['statusText']);
-        if (await getStatus()) {
-            return true;
-        }
+        isRunning = await scriptIsRunning();  /* if the reason the attempt failed was because the script was already
+                                            running, then still return true - it's running, doesn't matter why */
     } else {
         console.log("Successfully started the script!");
+        isRunning = true;
     }
-    return response['success'];
+    scriptCurrentlyRunning = isRunning;
+    startButton.disabled = isRunning;
+    return isRunning;
 }
 
 
@@ -57,7 +59,7 @@ async function startScript() {
 async function getPick() {
     let pickResponse = await get("status/champ");
     if (pickResponse['success']) {
-        return capitalize(pickResponse['statusText']);
+        return capitalize(pickResponse['data']);
     } else {
         return "";
     }
@@ -83,10 +85,10 @@ async function setPick(champ) {
 async function getBan() {
     let banResponse = await get("status/ban");
     if (banResponse['success']) {
-        return capitalize(banResponse['statusText']);
-    } else {
-        return ""
+        return capitalize(banResponse['data']);
     }
+
+    return "";
 }
 
 
@@ -117,10 +119,10 @@ async function setRunesPreference(preference) {
 async function getGamestate() {
     let response = await get('status/gamestate');
     if (response['success']) {
-        return response['statusText'];
-    } else {
-        return "";
+        return response['data'];
     }
+
+    return "";
 }
 
 /**
@@ -129,33 +131,33 @@ async function getGamestate() {
 async function getRole() {
     let response = await get('status/role');
     if (response['success']) {
-        return response['statusText'];
-    } else {
-
+        return response['data'];
     }
+    return "";
 }
+
 
 /**
  * Update the status display of the program.
  */
 async function updateStatus() {
-    let isRunning = await getStatus();
-
+    scriptCurrentlyRunning = await scriptIsRunning();
     // TODO: Make some of these API calls conditional based on gamestate, etc.; reduce noise
-    if (isRunning) {
+    if (scriptCurrentlyRunning) {
         pickDisplay.textContent = await getPick();
         banDisplay.textContent = await getBan();
         gamestateDisplay.textContent = await getGamestate();
         roleDisplay.textContent = await getRole();
         statusDisplay.textContent = "Running!";
+        startButton.disabled = true;
     } else {
-    // TODO: Re-enable start button if script is no longer running
-    // TODO: Make script stay alive while game is running, but reduce polling rate (?)
+        // TODO: Make script stay alive while game is running, but reduce polling rate (?)
         pickDisplay.textContent = "";
         banDisplay.textContent = "";
         gamestateDisplay.textContent = "";
         roleDisplay.textContent = "";
         statusDisplay.textContent = "Not running";
+        startButton.disabled = false;
     }
 }
 
@@ -163,9 +165,14 @@ async function updateStatus() {
 /**
  * Check if the script is currently running.
  */
-async function getStatus() {
-    let response = await get('status');
-    return response['success'];
+async function scriptIsRunning() {
+    try {
+        let response = await get('status');
+        return response['success'];
+    } catch (error) {
+        console.log(`Script not running due to an error: ${error}`)
+        return false;
+    }
 }
 
 

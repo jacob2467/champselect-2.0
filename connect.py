@@ -3,8 +3,9 @@ from base64 import b64encode
 import warnings
 import requests
 
-import utility as u
 import champselect_exceptions
+import utility as u
+import formatting
 
 # Configure warnings
 warnings.formatwarning = u.custom_formatwarning
@@ -46,7 +47,7 @@ class Connection:
         self.all_actions: dict = {}  # all champselect actions
         self.ban_action: dict = {}  # local player champselect ban action
         self.pick_action: dict = {}  # local player champselect pick action
-        self.invalid_picks: set[int] = set()  # set of champions that aren't valid picks
+        self.invalid_picks: set[int] = {131}  # set of champions that aren't valid picks
 
         # User intent and actual selections
         self.user_pick: str = ""  # the user's intended pick
@@ -134,12 +135,12 @@ class Connection:
         all_champs: dict = response.json()
 
         for champ in all_champs:
-            champ_name = u.clean_name(self.all_champs, champ["alias"], should_filter=False)
+            champ_name = formatting.clean_name(self.all_champs, champ["alias"], should_filter=False)
             self.all_champs[champ_name] = champ["id"]
 
         owned_champs = self.api_get("owned_champs").json()
         for champ in owned_champs:
-            champ_name = u.clean_name(self.all_champs, champ["alias"], should_filter=False)
+            champ_name = formatting.clean_name(self.all_champs, champ["alias"], should_filter=False)
             self.owned_champs[champ_name] = champ["id"]
 
 
@@ -150,8 +151,8 @@ class Connection:
             self.user_role = local_player_data["firstPositionPreference"].strip().lower()
         except Exception as e:
             warnings.warn(f"Unable to find player's role: {e}", RuntimeWarning)
-        finally:
-            return self.user_role
+
+        return self.user_role
 
     # --------------
     # Getter methods
@@ -162,7 +163,7 @@ class Connection:
         if self.role_checked:
             return self.assigned_role
 
-        role: str = ""
+        role: str = self.assigned_role
         try:
             my_team = self.session["myTeam"]
         except KeyError:
@@ -191,7 +192,7 @@ class Connection:
 
     def get_champid(self, champ: str) -> int:
         """ Get the id number of a champion. """
-        return self.all_champs[u.clean_name(self.all_champs, champ)]
+        return self.all_champs[formatting.clean_name(self.all_champs, champ)]
 
 
     def get_gamestate(self) -> str:
@@ -225,8 +226,15 @@ class Connection:
             - if the champion exists, their properly-formatted name
             - otherwise, an empty string
         """
-        result = u.clean_name(self.all_champs, name)
+        result = formatting.clean_name(self.all_champs, name)
         return result if result != "invalid" else ""
+
+
+    def re_parse_lockfile(self) -> None:
+        """ Re-parse the lockfile in case of a failed connection. """
+        lockfile = self.parse_lockfile()
+        self.request_url = self.get_request_url(lockfile)
+        self.http_headers = self.get_http_headers(lockfile)
 
 
     def setup_http_requests(self) -> tuple[str, dict[str, str]]:

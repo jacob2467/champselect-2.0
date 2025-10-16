@@ -1,4 +1,5 @@
 import connect
+import lobby
 
 c = connect.Connection()
-c.start_queue()
+lobby.start_queue(c)

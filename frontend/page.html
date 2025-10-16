@@ -33,20 +33,20 @@
             <label for="scriptstatus"> Script status:&nbsp </label>
             <label id="scriptstatus"> Not running </label> <br>
             <div style="padding-bottom: 3px"> </div>
-            <button id="startbutton"> Start script </button> <br>
+            <button id="startbutton"> Start script </button>
+            <button id="queuebutton"> Start queue </button>
         </form>
     </body>
 
     <script src="api.js"></script>
     <script src="interface.js"></script>
     <script>
-        let scriptStarted = false;
-
         // Set up buttons
         let startButton = document.getElementById("startbutton");
         let pickInput = document.getElementById("pick-intent-input");
         let banInput = document.getElementById("ban-intent-input");
         let runeCheckbox = document.getElementById("setrunes");
+        let queueButton = document.getElementById("queuebutton");
         // TODO: Add button to start queue
         // TODO: Make rune checkbox send runes right away if enabled in finalization phase
 
@@ -59,9 +59,11 @@
 
         setUpDisplay();
 
+        let scriptCurrentlyRunning;
+        (async () => { scriptCurrentlyRunning = await startScript(); })();
+
         setInterval(async () => {
-            // Only try to update once the script has been started
-            if (scriptStarted) {
+            if (scriptCurrentlyRunning) {
                 await updateStatus();
             }
         }, 3000);

@@ -1,11 +1,11 @@
-import utility as u
 import connect as c
+import formatting
 
 def get_champ_name_input(connection: c.Connection, prompt: str) -> str:
     """ Get user input for the name of a champion. """
-    name: str = u.clean_name(connection.all_champs, input(prompt))
+    name: str = formatting.clean_name(connection.all_champs, input(prompt))
     while name == "invalid":
-        name = u.clean_name(connection.all_champs, input("Invalid champion name! Please try again:  "))
+        name = formatting.clean_name(connection.all_champs, input("Invalid champion name! Please try again:  "))
 
     return name
 

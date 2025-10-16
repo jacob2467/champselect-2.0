@@ -1,14 +1,18 @@
 from flask_cors import CORS
 from functools import wraps
-from typing import Any
 import threading
-import requests
+import logging
 import flask
 
-import utility as u
 import connect as c
 import champselect
+import formatting
 import main_loop
+import lobby
+
+# stolen from here https://stackoverflow.com/questions/14888799/disable-console-messages-in-flask-server
+log = logging.getLogger('werkzeug')
+log.disabled = True
 
 api = flask.Flask(__name__)
 CORS(api)
@@ -26,12 +30,6 @@ def run_on_thread(func, *args, **kwargs):
     state.script_thread = thread
     thread.start()
 
-# Note that this function is not decorated with @ensure_connection because it should only be called from inside
-# other functions that are.
-def _get_gamestate():
-    """ Get a formatted string representing the League client's gamestate. """
-    return u.map_gamestate_for_display(state.connection.get_gamestate())
-
 
 def empty_success_response():
     """ Build an empty success response. """
@@ -40,12 +38,31 @@ def empty_success_response():
         "statusText": "",
     }), 200
 
+
 def build_response(**kwargs):
+    # Make status code mandatory
     if "status" in kwargs:
         status = kwargs.pop("status")
     else:
         raise SyntaxError(f"Function {build_response} called without a status code argument.")
+
+    # 'data' is the data the user requested (ifs present), and 'statusText' is a supplementary/explanatory message
+    # where applicable (error messages, for example). If either of them is not present, set them to an empty string
+    # so that they don't show up as undefined in the browser console
+    if "statusText" not in kwargs:
+        kwargs['statusText'] = ""
+    if "data" not in kwargs:
+        kwargs['data'] = ""
+
     return flask.jsonify(kwargs), status
+
+
+def script_is_running():
+    """ Check whether or not the script is running. """
+    if state.script_thread is None:
+        return False
+    return state.script_thread.is_alive()
+
 
 def ensure_connection(func):
     """
@@ -67,15 +84,10 @@ def ensure_connection(func):
         return func(*args, **kwargs)
     return wrapper
 
-def script_is_running():
-    """ Check whether or not the script is running. """
-    if state.script_thread is None:
-        return False
-    return state.script_thread.is_alive()
 
 @api.route("/start", methods=["POST"])
 def start():
-    """ Start the script, if it hasn't been started already. If it has, do nothing, returning a failure response. """
+    """ Start the script if it hasn't been started already. If it has, do nothing, returning a failure response. """
     if script_is_running():
         return build_response(
             success=False,
@@ -96,38 +108,49 @@ def start():
     return empty_success_response()
 
 
+@api.route("/actions/queue", methods=["POST"])
+@ensure_connection
+def start_queue():
+    """ Start queuing for a match. """
+    gamestate: str = formatting.gamestate(state.connection.get_gamestate())
+    if gamestate != "Lobby":
+        return build_response(
+            success=False,
+            statusText="not in lobby",
+            status=400,
+        )
+
+    lobby.start_queue(state.connection)
+    return empty_success_response()
+
+
+
 @api.route("/status/gamestate", methods=["GET"])
 @ensure_connection
 def get_gamestate():
-    try:
-        gamestate: str = u.map_gamestate_for_display(state.connection.get_gamestate())
-    except Exception as e:
-        return build_response(
-            success=False,
-            statusText=f"Unable to get gamestate due to an error: {e}",
-            status=400
-        )
+    gamestate: str = formatting.gamestate(state.connection.get_gamestate())
 
     return build_response(
         success=True,
-        statusText=gamestate,
+        data=gamestate,
         status=200,
     )
 
 
 @api.route("/status", methods=["GET"])
-@ensure_connection
 def get_status():
     if script_is_running():
         return build_response(
             success=True,
             statusText="Script is running!",
+            data=True,
             status=200,
         )
 
     return build_response(
         success=False,
         statusText="Script is not running.",
+        data=False,
         status=400,
     )
 
@@ -136,13 +159,13 @@ def get_status():
 @ensure_connection
 def get_role():
     """ Get the user's role. """
-    gamestate: str = u.map_gamestate_for_display(state.connection.get_gamestate())
+    gamestate: str = formatting.gamestate(state.connection.get_gamestate())
     match gamestate:
         case "Lobby" | "In Queue" | "Ready Check":
-            role = u.map_role_for_display(state.connection.update_primary_role())
+            role = formatting.role(state.connection.update_primary_role())
 
         case "Champselect":
-            role = u.map_role_for_display(state.connection.get_assigned_role())
+            role = formatting.role(state.connection.get_assigned_role())
 
         case _:
             return build_response(
@@ -153,7 +176,7 @@ def get_role():
 
     return build_response(
         success=True,
-        statusText=role,
+        data=role,
         status=200
     )
 
@@ -164,18 +187,7 @@ def get_champ():
     champ: str = state.connection.pick_intent or state.connection.user_pick or ""
     return build_response(
         success=True,
-        statusText=champ,
-        status=200
-    )
-
-
-@api.route("/status/ban", methods=["GET"])
-@ensure_connection
-def get_ban():
-    ban: str = state.connection.ban_intent or state.connection.user_ban or ""
-    return build_response(
-        success=True,
-        statusText=ban,
+        data=champ,
         status=200
     )
 
@@ -206,6 +218,17 @@ def set_pick():
     )
 
 
+@api.route("/status/ban", methods=["GET"])
+@ensure_connection
+def get_ban():
+    ban: str = state.connection.ban_intent or state.connection.user_ban or ""
+    return build_response(
+        success=True,
+        data=ban,
+        status=200
+    )
+
+
 @api.route("/data/ban", methods=["POST"])
 @ensure_connection
 def set_ban():
@@ -231,12 +254,13 @@ def set_ban():
         status=400
     )
 
+
 @api.route("/status/runespreference", methods=["GET"])
 @ensure_connection
 def get_runes_preference():
     return build_response(
         success=True,
-        statusText=state.connection.should_modify_runes,
+        data=state.connection.should_modify_runes,
         status=200
     )
 
@@ -247,6 +271,7 @@ def set_runes_preference():
     try:
         state.connection.should_modify_runes = bool(flask.request.json["setrunes"])
         return empty_success_response()
+
     except KeyError:
         statusText = "Invalid data parameter: POST request should contain a 'setrunes' key."
         return build_response(
@@ -254,6 +279,7 @@ def set_runes_preference():
             statusText=statusText,
             status=400
         )
+
 
 if __name__ == "__main__":
     api.run()

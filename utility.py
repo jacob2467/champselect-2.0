@@ -87,44 +87,6 @@ def get_lockfile_path() -> str:
             raise RuntimeError("Unsupported OS")
 
 
-def map_gamestate_for_display(gamestate: str) -> str:
-    """ Map the current gamestate to a more readable format for display to the user, e.g. "None" -> "Main Menu" """
-    match gamestate:
-        case "None":
-            return "Main Menu"
-        case "Matchmaking":
-            return "In Queue"
-        case "ReadyCheck":
-            return "Ready Check"
-        case "ChampSelect" | "FINALIZATION":
-            return "Champselect"
-        case _:
-            return gamestate
-
-
-def map_phase_for_display(phase: str) -> str:
-    """ Map the Champselect phase to a more readable format for display to the user, e.g. "BAN_PICK" -> "Pick/Ban" """
-    match phase:
-        case "PLANNING":
-            return "Planning"
-        case "BAN_PICK":
-            return "Pick/Ban"
-        case "FINALIZATION":
-            return "Loadout Selection"
-        case _:
-            return "None"
-
-def map_role_for_display(role: str) -> str:
-    match role:
-        case "middle":
-            return "Mid"
-        case "utility":
-            return "Support"
-        case "bottom":
-            return "ADC"
-        case _:
-            return capitalize(role)
-
 def get_backup_config_champs(position: str, picking: bool = True) -> list[str]:
     """
     Parse the user's config for backup champs and return it as a list.
@@ -152,21 +114,6 @@ def get_backup_config_champs(position: str, picking: bool = True) -> list[str]:
     return champs
 
 
-def clean_string(string: str) -> str:
-    """ Remove whitespace and illegal characters from a string, and convert it to lowercase. """
-    illegal = (" ", "'", ".")
-    new_string = ""
-    for char in string:
-        if char not in illegal:
-            new_string += char.lower()
-    return new_string
-
-
-def capitalize(string: str) -> str:
-    """ Capitalize the first letter in a string. """
-    return string[:1].upper() + string[1:]
-
-
 def print_and_write(*args, **kwargs) -> None:
     """ Print the input and save it to the log file. """
     indentation: str = TAB_CHARACTER * kwargs.pop("indentation", 0)
@@ -187,33 +134,3 @@ def custom_formatwarning(message, *_) -> str:
     formatted_msg: str = f"\tWarning: {message}\n"
     log(formatted_msg)  # don't print the error here because it will be printed anyways
     return formatted_msg
-
-
-def clean_name(all_champs: dict[str, int], name: str, should_filter: bool = True) -> str:
-    """
-    Remove whitespace and special characters from a champion's name.
-    Example output:
-        Aurelion Sol -> aurelionsol
-        Bel'Veth -> belveth
-
-    Args:
-        all_champs: champions that have already been processed
-        name: the name to clean
-        should_filter: if True, return "invalid" when an invalid champion name is passed
-    """
-    if not name:
-        return name
-    # Remove all illegal characters and whitespace
-    name = clean_string(name)
-
-    # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
-    if "nunu" in name:
-        return "nunu"
-    elif name == "wukong":
-        return "monkeyking"
-
-    if not should_filter:
-        return name
-
-    # Filter out invalid resulting names
-    return name if name in all_champs else "invalid"

@@ -6,17 +6,8 @@ function setUpStartButton() {
     startButton.addEventListener("click", async (event) => {
         event.preventDefault();
 
-        let success = await startScript();
-        startButton.disabled = true;
-        // If unable to start the script, re-enable the start buton after a timeout
-        if (! success) {
-            setTimeout(() => {
-                startButton.disabled = false;
-            }, 3000);
-        } else {
-            scriptStarted = true;
-        }
-    })
+        await startScript();
+    });
 }
 
 function setUpPickInput() {
@@ -35,7 +26,7 @@ function setUpPickInput() {
             pickInput.value = "";
             pickDisplay.textContent = capitalize(name);
         }
-    })
+    });
 }
 
 function setUpBanInput() {
@@ -54,14 +45,28 @@ function setUpBanInput() {
             banInput.value = "";
             banDisplay.textContent = capitalize(name);
         }
-    })
+    });
 }
 
 function setUpRuneCheckbox() {
     // Allow the user to enable or disable rune changing
     runeCheckbox.addEventListener("change", (event) => {
+        // TODO: Log error message here instad of discarding
         void setRunesPreference(event.target.checked);
-    })
+    });
+}
+
+function setUpQueueButton() {
+    queueButton.addEventListener("click", async (event) => {
+        event.preventDefault();
+
+        let response = await post("actions/queue");
+        if (response['success']) {
+            console.log("Successfully started queue!");
+        } else {
+            console.log(`Unable to start queue due to an error: ${response['statusText']}`);
+        }
+    });
 }
 
 /**
@@ -72,4 +77,5 @@ function setUpDisplay() {
     setUpPickInput();
     setUpBanInput();
     setUpRuneCheckbox();
+    setUpQueueButton();
 }

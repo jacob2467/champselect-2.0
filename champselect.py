@@ -2,9 +2,10 @@ import warnings
 import time
 
 from champselect_action import ChampselectAction
+import champselect_exceptions
 import utility as u
 import connect as c
-import champselect_exceptions
+import formatting
 
 def ban_or_pick(connection: c.Connection) -> None:
     """ Decide whether to pick or ban based on gamestate, then call the corresponding method. """
@@ -248,14 +249,9 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> tuple[bool, str]
     if not champ_name:
         return False, ""
 
-    champ_name = u.clean_name(connection.all_champs, champ_name)
+    champ_name = formatting.clean_name(connection.all_champs, champ_name)
     champid: int = connection.get_champid(champ_name)
     error_msg: str = "Invalid pick: "
-
-    # If champ has already been checked, and was invalid
-    if champid in connection.invalid_picks:
-        connection.invalid_picks.add(champid)
-        return False, error_msg + "in list of invalid champs"
 
     # If champ is banned
     if is_banned(connection, champid):
@@ -265,12 +261,12 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> tuple[bool, str]
     # If user doesn't own the champ
     if champ_name not in connection.owned_champs:
         connection.invalid_picks.add(champid)
-        return False, f"{error_msg}{u.capitalize(champ_name)} is unowned."
+        return False, f"{error_msg}{formatting.champ(champ_name)} is unowned."
 
     # If a player has already PICKED the champ (hovering is ok)
     if is_picked(connection, champid):
         connection.invalid_picks.add(champid)
-        return False, f"{error_msg}{u.capitalize(champ_name)} has already been picked."
+        return False, f"{error_msg}{formatting.champ(champ_name)} has already been picked."
 
     # If the user got assigned a role other than the one they queued for, disregard the champ they picked
     # This does nothing when queuing for gamemodes that don't have assigned roles
@@ -284,6 +280,13 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> tuple[bool, str]
         connection.invalid_picks.add(champid)
         return False, error_msg + "autofilled"
 
+    # If champ has already been checked, and was invalid
+    # For efficiency reasons, this should technically be the first check, but then we don't know *why* it's an invalid
+    # pick
+    if champid in connection.invalid_picks:
+        connection.invalid_picks.add(champid)
+        return False, error_msg + "in list of invalid champs"
+
     return True, ""
 
 
@@ -294,7 +297,7 @@ def is_valid_ban(connection: c.Connection, champ: str) -> tuple[bool, str]:
         return False, ""
 
     champid = connection.get_champid(champ)
-    champ = u.clean_name(connection.all_champs, champ)
+    champ = formatting.clean_name(connection.all_champs, champ)
     error_msg = "Invalid ban: "
 
     # If trying to ban the champ the user wants to play
@@ -418,7 +421,7 @@ def update_champ_intent(connection: c.Connection) -> None:
 
         if not connection.has_printed_pick:
             indent = connection.indentation
-            u.print_and_write(f"Pick intent: {u.capitalize(connection.pick_intent)}", indentation=indent)
+            u.print_and_write(f"Pick intent: {formatting.champ(connection.pick_intent)}", indentation=indent)
             connection.has_printed_pick = True
 
     ##### Update ban intent #####
@@ -432,7 +435,7 @@ def update_champ_intent(connection: c.Connection) -> None:
 
         if not connection.has_printed_ban:
             indent = connection.indentation
-            u.print_and_write(f"Ban intent: {u.capitalize(connection.ban_intent)}", indentation=indent)
+            u.print_and_write(f"Ban intent: {formatting.champ(connection.ban_intent)}", indentation=indent)
             connection.has_printed_ban = True
 
 

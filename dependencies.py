@@ -13,12 +13,15 @@ def install_dependencies():
             print(f"Package '{package}' not found - attempting to install...\n")
 
         try:
-            subprocess.run(["pip3", "install", package], check=True)
+            subprocess.run(["pip", "install", package], check=True)
         except Exception:
             try:
-                subprocess.run(["pip", "install", package], check=True)
+                subprocess.run(["pip3", "install", package], check=True)
             except Exception as e:
-                raise RuntimeError(f"Unable to install package '{package}' due to an error: {e}")
+                try:
+                    subprocess.run(["python.exe", "-m", "pip", "install", package], check=True)
+                except Exception as e:
+                    raise RuntimeError(f"Unable to install package '{package}' due to an error: {e}")
         print(f"\nSuccessfully installed package '{package}'!\n")
 
 if __name__ == "__main__":

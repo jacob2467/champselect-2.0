@@ -4,6 +4,7 @@ import time
 import utility as u
 import connect as c
 import champselect
+import formatting
 import runes
 import lobby
 
@@ -11,7 +12,7 @@ import lobby
 SHOULD_PRINT: bool = u.get_config_option_bool("settings", "print_debug_info")
 
 # Whether or not to automatically start the queue
-START_QUEUE: bool = u.get_config_option_bool("settings", "start_queue")
+SHOULD_START_QUEUE: bool = u.get_config_option_bool("settings", "start_queue")
 
 # How many seconds to wait before re-running the main loop
 UPDATE_INTERVAL: float = float(u.get_config_option_str("settings", "update_interval"))
@@ -20,8 +21,9 @@ MSG_ATTEMPT_RECONNECT: str = "Unable to connect to the League of Legends client.
 
 
 def handle_lobby(connection: c.Connection) -> None:
-    if START_QUEUE:
+    if SHOULD_START_QUEUE and not connection.started_queue:
         lobby.start_queue(connection)
+        connection.started_queue = True
     lobby.reset_after_dodge(connection)
 
 
@@ -41,7 +43,7 @@ def handle_champselect(connection: c.Connection, champselect_loop_iteration: int
 
     if SHOULD_PRINT:
         u.print_and_write(f"\nChampselect loop #{champselect_loop_iteration}:")
-        u.print_and_write("\tChampselect phase:", u.map_phase_for_display(phase))
+        u.print_and_write("\tChampselect phase:", formatting.phase(phase))
 
     # Handle each champ select phase separately
     match phase:
@@ -69,7 +71,7 @@ def main_loop(connection: c.Connection) -> None:
 
             # Print current gamestate if it's different from the last one
             if gamestate_has_changed:
-                u.print_and_write(f"\nCurrent gamestate: {u.map_gamestate_for_display(gamestate)}")
+                u.print_and_write(f"\nCurrent gamestate: {formatting.gamestate(gamestate)}")
                 last_gamestate = gamestate
 
             match gamestate:
@@ -91,4 +93,4 @@ def main_loop(connection: c.Connection) -> None:
                     in_game = True
 
         except requests.exceptions.ConnectionError:
-            connection.parse_lockfile()
+            connection.re_parse_lockfile()
