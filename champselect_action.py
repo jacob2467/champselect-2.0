@@ -9,6 +9,8 @@ class ChampselectAction:
         self.actionid: int = actionid
         self.champid: int = champid
 
+    # Context manager to change the Action's mode to hover, then change it back when exiting.
+    # Used to ensure that client is hovering the champ before picking/banning.
     def __enter__(self):
         self._mode = "hover"
         return self

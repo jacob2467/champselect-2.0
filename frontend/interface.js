@@ -50,9 +50,24 @@ function setUpBanInput() {
 
 function setUpRuneCheckbox() {
     // Allow the user to enable or disable rune changing
-    runeCheckbox.addEventListener("change", (event) => {
+    runeCheckbox.addEventListener("change", async (event) => {
+        event.preventDefault();
+
         // TODO: Log error message here instad of discarding
         void setRunesPreference(event.target.checked);
+
+        if (! event.target.checked) {
+            return;
+        }
+        // Send runes to the client if we're in champselect
+        if (await getGamestate() === "Champselect") {
+            let response = await post("actions/sendrunes");
+            if (response['success']) {
+                console.log("Successfully set runes!");
+            } else {
+                console.log(`Unable to set runes due to an error: ${response['statusText']}`);
+            }
+        }
     });
 }
 
@@ -69,6 +84,19 @@ function setUpQueueButton() {
     });
 }
 
+function setUpLobbyControls() {
+    lobbyButton.addEventListener("click", async (event) => {
+        event.preventDefault();
+
+        let response = await post("actions/createlobby", {lobbytype: lobbyDropdown.value});
+        if (response['success']) {
+            console.log("Successfully created a lobby!");
+        } else {
+            console.log(`Unable to create lobby due to an error: ${response['statusText']}`);
+        }
+    });
+}
+
 /**
  * Set up elements for the HTML display.
  */
@@ -78,4 +106,5 @@ function setUpDisplay() {
     setUpBanInput();
     setUpRuneCheckbox();
     setUpQueueButton();
+    setUpLobbyControls();
 }

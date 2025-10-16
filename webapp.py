@@ -9,6 +9,7 @@ import champselect
 import formatting
 import main_loop
 import lobby
+import runes
 
 # TODO: make the script queue the mode you select and also make a button to start each queue
 
@@ -150,10 +151,10 @@ def get_status():
         )
 
     return build_response(
-        success=False,
+        success=True,
         statusText="Script is not running.",
         data=False,
-        status=400,
+        status=200,
     )
 
 
@@ -279,6 +280,37 @@ def set_runes_preference():
         return build_response(
             success=False,
             statusText=statusText,
+            status=400
+        )
+
+
+@api.route("/actions/sendrunes", methods=["POST"])
+@ensure_connection
+def set_runes():
+    try:
+        runes.send_runes_and_summs(state.connection)
+        return empty_success_response()
+    except Exception as e:
+        return build_response(
+            success=False,
+            statusText=f"Unable to set runes due to an error: {e}",
+            status=400
+        )
+
+
+
+@api.route("/actions/createlobby", methods=["POST"])
+@ensure_connection
+def create_lobby():
+    lobbytype = flask.request.json['lobbytype']
+    try:
+        lobby.create_lobby(state.connection, lobbytype)
+        return empty_success_response()
+
+    except Exception as e:
+        return build_response(
+            success=False,
+            statusText=f"Unable to create the lobby due to an error: {e}",
             status=400
         )
 

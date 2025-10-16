@@ -82,9 +82,66 @@ def clean_string(string: str) -> str:
 def champ(name: str) -> str:
     """ Format a champion name for user-facing display. """
     # This method is intended to be used only for display to the user; clean_name is used internally
-    # TODO: Implement this (and then actually use it)
-    # for now just capitalize it
-    return capitalize(name)
+    # There may be an endpoint provided by the LCU API for this, but this is good enough (for now ?).
+    name = capitalize(name)
+    match name:
+        case "Belveth" | "Kaisa" | "Reksai" | "Kogmaw", "Velkoz":
+            return format_void_champ(name)
+
+        case "Nunu":
+            return "Nunu and Willump"
+
+        case "Monkeyking":
+            return "Wukong"
+
+        case "Twistedfate":
+            return "Twisted Fate"
+
+        case "Xinzhao":
+            return "Xin Zhao"
+
+        case "Leblanc":
+            return "LeBlanc"
+
+        case "Masteryi":
+            return "Master Yi"
+
+        case "Missfortune":
+            return "Miss Fortune"
+
+        case "Drmundo":
+            return "Dr. Mundo"
+
+        case "Jarvaniv":
+            return "Jarvan IV"
+
+        case "Leesin":
+            return "Lee Sin"
+
+        case "Aurelionsol":
+            return "Aurelion Sol"
+
+        case "Tahmkench":
+            return "Tahm Kench"
+
+        case "Neeko":
+            return "Not Neeko"
+
+        case "Ksante":
+            return "K'Sante"
+
+        case _:
+            return name
+
+
+def format_void_champ(name: str) -> str:
+    """
+    Format the specified void champion's name for user-facing display.
+    Examples:
+        - Belveth -> Bel'Veth
+        - Kaisa -> Kai'Sa
+    """
+    return f"{name[:3]}'{name[3:]}"
 
 
 def capitalize(string: str) -> str:
