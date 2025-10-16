@@ -6,7 +6,7 @@ import os
 
 owner: str = "jacob2467"
 repo: str = "champselect-2.0"
-branch: str = "final-webserver-testing"
+branch: str = "webserver"
 version_file: str = "version.txt"
 update_zip: str = "update.zip"
 
