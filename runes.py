@@ -1,5 +1,6 @@
 import utility as u
 import connect as c
+import formatting
 
 
 FLASH: int = 4
@@ -87,7 +88,7 @@ def pick_from_existing_runepages(connection: c.Connection, champ_name: str) -> t
 
     for page in all_pages:
         page_name: str = page["name"]
-        clean_page_name: str = u.clean_name(connection.all_champs, page_name, False)
+        clean_page_name: str = formatting.clean_name(connection.all_champs, page_name, False)
 
         # If rune page with this script's naming scheme is found
         if page_name.startswith(prefix):

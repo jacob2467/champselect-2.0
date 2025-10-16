@@ -3,7 +3,9 @@ from base64 import b64encode
 import warnings
 import requests
 
+import champselect_exceptions
 import utility as u
+import formatting
 
 # Configure warnings
 warnings.formatwarning = u.custom_formatwarning
@@ -11,7 +13,7 @@ warnings.simplefilter('ignore', InsecureRequestWarning)
 
 
 MSG_CLIENT_CONNECTION_ERR: str = ("Unable to connect to the League of Legends client. If it's open, try updating your "
-"game directory in the config file (config.ini), and then restart the program.")
+f"game directory in the config file ({u.CONFIG}), and then restart the program.")
 
 class Connection:
     """
@@ -22,9 +24,6 @@ class Connection:
     BRYAN_SUMMONERID: int = 2742039436911744
 
     def __init__(self, indentation: int = 0):
-        # Info stored in lockfile
-        # self.lockfile = u.Lockfile()
-
         # How many seconds to wait before locking in the champ
         self.lock_in_delay: int = int(u.get_config_option_str("settings", "lock_in_delay"))
 
@@ -48,7 +47,7 @@ class Connection:
         self.all_actions: dict = {}  # all champselect actions
         self.ban_action: dict = {}  # local player champselect ban action
         self.pick_action: dict = {}  # local player champselect pick action
-        self.invalid_picks: set[int] = set()  # set of champions that aren't valid picks
+        self.invalid_picks: dict[int, str] = {}  # champions that aren't valid picks
 
         # User intent and actual selections
         self.user_pick: str = ""  # the user's intended pick
@@ -82,13 +81,11 @@ class Connection:
                 contents: list[str] = f.read().split(":")
                 lockfile.pid, lockfile.port, lockfile.password, lockfile.protocol = contents[1:5]
 
-        except FileNotFoundError:
-            # Create the error here, but avoid raising it inside this block.
-            # Done this way to avoid the "During handling of the above exception..." message.
-            u.exit_with_error(MSG_CLIENT_CONNECTION_ERR)
+        except FileNotFoundError as e:
+            raise champselect_exceptions.ClientConnectionError(MSG_CLIENT_CONNECTION_ERR) from e
 
         except Exception as e:
-            raise Exception(f"Error while parsing lockfile: {e}")
+            raise Exception(f"Error while parsing lockfile") from e
 
         return lockfile
 
@@ -138,34 +135,39 @@ class Connection:
         all_champs: dict = response.json()
 
         for champ in all_champs:
-            champ_name = u.clean_name(self.all_champs, champ["alias"], should_filter=False)
+            champ_name = formatting.clean_name(self.all_champs, champ["alias"], should_filter=False)
             self.all_champs[champ_name] = champ["id"]
 
         owned_champs = self.api_get("owned_champs").json()
         for champ in owned_champs:
-            champ_name = u.clean_name(self.all_champs, champ["alias"], should_filter=False)
+            champ_name = formatting.clean_name(self.all_champs, champ["alias"], should_filter=False)
             self.owned_champs[champ_name] = champ["id"]
 
 
-    def update_primary_role(self) -> None:
-        """ Check what role the user is queueing for. """
+    def update_primary_role(self) -> str:
+        """ Check what role the user is queueing for, update the Connection accordingly, and also return the role. """
         try:
             local_player_data: dict = self.api_get("lobby").json()["localMember"]
             self.user_role = local_player_data["firstPositionPreference"].strip().lower()
         except Exception as e:
             warnings.warn(f"Unable to find player's role: {e}", RuntimeWarning)
 
+        return self.user_role
+
     # --------------
     # Getter methods
     # --------------
-    def get_assigned_role(self) -> str:
+    def get_assigned_role(self, default: str = "middle") -> str:
         """ Get the name of the user's assigned role. """
         # Skip unecessary API calls
         if self.role_checked:
             return self.assigned_role
 
-        role: str = ""
-        my_team = self.session["myTeam"]
+        role: str = self.assigned_role
+        try:
+            my_team = self.session["myTeam"]
+        except KeyError:
+            return self.user_role if self.user_role else ""
         my_id = self.get_summoner_id()
         for player in my_team:
             if player["summonerId"] == my_id:
@@ -174,8 +176,8 @@ class Connection:
         # Can't find user's role
         if not role:
             # If no role was assigned, default to the role the user was queueing for. If that doesn't exist either,
-            # default to mid
-            role = self.user_role if self.user_role else "middle"
+            # use the specified default
+            role = self.user_role if self.user_role else default
             warnings.warn(f"Unable to get assigned role, defaulting to {role}", RuntimeWarning)
 
         self.assigned_role = role
@@ -190,7 +192,7 @@ class Connection:
 
     def get_champid(self, champ: str) -> int:
         """ Get the id number of a champion. """
-        return self.all_champs[u.clean_name(self.all_champs, champ)]
+        return self.all_champs[formatting.clean_name(self.all_champs, champ)]
 
 
     def get_gamestate(self) -> str:
@@ -215,6 +217,24 @@ class Connection:
                 return name
         warnings.warn(f"Unable to find champion name with id {target_id}")
         return "unknown"
+
+
+    def champ_exists(self, name: str) -> str:
+        """
+        Check whether or not the champion with the specified name exists.
+        Returns:
+            - if the champion exists, their properly-formatted name
+            - otherwise, an empty string
+        """
+        result = formatting.clean_name(self.all_champs, name)
+        return result if result != "invalid" else ""
+
+
+    def re_parse_lockfile(self) -> None:
+        """ Re-parse the lockfile in case of a failed connection. """
+        lockfile = self.parse_lockfile()
+        self.request_url = self.get_request_url(lockfile)
+        self.http_headers = self.get_http_headers(lockfile)
 
 
     def setup_http_requests(self) -> tuple[str, dict[str, str]]:

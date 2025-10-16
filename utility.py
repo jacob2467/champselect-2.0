@@ -1,24 +1,31 @@
 from dataclasses import dataclass
 import configparser
 import warnings
-import sys
 import os
+
+
+CONFIG = "config.ini"
+CONFIG_TEMPLATE = "config-template.ini"
+LOGFILE = "output.log"
+
+TAB_CHARACTER = '\t'
 
 config_name = "config.ini"
 config_template_name = "config-template.ini"
 
+
 # Read config
 config = configparser.ConfigParser()
-config_contents = config.read(config_name)
+config_contents = config.read(CONFIG)
 
 # Backup config
 config_template = configparser.ConfigParser()
-config_template_contents = config_template.read(config_template_name)
+config_template_contents = config_template.read(CONFIG_TEMPLATE)
 
 # Check for empty/missing config
 if not config_contents:
-    # TODO: Copy template config here instead of raising an error
-    raise RuntimeError(f"Unable to parse {config_name} - does it exist?")
+    warnings.warn(f"Unable to parse {CONFIG} - does it exist? Falling back to default config", RuntimeWarning)
+    config = config_template
 
 
 @dataclass
@@ -62,7 +69,6 @@ def _get_config_option(section: str, option: str, is_bool: bool = False, *, conf
     try:
         if is_bool:
             return config.getboolean(section, option)
-
         return config.get(section, option)
 
     except configparser.NoSectionError as e:
@@ -70,17 +76,17 @@ def _get_config_option(section: str, option: str, is_bool: bool = False, *, conf
         if config != config_template:
             return _get_config_option(section, option, is_bool, config=config_template)
         else:
-            raise RuntimeError(f"Invalid config section '{section}': {e}")
+            raise e
 
     except configparser.NoOptionError as e:
         # Check config template for the option if it doesn't exist in user's config
         if config != config_template:
             return _get_config_option(section, option, is_bool, config=config_template)
         else:
-            raise RuntimeError(f"Invalid config option '{option}': {e}")
+            raise e
 
     except Exception as e:
-        raise RuntimeError(f"An unknown error occurred while reading {config_name}: {e}")
+        raise type(e)(f"An error occurred while reading {CONFIG}: {e}")
 
 
 def get_lockfile_path() -> str:
@@ -89,9 +95,10 @@ def get_lockfile_path() -> str:
 
     # Use directory specified in config if it exists
     if config_dir:
-        return config_dir
+        return os.path.join(config_dir, "lockfile")
 
     # If directory not specified in config, use defaults
+    # Hardcoding these is fine. More readable than os.path.join(), and I'm handling each OS separately anyways.
     osx = "/Applications/League of Legends.app/Contents/LoL/lockfile"
     windows = "C:\\Riot Games\\League of Legends\\lockfile"
     # league can't be played on linux anymore because rito
@@ -103,36 +110,6 @@ def get_lockfile_path() -> str:
             return osx
         case _:
             raise RuntimeError("Unsupported OS")
-
-
-def map_gamestate_for_display(gamestate: str) -> str:
-    """ Map the current gamestate to a more readable format for display to the user, e.g. "None" -> "Main Menu" """
-    match gamestate:
-        case "None":
-            return "Main Menu"
-        case "Matchmaking":
-            return "In Queue"
-        case "ReadyCheck":
-            return "Ready Check"
-        case "ChampSelect":
-            return "Champselect"
-        case "FINALIZATION":
-            return "Champselect"
-        case _:
-            return gamestate
-
-
-def map_phase_for_display(phase: str) -> str:
-    """ Map the Champselect phase to a more readable format for display to the user, e.g. "BAN_PICK" -> "Pick/Ban" """
-    match phase:
-        case "PLANNING":
-            return "Planning"
-        case "BAN_PICK":
-            return "Pick/Ban"
-        case "FINALIZATION":
-            return "Loadout Selection"
-        case _:
-            return "None"
 
 
 def get_backup_config_champs(position: str, picking: bool = True) -> list[str]:
@@ -162,70 +139,23 @@ def get_backup_config_champs(position: str, picking: bool = True) -> list[str]:
     return champs
 
 
-def clean_string(string: str) -> str:
-    """ Remove whitespace and illegal characters from a string, and convert it to lowercase. """
-    illegal = (" ", "'", ".")
-    new_string = ""
-    for char in string:
-        if char not in illegal:
-            new_string += char.lower()
-    return new_string
+def print_and_write(*args, **kwargs) -> None:
+    """ Print the input and save it to the log file. """
+    indentation: str = TAB_CHARACTER * kwargs.pop("indentation", 0)
+    print(indentation, end="")
+    print(*args, **kwargs)
+    log(*args, **kwargs)
 
 
-def capitalize(string: str) -> str:
-    """ Capitalize the first letter in a string. """
-    return string[:1].upper() + string[1:]
-
-
-def print_and_write(*args: object, should_print: bool = True) -> None:
-    """ Print the input and save it to a log file. """
-    text: str = " ".join(str(arg) for arg in args)
-
-    if should_print:
-        print(text)
-
-    with open("output.log", "a") as file:
-        file.write(text + "\n")
-
+def log(*args, **kwargs):
+    """ Write the input to the log file. """
+    with open(LOGFILE, "a") as file:
+        indentation: str = TAB_CHARACTER * kwargs.pop("indentation", 0)
+        print(indentation, end="", file=file)
+        print(*args, **kwargs, file=file)
 
 def custom_formatwarning(message, *_) -> str:
     """ Create and return a custom warning format, containing only the warning message. """
     formatted_msg: str = f"\tWarning: {message}\n"
-    print_and_write(formatted_msg, should_print=False)  # don't print the error here because it will be printed anyways
+    log(formatted_msg)  # don't print the error here because it will be printed anyways
     return formatted_msg
-
-
-def clean_name(all_champs: dict[str, int], name: str, should_filter: bool = True) -> str:
-    """
-    Remove whitespace and special characters from a champion's name.
-    Example output:
-        Aurelion Sol -> aurelionsol
-        Bel'Veth -> belveth
-
-    Args:
-        all_champs: champions that have already been processed
-        name: the name to clean
-        should_filter: if True, return "invalid" when an invalid champion name is passed
-    """
-    if not name:
-        return name
-    # Remove all illegal characters and whitespace
-    name = clean_string(name)
-
-    # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
-    if "nunu" in name:
-        return "nunu"
-    elif name == "wukong":
-        return "monkeyking"
-
-    if not should_filter:
-        return name
-
-    # Filter out invalid resulting names
-    return name if name in all_champs else "invalid"
-
-
-def exit_with_error(err_msg: str, exitcode: int = 1) -> None:
-    """ Exit the program with the specified error message. """
-    sys.stderr.write(err_msg)
-    sys.exit(exitcode)

@@ -2,10 +2,7 @@ import connect as c
 
 def start_queue(connection: c.Connection) -> None:
     """ Make an API call to start queueing for a match. """
-    # Only want to start queue once - if user stops queue after, it shouldn't start again automatically
-    if not connection.started_queue:
-        connection.api_post("start_queue")
-        connection.started_queue = True
+    connection.api_post("start_queue")
 
 
 def accept_match(connection: c.Connection) -> None:
