@@ -70,7 +70,7 @@ def get_lockfile_path() -> str:
 
     # Use directory specified in config if it exists
     if config_dir:
-        return config_dir
+        return os.path.join(config_dir, "lockfile")
 
     # If directory not specified in config, use defaults
     # Hardcoding these is fine. More readable than os.path.join(), and I'm handling each OS separately anyways.

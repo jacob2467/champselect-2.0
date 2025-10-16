@@ -1,7 +1,8 @@
-import dependencies
-import requests
+import importlib.util
+import subprocess
 import shutil
 import os
+
 
 owner: str = "jacob2467"
 repo: str = "champselect-2.0"
@@ -17,7 +18,9 @@ updated_dir: str = os.path.join(outdated_dir, updated_dir_name, f"{repo}-{branch
 config: str = "config.ini"
 
 download_url: str = f"https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.zip"
-version_url: str = f"https://api.github.com/repos/{owner}/{repo}/commits?per_page=1"
+version_url: str = f"https://api.github.com/repos/{owner}/{repo}/commits?sha={branch}&per_page=1"
+
+package_names: list[str] = ["requests", "flask", "flask_cors"]
 
 
 ignored = {
@@ -47,6 +50,7 @@ def check_for_update() -> tuple[bool, str]:
 
 def get_version():
     """ Check the most recent version of the script. """
+    import requests  # lazy import for dependency reasons
     response = requests.get(version_url, timeout=10)
 
     if response.status_code == 200:
@@ -57,6 +61,8 @@ def get_version():
 
 def download_update():
     """ Download the most recent version of the script and store it as a zip file. """
+    import requests  # lazy import for dependency reasons
+    print("Script is out of date. Downloading update...")
     response = requests.get(download_url, timeout=30)
 
     if response.status_code != 200:
@@ -77,7 +83,6 @@ def unzip():
 def install_update():
     """ Copy the updated files to the script's install location. """
     outdated_files = os.listdir(outdated_dir)
-
     updated_files = os.listdir(updated_dir)
 
     # Delete files that have been deleted on remote
@@ -95,7 +100,8 @@ def install_update():
     # Copy over new files
     for file in updated_files:
         if file in ignored:
-            continue
+            if file != config or file not in outdated_files:
+                continue
 
         full_src = os.path.join(updated_dir, file)
         full_dest = os.path.join(outdated_dir, file)
@@ -108,6 +114,7 @@ def install_update():
 
     # Delete the folder containing the updated script
     shutil.rmtree(os.path.join(outdated_dir, updated_dir_name))
+    print("Update successfully installed!")
 
 
 def update_version_info(version: str):
@@ -116,17 +123,36 @@ def update_version_info(version: str):
         file.write(version)
 
 
+def install_dependencies():
+    for package in package_names:
+        # Skip installing if the module is already installed
+        if importlib.util.find_spec(package) is not None:
+            continue
+        else:
+            print(f"Package '{package}' not found - attempting to install...")
+
+        try:
+            subprocess.run(["pip", "install", package], check=True, capture_output=True)
+        except Exception:
+            try:
+                subprocess.run(["pip3", "install", package], check=True, capture_output=True)
+            except Exception:
+                try:
+                    subprocess.run(["python.exe", "-m", "pip", "install", package], check=True, capture_output=True)
+                except Exception as e:
+                    raise RuntimeError(f"Unable to install package '{package}' due to an error: {e}")
+        print(f"Successfully installed package '{package}'!")
+
+
 def main():
-    print("Checking for updates...\n")
+    print("Checking for updates...")
+    install_dependencies()
     should_update, current_version = check_for_update()
     if should_update:
-        print("Script is out of date. Downloading update...\n")
         download_update()
         unzip()
         install_update()
         update_version_info(current_version)
-        print("Update successfully installed! Checking dependencies...\n")
-        dependencies.install_dependencies()
     else:
         print("Script is already up to date!")
 
