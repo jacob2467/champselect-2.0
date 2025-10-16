@@ -4,6 +4,7 @@ import warnings
 import os
 
 CONFIG = "config.ini"
+CONFIG_TEMPLATE = "config-template.ini"
 LOGFILE = "output.log"
 
 TAB_CHARACTER = '\t'
@@ -12,9 +13,14 @@ TAB_CHARACTER = '\t'
 config = configparser.ConfigParser()
 config_contents = config.read(CONFIG)
 
+# Backup config
+config_template = configparser.ConfigParser()
+config_template_contents = config_template.read(CONFIG_TEMPLATE)
+
 # Check for empty/missing config
 if not config_contents:
-    raise FileNotFoundError(f"Unable to parse {CONFIG} - does it exist?")
+    warnings.warn(f"Unable to parse {CONFIG} - does it exist? Falling back to default config", RuntimeWarning)
+    config = config_template
 
 
 @dataclass
@@ -46,19 +52,33 @@ def get_config_option_bool(section: str, option: str) -> bool:
     return _get_config_option(section, option, True)
 
 
-def _get_config_option(section: str, option: str, is_bool: bool = False) -> str | bool:
+def _get_config_option(section: str, option: str, is_bool: bool = False, *, config=config) -> str | bool:
     """
     Get an option from the user's config.
     Args:
         section: the config section to read from
         option: the config option to read from
         is_bool: flag indicating whether or not to interpret the config option as a bool
+        config: (optional) the config to read from
     """
     try:
         if is_bool:
             return config.getboolean(section, option)
-
         return config.get(section, option)
+
+    except configparser.NoSectionError as e:
+        # Check config template for the section if it doesn't exist in user's config
+        if config != config_template:
+            return _get_config_option(section, option, is_bool, config=config_template)
+        else:
+            raise e
+
+    except configparser.NoOptionError as e:
+        # Check config template for the option if it doesn't exist in user's config
+        if config != config_template:
+            return _get_config_option(section, option, is_bool, config=config_template)
+        else:
+            raise e
 
     except Exception as e:
         raise type(e)(f"An unknown error occurred while reading {CONFIG}: {e}")
