@@ -6,7 +6,7 @@ import os
 
 owner: str = "jacob2467"
 repo: str = "champselect-2.0"
-branch: str = "webserver"
+ranch: str = "main"
 version_file: str = "version.txt"
 update_zip: str = "update.zip"
 
@@ -27,6 +27,7 @@ ignored = {
     '__pycache__', '.mypy_cache', '.vscode', '.git', '.gitignore', version_file, config, download_script_name,
     updated_dir_name
 }
+
 
 def check_for_update() -> tuple[bool, str]:
     """
@@ -124,6 +125,7 @@ def update_version_info(version: str):
 
 
 def install_dependencies():
+    """ Install the required dependencies for the script. """
     for package in package_names:
         # Skip installing if the module is already installed
         if importlib.util.find_spec(package) is not None:

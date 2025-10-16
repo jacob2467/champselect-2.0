@@ -3,11 +3,16 @@ import configparser
 import warnings
 import os
 
+<<<<<<< HEAD
 CONFIG = "config.ini"
 CONFIG_TEMPLATE = "config-template.ini"
 LOGFILE = "output.log"
 
 TAB_CHARACTER = '\t'
+=======
+config_name = "config.ini"
+config_template_name = "config-template.ini"
+>>>>>>> main
 
 # Read config
 config = configparser.ConfigParser()
@@ -17,10 +22,19 @@ config_contents = config.read(CONFIG)
 config_template = configparser.ConfigParser()
 config_template_contents = config_template.read(CONFIG_TEMPLATE)
 
+# Backup config
+config_template = configparser.ConfigParser()
+config_template_contents = config_template.read(config_template_name)
+
 # Check for empty/missing config
 if not config_contents:
+<<<<<<< HEAD
     warnings.warn(f"Unable to parse {CONFIG} - does it exist? Falling back to default config", RuntimeWarning)
     config = config_template
+=======
+    # TODO: Copy template config here instead of raising an error
+    raise RuntimeError(f"Unable to parse {config_name} - does it exist?")
+>>>>>>> main
 
 
 @dataclass
@@ -71,14 +85,22 @@ def _get_config_option(section: str, option: str, is_bool: bool = False, *, conf
         if config != config_template:
             return _get_config_option(section, option, is_bool, config=config_template)
         else:
+<<<<<<< HEAD
             raise e
+=======
+            raise RuntimeError(f"Invalid config section '{section}': {e}")
+>>>>>>> main
 
     except configparser.NoOptionError as e:
         # Check config template for the option if it doesn't exist in user's config
         if config != config_template:
             return _get_config_option(section, option, is_bool, config=config_template)
         else:
+<<<<<<< HEAD
             raise e
+=======
+            raise RuntimeError(f"Invalid config option '{option}': {e}")
+>>>>>>> main
 
     except Exception as e:
         raise type(e)(f"An unknown error occurred while reading {CONFIG}: {e}")
@@ -152,5 +174,46 @@ def log(*args, **kwargs):
 def custom_formatwarning(message, *_) -> str:
     """ Create and return a custom warning format, containing only the warning message. """
     formatted_msg: str = f"\tWarning: {message}\n"
+<<<<<<< HEAD
     log(formatted_msg)  # don't print the error here because it will be printed anyways
     return formatted_msg
+=======
+    print_and_write(formatted_msg, should_print=False)  # don't print the error here because it will be printed anyways
+    return formatted_msg
+
+
+def clean_name(all_champs: dict[str, int], name: str, should_filter: bool = True) -> str:
+    """
+    Remove whitespace and special characters from a champion's name.
+    Example output:
+        Aurelion Sol -> aurelionsol
+        Bel'Veth -> belveth
+
+    Args:
+        all_champs: champions that have already been processed
+        name: the name to clean
+        should_filter: if True, return "invalid" when an invalid champion name is passed
+    """
+    if not name:
+        return name
+    # Remove all illegal characters and whitespace
+    name = clean_string(name)
+
+    # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
+    if "nunu" in name:
+        return "nunu"
+    elif name == "wukong":
+        return "monkeyking"
+
+    if not should_filter:
+        return name
+
+    # Filter out invalid resulting names
+    return name if name in all_champs else "invalid"
+
+
+def exit_with_error(err_msg: str, exitcode: int = 1) -> None:
+    """ Exit the program with the specified error message. """
+    sys.stderr.write(err_msg)
+    sys.exit(exitcode)
+>>>>>>> main
