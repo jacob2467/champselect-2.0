@@ -1,3 +1,4 @@
+import champselect
 import utility as u
 import connect as c
 import formatting
@@ -34,14 +35,22 @@ def send_runes_and_summs(connection: c.Connection) -> None:
         connection.api_patch("send_summs", request_body)
     connection.runes_chosen = True
 
-def build_runepage_request(connection) -> tuple[dict, list[int]]:
+def build_runepage_request(connection: c.Connection) -> tuple[dict, list[int]]:
     """
     Build an HTTP request body for setting the user's rune page and summoner spells.
     Returns:
         a tuple containing the HTTP request (dictionary), and a list of summoner spell IDs.
     """
-    champid: int = connection.api_get("current_champ").json()
-    champ_name: str = connection.get_champ_name_by_id(champid)
+    # Check pick intent if we haven't locked yet
+    if connection.get_gamestate() == "ChampSelect":
+        champ_name: str = connection.pick_intent
+        champid: int = connection.get_champid(champ_name)
+
+    # If we already locked in, check what champ was locked using API (in case user picks something besides pick intent)
+    else:
+        champid: int = connection.api_get("current_champ").json()  # this endpoint only works after locking
+        champ_name = connection.get_champ_name_by_id(champid)
+
     role_name: str = connection.get_assigned_role()
 
     # Get the runepage to use

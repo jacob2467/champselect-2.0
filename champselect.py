@@ -17,13 +17,10 @@ def ban_or_pick(connection: c.Connection) -> None:
     # User's turn to ban
     elif is_currently_banning(connection):
         ban_champ(connection)
-        # Re-hover pick intent after the ban
-        hover_champ(connection)
-        return
 
-    # Not user's turn to do anything, but still make sure we're always showing our intent
-    else:
-        hover_champ(connection)
+    # Ensure that we're always hovering the champ
+    hover_champ(connection)
+
 
 def hover_champ(connection: c.Connection, champid: int | None = None) -> None:
     """
@@ -133,7 +130,7 @@ def wait_before_locking(connection: c.Connection, action: ChampselectAction) -> 
         time.sleep(1)
 
         # Check if enough time elapsed
-        if time.time() > start_time + connection.lock_in_delay:
+        if time.time() > start_time + connection.lock_in_delay - 1:
             still_waiting = False
 
         # Make sure we update the hover if champ is changed by web API
@@ -229,7 +226,6 @@ def get_actionid(connection: c.Connection, mode: str) -> int | None:
 
     except Exception as e:
         warnings.warn(f"Unable to {mode} the specified champion: {e}", RuntimeWarning)
-        return
 
 
 def get_champselect_phase(connection: c.Connection) -> str:

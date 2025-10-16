@@ -7,11 +7,15 @@
 async function apiCall(endpoint, method, data) {
     let fullEndpoint = "http://127.0.0.1:5000/" + endpoint;
 
-    return await (await fetch(fullEndpoint, {
-        method: method,
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(data)
-    })).json()
+    try {
+        return await (await fetch(fullEndpoint, {
+            method: method,
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(data)
+        })).json()
+    } catch (error) {
+        console.log(`Error while trying to send the request to endpoint ${endpoint}:\n\t${error}`)
+    }
 }
 
 /**
@@ -19,8 +23,8 @@ async function apiCall(endpoint, method, data) {
  * @param endpoint the endpoint to send the request to
  * @param data (optional) the data to send with the request
  */
-async function post(endpoint) {
-    return await apiCall(endpoint, "POST")
+async function post(endpoint, data) {
+    return await apiCall(endpoint, "POST", data)
 }
 
 /**
@@ -168,7 +172,7 @@ async function updateStatus() {
 async function scriptIsRunning() {
     try {
         let response = await get('status');
-        return response['success'];
+        return response['data'];
     } catch (error) {
         console.log(`Script not running due to an error: ${error}`)
         return false;

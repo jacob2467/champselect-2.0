@@ -260,27 +260,27 @@ class Connection:
     # -----------
     # API Methods
     # -----------
-    def api_get(self, endpoint: str) -> requests.Response:
+    def api_get(self, endpoint: str, should_print: bool = False) -> requests.Response:
         """ Send an HTTP GET request. """
-        return self.api_call(endpoint, "get")
+        return self.api_call(endpoint, "get", None, should_print)
 
 
-    def api_post(self, endpoint: str, data: dict | None = None) -> requests.Response:
+    def api_post(self, endpoint: str, data: dict | None = None, should_print: bool = False) -> requests.Response:
         """ Send an HTTP POST request. """
-        return self.api_call(endpoint, "post", data=data)
+        return self.api_call(endpoint, "post", data, should_print)
 
 
-    def api_put(self, endpoint: str, data: dict | None = None) -> requests.Response:
+    def api_put(self, endpoint: str, data: dict | None = None, should_print: bool = False) -> requests.Response:
         """ Send an HTTP PUT request. """
-        return self.api_call(endpoint, "put", data=data)
+        return self.api_call(endpoint, "put", data, should_print)
 
 
-    def api_patch(self, endpoint: str, data: dict | None = None) -> requests.Response:
+    def api_patch(self, endpoint: str, data: dict | None = None, should_print: bool = False) -> requests.Response:
         """ Send an HTTP PATCH request. """
-        return self.api_call(endpoint, "patch", data=data)
+        return self.api_call(endpoint, "patch", data, should_print)
 
 
-    def api_call(self, endpoint: str, method: str, data: dict | None = None, should_print: bool = False) -> requests.Response:
+    def api_call(self, endpoint: str, method: str, data: dict | None, should_print: bool) -> requests.Response:
         """
         Make an API call.
         Args:
