@@ -10,6 +10,8 @@ import formatting
 import main_loop
 import lobby
 
+# TODO: make the script queue the mode you select and also make a button to start each queue
+
 # stolen from here https://stackoverflow.com/questions/14888799/disable-console-messages-in-flask-server
 log = logging.getLogger('werkzeug')
 log.disabled = True

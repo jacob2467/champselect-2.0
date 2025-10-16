@@ -6,7 +6,7 @@ import os
 
 owner: str = "jacob2467"
 repo: str = "champselect-2.0"
-ranch: str = "main"
+branch: str = "main"
 version_file: str = "version.txt"
 update_zip: str = "update.zip"
 

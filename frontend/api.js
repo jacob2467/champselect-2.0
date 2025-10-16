@@ -19,8 +19,8 @@ async function apiCall(endpoint, method, data) {
  * @param endpoint the endpoint to send the request to
  * @param data (optional) the data to send with the request
  */
-async function post(endpoint, data) {
-    return await apiCall(endpoint, "POST", data)
+async function post(endpoint) {
+    return await apiCall(endpoint, "POST")
 }
 
 /**

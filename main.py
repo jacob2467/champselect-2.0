@@ -15,6 +15,7 @@ def handle_error(original_err: Exception, err_msg: str = "", exit_code: int = 1)
     user-facing errors. No stacktrace, no exception chaining. If this file was *not* run as a script, just raise
     the original exception, and let it (potentially) be caught elsewhere.
     """
+    # This allows the error to be caught in the web app. But we want a clean exit here if running as a script.
     if __name__ != "__main__":
         raise original_err
 
@@ -26,7 +27,7 @@ def handle_error(original_err: Exception, err_msg: str = "", exit_code: int = 1)
     if not err_msg:
         err_msg = str(original_err)
 
-    sys.stderr.write(err_msg)
+    sys.stderr.write(err_msg + "\n")
     sys.exit(exit_code)
 
 def initialize_connection() -> c.Connection:

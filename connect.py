@@ -81,11 +81,11 @@ class Connection:
                 contents: list[str] = f.read().split(":")
                 lockfile.pid, lockfile.port, lockfile.password, lockfile.protocol = contents[1:5]
 
-        except FileNotFoundError:
-            raise champselect_exceptions.ClientConnectionError(MSG_CLIENT_CONNECTION_ERR)
+        except FileNotFoundError as e:
+            raise champselect_exceptions.ClientConnectionError(MSG_CLIENT_CONNECTION_ERR) from e
 
         except Exception as e:
-            raise Exception(f"Error while parsing lockfile: {e}")
+            raise Exception(f"Error while parsing lockfile") from e
 
         return lockfile
 

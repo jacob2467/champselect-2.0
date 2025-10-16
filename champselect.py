@@ -200,17 +200,22 @@ def decide_ban(connection: c.Connection) -> str:
 
     # First check current ban intent
     ban = connection.ban_intent
-    if is_valid_ban(connection, ban):
+    is_valid, reason = is_valid_ban(connection, ban)
+    if is_valid:
         return ban
+    else:
+        u.print_and_write(reason)
 
     # If current ban intent isn't valid, loop through user's config to find a champ to ban
-    options = u.get_backup_config_champs(connection.get_assigned_role(), False)
+    options: list[str] = u.get_backup_config_champs(connection.get_assigned_role(), False)
     for ban in options:
-        if is_valid_ban(connection, ban):
+        is_valid, reason = is_valid_ban(connection, ban)
+        if is_valid:
             return ban
 
     # Last config option isn't valid
-    if not is_valid_ban(connection, ban):
+    is_valid, reason = is_valid_ban(connection, ban)
+    if not is_valid:
         # Unlike with picking a champ, having no ban doesn't stop user from being able to play, so just
         # raise a warning instead of an exception
         warnings.warn("Unable to find a valid champion to ban.", RuntimeWarning)
@@ -252,8 +257,10 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> tuple[bool, str]
         return False, ""
 
     champ_name = formatting.clean_name(connection.all_champs, champ_name)
-    champid: int = connection.get_champid(champ_name)
     error_msg: str = "Invalid pick: "
+    if champ_name == "invalid":
+        return False, error_msg + "unknown champion."
+    champid: int = connection.get_champid(champ_name)
 
     # If champ has already been checked, and was invalid
     if champid in connection.invalid_picks:
