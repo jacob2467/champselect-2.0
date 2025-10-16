@@ -29,12 +29,23 @@
             <input type="checkbox" id="setrunes"> <br>
             <div style="padding-bottom: 8px"> </div>
 
+            <!-- Lobby management -->
+            <label for="lobbyDropdown">Select lobby type:</label>
+            <select name="lobbyDropdown" id="lobbyDropdown">
+                <option value="draft">Normal Draft</option>
+                <option value="ranked">Ranked Solo/Duo</option>
+                <option value="flex">Ranked Flex</option>
+            </select>
+            <div style="padding-bottom: 8px"> </div>
+            <button id="lobbyButton"> Create lobby </button>
+            <button id="queuebutton"> Start queue </button>
+            <div style="padding-bottom: 8px"> </div>
+
             <!-- Script status -->
             <label for="scriptstatus"> Script status:&nbsp </label>
             <label id="scriptstatus"> Not running </label> <br>
-            <div style="padding-bottom: 3px"> </div>
+            <div style="padding-bottom: 8px"> </div>
             <button id="startbutton"> Start script </button>
-            <button id="queuebutton"> Start queue </button>
         </form>
     </body>
 
@@ -47,8 +58,8 @@
         let banInput = document.getElementById("ban-intent-input");
         let runeCheckbox = document.getElementById("setrunes");
         let queueButton = document.getElementById("queuebutton");
-        // TODO: Add button to start queue
-        // TODO: Make rune checkbox send runes right away if enabled in finalization phase
+        let lobbyDropdown = document.getElementById("lobbyDropdown");
+        let lobbyButton = document.getElementById("lobbyButton");
 
         // Set up displays
         let pickDisplay = document.getElementById("pick-intent");

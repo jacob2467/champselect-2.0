@@ -29,7 +29,6 @@ def handle_lobby(connection: c.Connection) -> None:
 
 def handle_readycheck(connection: c.Connection) -> None:
     connection.update_primary_role()
-    lobby.reset_after_dodge(connection)
     lobby.accept_match(connection)
 
 
