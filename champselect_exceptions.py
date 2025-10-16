@@ -3,5 +3,5 @@
 class ClientConnectionError(Exception):
     pass
 
-class ChampionError(Exception):
+class NoChampionError(Exception):
     pass

@@ -113,7 +113,8 @@ def _do_champ_inner(connection: c.Connection, action: ChampselectAction) -> None
             # Note: This will break in custom game tournament drafts and in clash - the API returns an error code
             # of 500 when you try to hover a champ during the ban phase, causing every champ the script tries to
             # hover to be marked as invalid.
-            connection.invalid_picks.add(action.champid)
+            if action.champid not in connection.invalid_picks:
+                connection.invalid_picks[action.champid] = "banned"
 
 
 def wait_before_locking(connection: c.Connection, action: ChampselectAction) -> None:
@@ -158,21 +159,22 @@ def decide_pick(connection: c.Connection) -> str:
     if connection.is_bryan:
         return "yuumi"
 
-    # First check user pick (could have been updated via web API)
+    # First check user pick
     pick: str = connection.user_pick
     is_valid, reason = is_valid_pick(connection, pick)
     if is_valid:
         return pick
     else:
-        print(reason)
+        u.print_and_write(reason)
 
     # Then, check current pick intent
-    pick: str = connection.pick_intent
-    is_valid, reason = is_valid_pick(connection, pick)
-    if is_valid:
-        return pick
-    else:
-        print(reason)
+    if pick != connection.pick_intent:
+        pick: str = connection.pick_intent
+        is_valid, reason = is_valid_pick(connection, pick)
+        if is_valid:
+            return pick
+        else:
+            u.print_and_write(reason)
 
     # If current pick intent isn't valid, loop through user's config to find a champ to pick
     options: list[str] = u.get_backup_config_champs(connection.get_assigned_role())
@@ -181,11 +183,11 @@ def decide_pick(connection: c.Connection) -> str:
         if is_valid:
             return pick
         else:
-            print(reason)
+            u.print_and_write(reason)
 
     # Last config option isn't valid
     if not is_valid:
-        raise champselect_exceptions.ChampionError("Unable to find a valid champion to pick.")
+        raise champselect_exceptions.NoChampionError("Unable to find a valid champion to pick.")
 
     return pick
 
@@ -253,20 +255,28 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> tuple[bool, str]
     champid: int = connection.get_champid(champ_name)
     error_msg: str = "Invalid pick: "
 
+    # If champ has already been checked, and was invalid
+    if champid in connection.invalid_picks:
+        reason = connection.invalid_picks[champid]
+        return False, reason
+
     # If champ is banned
     if is_banned(connection, champid):
-        connection.invalid_picks.add(champid)
-        return False, error_msg + "banned"
+        reason = f"{error_msg}{formatting.champ(champ_name)} is banned."
+        connection.invalid_picks[champid] = reason
+        return False, reason
 
     # If user doesn't own the champ
     if champ_name not in connection.owned_champs:
-        connection.invalid_picks.add(champid)
-        return False, f"{error_msg}{formatting.champ(champ_name)} is unowned."
+        reason = f"{error_msg}{formatting.champ(champ_name)} is unowned."
+        connection.invalid_picks[champid] = reason
+        return False, reason
 
     # If a player has already PICKED the champ (hovering is ok)
     if is_picked(connection, champid):
-        connection.invalid_picks.add(champid)
-        return False, f"{error_msg}{formatting.champ(champ_name)} has already been picked."
+        reason = f"{error_msg}{formatting.champ(champ_name)} has already been picked."
+        connection.invalid_picks[champid] = reason
+        return False, reason
 
     # If the user got assigned a role other than the one they queued for, disregard the champ they picked
     # This does nothing when queuing for gamemodes that don't have assigned roles
@@ -276,16 +286,9 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> tuple[bool, str]
             and (connection.user_role != assigned_role and connection.user_role)
             # and champ user picked is the pick in question
             and (connection.user_pick == champ_name and connection.user_pick)):
-
-        connection.invalid_picks.add(champid)
-        return False, error_msg + "autofilled"
-
-    # If champ has already been checked, and was invalid
-    # For efficiency reasons, this should technically be the first check, but then we don't know *why* it's an invalid
-    # pick
-    if champid in connection.invalid_picks:
-        connection.invalid_picks.add(champid)
-        return False, error_msg + "in list of invalid champs"
+        reason = error_msg + "user was autofilled"
+        connection.invalid_picks[champid] = reason
+        return False, reason
 
     return True, ""
 
@@ -443,17 +446,19 @@ def update_champselect(connection: c.Connection) -> None:
     """ Update all champselect session data. """
     connection.session = connection.get_session()
     try:
-        if get_champselect_phase(connection) != "FINALIZATION":  # skip unnecessary API calls
-            connection.all_actions = connection.session["actions"]
-            # Look at each action, and return the one with the corresponding cellid
-            for action_group in connection.all_actions:
-                for action in action_group:
-                    if action["actorCellId"] == connection.get_localcellid():
-                        if action["type"] == "ban":
-                            connection.ban_action = action
+        if get_champselect_phase(connection) == "FINALIZATION":  # skip unnecessary API calls
+            return
 
-                        elif action["type"] == "pick":
-                            connection.pick_action = action
+        connection.all_actions = connection.session["actions"]
+        # Look at each action, and return the one with the corresponding cellid
+        for action_group in connection.all_actions:
+            for action in action_group:
+                if action["actorCellId"] == connection.get_localcellid():
+                    if action["type"] == "ban":
+                        connection.ban_action = action
+
+                    elif action["type"] == "pick":
+                        connection.pick_action = action
 
             update_champ_intent(connection)
     except KeyError:  # bypass error that happens when someone dodges

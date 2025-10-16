@@ -47,7 +47,7 @@ class Connection:
         self.all_actions: dict = {}  # all champselect actions
         self.ban_action: dict = {}  # local player champselect ban action
         self.pick_action: dict = {}  # local player champselect pick action
-        self.invalid_picks: set[int] = {131}  # set of champions that aren't valid picks
+        self.invalid_picks: dict[int, str] = {}  # champions that aren't valid picks
 
         # User intent and actual selections
         self.user_pick: str = ""  # the user's intended pick
