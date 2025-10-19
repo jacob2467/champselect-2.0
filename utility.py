@@ -161,7 +161,7 @@ def custom_formatwarning(message, *_) -> str:
 
 def setup_autoflushing():
     """
-    Wrap stdin and stdout in a class that manually flushes the output after every write so that it can be sent
+    Wrap stdout and stderr in a class that manually flushes the output after every write so that it can be sent
     properly to the web app.
     """
     class AutoFlusher():

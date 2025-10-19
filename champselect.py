@@ -239,12 +239,8 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> bool:
         return False
 
     champ_name = formatting.clean_name(connection.all_champs, champ_name)
-    error_msg: str = f"Invalid pick ({formatting.champ(champ_name)}) - "
-    if champ_name == "invalid":
-        u.print_and_write(error_msg + "doesn't exist.")
-        return False
-
     champid: int = connection.get_champid(champ_name)
+    error_msg: str = f"Invalid pick ({formatting.champ(champ_name)}) - "
 
     # If champ has already been checked, and was invalid
     if champid in connection.invalid_picks:
@@ -281,6 +277,7 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> bool:
             and (connection.user_pick == champ_name and connection.user_pick)):
         reason = error_msg + "user was autofilled"
         connection.invalid_picks[champid] = reason
+        u.print_and_write(reason)
         return False
 
     return True
@@ -295,13 +292,9 @@ def is_valid_ban(connection: c.Connection, champ_name: str) -> bool:
     if not champ_name:
         return False
 
-    champid = connection.get_champid(champ_name)
     champ_name = formatting.clean_name(connection.all_champs, champ_name)
-    error_msg: str = f"Invalid pick ({formatting.champ(champ_name)}) - "
-
-    # If the champ doesn't exist
-    if champ_name == "invalid":
-        return False
+    champid = connection.get_champid(champ_name)
+    error_msg: str = f"Invalid ban ({formatting.champ(champ_name)}) - "
 
     # If the champion has already been checked, and was invalid
     if champid in connection.invalid_bans:
@@ -330,6 +323,14 @@ def is_valid_ban(connection: c.Connection, champ_name: str) -> bool:
 
     return True
 
+
+def get_invalid_pick_reason(connection: c.Connection, champid: int) -> str:
+    """ Return a string explaining the reason why the specified champion is an invalid pick. """
+    return connection.invalid_picks[champid]
+
+def get_invalid_ban_reason(connection: c.Connection, champid: int) -> str:
+    """ Return a string explaining the reason why the specified champion is an invalid ban. """
+    return connection.invalid_bans[champid]
 
 def is_banned(connection: c.Connection, champid: int) -> bool:
     """ Check if the given champion is banned. """

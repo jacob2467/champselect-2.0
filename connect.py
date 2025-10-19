@@ -192,8 +192,10 @@ class Connection:
 
 
     def get_champid(self, champ: str) -> int:
-        """ Get the id number of a champion. """
-        return self.all_champs[formatting.clean_name(self.all_champs, champ)]
+        """ Get the id number of a champion.
+        Note: This function assumes the champion name has already been cleaned using formatting.clean_name().
+        """
+        return self.all_champs[champ]
 
 
     def get_gamestate(self) -> str:

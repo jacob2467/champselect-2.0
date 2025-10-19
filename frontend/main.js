@@ -36,7 +36,7 @@ function createWindow() {
         }
     });
 
-    win.loadFile("index.html");
+    win.loadFile(path.join(__dirname, "index.html"));
     return win;
 }
 
@@ -86,8 +86,12 @@ app.whenReady().then(async () => {
  * Attempt to terminate the running Flask process. If the attempt fails, log the error in the console.
  */
 function terminateFlask() {
+    if (!flaskProcess || flaskProcess.killed) {
+        return;
+    }
+
     try {
-        flaskProcess.kill('SIGINT');
+        flaskProcess.kill();
     } catch (error) {
         console.log(`Unable to terminate the flask process due to an error: ${error}`);
     }

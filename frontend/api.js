@@ -6,17 +6,21 @@
  */
 async function apiCall(endpoint, method, data) {
     let fullEndpoint = "http://127.0.0.1:6969/" + endpoint;
-    let response = await (await fetch(fullEndpoint, {
+    let response = await fetch(fullEndpoint, {
         method: method,
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(data),
-    }));
+    });
 
     try {
-        return response.json();
+        return await response.json();
     } catch (error) {
         console.log(response);
         console.log(`Error while trying to send the request to endpoint ${endpoint}:\n\t${error}`);
+        return {
+            success: false,
+            statusText: error.message
+        }
     }
 }
 
@@ -41,8 +45,8 @@ async function get(endpoint, data) {
 
 async function flaskIsRunning() {
     try {
-        await get("status");
-        return true;
+        let response = await get("status");
+        return response && response['status'];
     } catch (error) {
         return false;
     }
@@ -85,7 +89,7 @@ async function startScript() {
  */
 async function getPick() {
     let response = await get("status/pick");
-    if (response['success']) {
+    if (response && response['success']) {
         return await formatName(response['data']);
     }
     return "";
@@ -110,7 +114,7 @@ async function setPick(champ) {
  */
 async function getBan() {
     let response = await get("status/ban");
-    if (response['success']) {
+    if (response && response['success']) {
         return await formatName(response['data']);
     }
     return "";
@@ -120,13 +124,12 @@ async function getBan() {
 /**
  * Set the champion ban intent.
  * @param champ the name of the champion to ban
- * @returns a string containing the champion's name, properly formatted, if successful.
+ * @returns the response object fromt he API call
  */
 async function setBan(champ) {
     let response = await post("data/ban", {champ: champ});
     if (! response['success']) {
         console.log(`Unable to set ban intent: ${response['statusText']}`);
-
     }
     return response;
 }
@@ -138,7 +141,7 @@ async function formatName(name) {
     }
 
     let response = await post("actions/formatname", {champ: name});
-    if (response['success']) {
+    if (response && response['success']) {
         return response['data'];
     } else {
         console.log("Unable to format the name via an API call - attempting to do it manually");

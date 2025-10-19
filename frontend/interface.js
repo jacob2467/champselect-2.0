@@ -6,7 +6,7 @@ function setUpStartButton() {
     startButton.addEventListener("click", async (event) => {
         event.preventDefault();
 
-        await startScript();
+        scriptCurrentlyRunning = await startScript();
     });
 }
 
@@ -25,6 +25,9 @@ function setUpPickInput() {
         if (response['success']) {
             pickInput.value = "";
             pickDisplay.textContent = response['data'];
+        } else {
+            showUser("Unable to set pick - check the console for errors");
+            console.log(`Unable to set pick due to an error: ${response['statusText']}`);
         }
     });
 }
@@ -44,6 +47,9 @@ function setUpBanInput() {
         if (response['success']) {
             banInput.value = "";
             banDisplay.textContent = response['data'];
+        } else {
+            showUser("Unable to set ban - check the console for errors");
+            console.log(`Unable to set ban due to an error: ${response['statusText']}`);
         }
     });
 }
@@ -101,6 +107,10 @@ function setUpLobbyControls() {
 function setUpConsoleButton() {
     consoleButton.addEventListener("click", async (event) => {
         event.preventDefault();
+        if (! window.debugging) {
+            console.log("Unable to open debug console - window.debugging is null");
+            return;
+        }
         window.debugging.openConsole();
     });
 }
@@ -144,6 +154,7 @@ async function main() {
     let scriptCurrentlyRunning;
 
     await startScript().then( async() => {
+        // Only try to start the script automatically once. If that fails, wait for user to start manually
         scriptCurrentlyRunning = await scriptIsRunning();
         await updateStatus();
         setInterval(async () => {
