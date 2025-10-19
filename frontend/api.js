@@ -46,8 +46,9 @@ async function get(endpoint, data) {
 async function flaskIsRunning() {
     try {
         let response = await get("status");
-        return response && response['status'];
+        return response['success'];
     } catch (error) {
+        console.log(error)
         return false;
     }
 }
@@ -57,13 +58,13 @@ async function flaskIsRunning() {
  */
 async function startScript() {
     let response;
-    let isRunning;
 
     if (! await flaskIsRunning()) {
         console.log(`Couldn't start the script - Flask server isn't running.`);
         return false;
     }
 
+    let isRunning;
     try {
         response = await post("start");
             if (! response['success']) {

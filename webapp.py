@@ -172,11 +172,8 @@ def get_role():
             role = formatting.role(state.connection.get_assigned_role())
 
         case _:
-            return build_response(
-                success=False,
-                statusText=f"Unable to get role: user doesn't have a role in gamestate {gamestate}",
-                status=400,
-            )
+            role = ""
+
 
     return build_response(
         success=True,
