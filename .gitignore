@@ -46,3 +46,6 @@ frontend/package-lock.json
 frontend/cpython-3.14.0+20251014-aarch64-apple-darwin-install_only.tar.gz
 frontend/cpython-3.14.0+20251014-x86_64-pc-windows-msvc-install_only.tar.gz
 /frontend/venv-mac
+/frontend/venv-win
+/frontend/venv-mac64
+frontend/cpython-3.14.0+20251014-x86_64-apple-darwin-install_only.tar.gz

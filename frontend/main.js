@@ -16,7 +16,7 @@ const pyExecutable = isDev
     // If in bundled executable, path to Python interpreter in venv
     : process.platform === "darwin"
         ? path.join(venvDir, "bin", "python")
-        : path.join(venvDir) // TODO: implement this
+        : path.join(venvDir, "python.exe")
 
 let mainWindow;
 let flaskProcess = startFlask();

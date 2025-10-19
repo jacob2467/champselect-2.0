@@ -1,5 +1,2 @@
-- Display text on screen in Electron UI
 - Prettify the Electron UI
 - Make JS code not disgusting. Probably convert it to TypeScript, but definitely needs some cleaning up.
-- Figure out how to make an electron package, and then do that.
-- Find a way to install Python if it's not installed already (or perhaps package it with PyInstaller)
