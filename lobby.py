@@ -40,3 +40,4 @@ def reset_after_dodge(connection: c.Connection) -> None:
     connection.ban_intent = connection.user_ban
     connection.assigned_role = connection.user_role
     connection.invalid_picks.clear()
+    connection.invalid_bans.clear()

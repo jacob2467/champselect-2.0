@@ -5,16 +5,18 @@
  * @param data (optional) the data to send with the HTTP request
  */
 async function apiCall(endpoint, method, data) {
-    let fullEndpoint = "http://127.0.0.1:5000/" + endpoint;
+    let fullEndpoint = "http://127.0.0.1:6969/" + endpoint;
+    let response = await (await fetch(fullEndpoint, {
+        method: method,
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data),
+    }));
 
     try {
-        return await (await fetch(fullEndpoint, {
-            method: method,
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify(data)
-        })).json()
+        return response.json();
     } catch (error) {
-        console.log(`Error while trying to send the request to endpoint ${endpoint}:\n\t${error}`)
+        console.log(response);
+        console.log(`Error while trying to send the request to endpoint ${endpoint}:\n\t${error}`);
     }
 }
 
@@ -37,19 +39,40 @@ async function get(endpoint, data) {
 }
 
 
+async function flaskIsRunning() {
+    try {
+        await get("status");
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
 /**
  * Attempt to start the script, and return a bool indicating whether it's running or not.
  */
 async function startScript() {
-    let response = await post("start");
+    let response;
     let isRunning;
-    if (! response['success']) {
-        console.log(response['statusText']);
-        isRunning = await scriptIsRunning();  /* if the reason the attempt failed was because the script was already
-                                            running, then still return true - it's running, doesn't matter why */
-    } else {
-        console.log("Successfully started the script!");
-        isRunning = true;
+
+    if (! await flaskIsRunning()) {
+        console.log(`Couldn't start the script - Flask server isn't running.`);
+        return false;
+    }
+
+    try {
+        response = await post("start");
+            if (! response['success']) {
+                console.log(response['statusText']);
+                isRunning = await scriptIsRunning();  /* if the reason the attempt failed was because the script was
+                                                already running, then return true - it's running, doesn't matter why */
+            } else {
+                console.log("Successfully started the script!");
+                isRunning = true;
+            }
+    } catch (error) {
+        console.log(`Error starting the script: ${error}`);
+        isRunning = false;
     }
     scriptCurrentlyRunning = isRunning;
     startButton.disabled = isRunning;
@@ -61,12 +84,11 @@ async function startScript() {
  * Get the curret pick intent from the client. If unable to get the pick intent, return an empty string.
  */
 async function getPick() {
-    let pickResponse = await get("status/champ");
-    if (pickResponse['success']) {
-        return capitalize(pickResponse['data']);
-    } else {
-        return "";
+    let response = await get("status/pick");
+    if (response['success']) {
+        return await formatName(response['data']);
     }
+    return "";
 }
 
 
@@ -79,19 +101,18 @@ async function setPick(champ) {
     if (! response['success']) {
         console.log(`Unable to set pick intent: ${response['statusText']}`)
     }
-    return response['success'];
+    return response;
 }
 
 
 /**
- * Get the curret ban intent from the client. If unable to get the ban intent, return an empty string.
+ * Get the current ban intent from the client. If unable to get the ban intent, return an empty string.
  */
 async function getBan() {
-    let banResponse = await get("status/ban");
-    if (banResponse['success']) {
-        return capitalize(banResponse['data']);
+    let response = await get("status/ban");
+    if (response['success']) {
+        return await formatName(response['data']);
     }
-
     return "";
 }
 
@@ -99,13 +120,30 @@ async function getBan() {
 /**
  * Set the champion ban intent.
  * @param champ the name of the champion to ban
+ * @returns a string containing the champion's name, properly formatted, if successful.
  */
 async function setBan(champ) {
     let response = await post("data/ban", {champ: champ});
     if (! response['success']) {
-        console.log(`Unable to set ban intent: ${response['statusText']}`)
+        console.log(`Unable to set ban intent: ${response['statusText']}`);
+
     }
-    return response['success'];
+    return response;
+}
+
+
+async function formatName(name) {
+    if (name === "") {
+        return "";
+    }
+
+    let response = await post("actions/formatname", {champ: name});
+    if (response['success']) {
+        return response['data'];
+    } else {
+        console.log("Unable to format the name via an API call - attempting to do it manually");
+        return capitalize(name);
+    }
 }
 
 
@@ -170,6 +208,10 @@ async function updateStatus() {
  * Check if the script is currently running.
  */
 async function scriptIsRunning() {
+    if (! await flaskIsRunning()) {
+        return false;
+    }
+
     try {
         let response = await get('status');
         return response['data'];

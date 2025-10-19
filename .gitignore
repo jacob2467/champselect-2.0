@@ -41,3 +41,8 @@ bin/
 output.log
 /frontend/node_modules
 frontend/package-lock.json
+/frontend/dist
+/frontend/python
+frontend/cpython-3.14.0+20251014-aarch64-apple-darwin-install_only.tar.gz
+frontend/cpython-3.14.0+20251014-x86_64-pc-windows-msvc-install_only.tar.gz
+/frontend/venv-mac

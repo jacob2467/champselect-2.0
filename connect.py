@@ -48,6 +48,7 @@ class Connection:
         self.ban_action: dict = {}  # local player champselect ban action
         self.pick_action: dict = {}  # local player champselect pick action
         self.invalid_picks: dict[int, str] = {}  # champions that aren't valid picks
+        self.invalid_bans: dict[int, str] = {}  # champions that aren't valid bans
 
         # User intent and actual selections
         self.user_pick: str = ""  # the user's intended pick
@@ -219,15 +220,11 @@ class Connection:
         return "unknown"
 
 
-    def champ_exists(self, name: str) -> str:
+    def champ_exists(self, name: str) -> bool:
         """
         Check whether or not the champion with the specified name exists.
-        Returns:
-            - if the champion exists, their properly-formatted name
-            - otherwise, an empty string
         """
-        result = formatting.clean_name(self.all_champs, name)
-        return result if result != "invalid" else ""
+        return formatting.clean_name(self.all_champs, name) != "invalid"
 
 
     def re_parse_lockfile(self) -> None:

@@ -1,18 +1,17 @@
 from dataclasses import dataclass
 import configparser
 import warnings
+import sys
 import os
 
-
-CONFIG = "config.ini"
-CONFIG_TEMPLATE = "config-template.ini"
-LOGFILE = "output.log"
+CWD = os.path.split(__file__)[0]
+CONFIG = os.path.join(CWD, "config.ini")
+CONFIG_TEMPLATE = os.path.join(CWD, "config-template.ini")
+LOGFILE = os.path.join(CWD, "output.log")
 
 TAB_CHARACTER = '\t'
 
-config_name = "config.ini"
-config_template_name = "config-template.ini"
-
+# TODO: Function to find config dir for electron build
 
 # Read config
 config = configparser.ConfigParser()
@@ -159,3 +158,22 @@ def custom_formatwarning(message, *_) -> str:
     formatted_msg: str = f"\tWarning: {message}\n"
     log(formatted_msg)  # don't print the error here because it will be printed anyways
     return formatted_msg
+
+def setup_autoflushing():
+    """
+    Wrap stdin and stdout in a class that manually flushes the output after every write so that it can be sent
+    properly to the web app.
+    """
+    class AutoFlusher():
+        def __init__(self, out):
+            self._out = out
+
+        def write(self, text):
+            self._out.write(text)
+            self._out.flush()
+
+        def flush(self):
+            self._out.flush()
+
+    sys.stdout = AutoFlusher(sys.stdout)
+    sys.stderr = AutoFlusher(sys.stderr)

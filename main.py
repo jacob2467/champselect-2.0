@@ -6,6 +6,7 @@ import os
 import connect as c
 import userinput
 import main_loop
+import utility
 
 LOGFILE: str = "output.log"
 

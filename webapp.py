@@ -8,9 +8,9 @@ import connect as c
 import champselect
 import formatting
 import main_loop
+import utility
 import lobby
 import runes
-
 
 # stolen from here https://stackoverflow.com/questions/14888799/disable-console-messages-in-flask-server
 log = logging.getLogger('werkzeug')
@@ -19,6 +19,7 @@ log.disabled = True
 api = flask.Flask(__name__)
 CORS(api)
 
+utility.setup_autoflushing()
 
 class BotState:
     def __init__(self):
@@ -101,6 +102,7 @@ def start():
     try:
         state.connection = c.Connection()
         run_on_thread(main_loop.main_loop, state.connection)
+
     except Exception as e:
         return build_response(
             success=False,
@@ -183,7 +185,7 @@ def get_role():
     )
 
 
-@api.route("/status/champ", methods=["GET"])
+@api.route("/status/pick", methods=["GET"])
 @ensure_connection
 def get_champ():
     champ: str = state.connection.pick_intent or state.connection.user_pick or ""
@@ -198,24 +200,29 @@ def get_champ():
 @ensure_connection
 def set_pick():
     desired_champ: str = flask.request.json['champ']
-    champ = state.connection.champ_exists(desired_champ)
-    if not champ:
+    champ_exists = state.connection.champ_exists(desired_champ)
+    if not champ_exists:
         return build_response(
             success=False,
             statusText=f"Champion '{desired_champ}' does not exist.",
             status=400,
         )
 
-    is_valid, reason = champselect.is_valid_pick(state.connection, champ)
-    state.connection.user_pick = champ
-    if is_valid:
-        state.connection.pick_intent = champ
-        return empty_success_response()
+    champ_name: str = formatting.clean_name(state.connection.all_champs, desired_champ)
+    state.connection.user_pick = champ_name
+    # If the pick is currently valid
+    if champselect.is_valid_pick(state.connection, champ_name):
+        state.connection.pick_intent = champ_name
+        return build_response(
+            success=True,
+            data=formatting.champ(champ_name),
+            status=200
+        )
 
     # Invalid pick
     return build_response(
         success=False,
-        statusText=reason,
+        statusText="Invalid pick",
         status=400
     )
 
@@ -234,25 +241,30 @@ def get_ban():
 @api.route("/data/ban", methods=["POST"])
 @ensure_connection
 def set_ban():
-    desired_ban: str = flask.request.json['champ']
-    ban = state.connection.champ_exists(desired_ban)
-    if not ban:
+    desired_champ: str = flask.request.json['champ']
+    champ_exists = state.connection.champ_exists(desired_champ)
+    if not champ_exists:
         return build_response(
             success=False,
-            statusText=f"Champion '{ban}' does not exist.",
+            statusText=f"Champion '{desired_champ}' does not exist.",
             status=400,
         )
 
-    is_valid, reason = champselect.is_valid_ban(state.connection, ban)
-    state.connection.user_ban = ban
-    if is_valid:
-        state.connection.ban_intent = ban
-        return empty_success_response()
+    champ_name: str = formatting.clean_name(state.connection.all_champs, desired_champ)
+    state.connection.user_ban = champ_name
+    # If ban is currently valid
+    if champselect.is_valid_ban(state.connection, champ_name):
+        state.connection.ban_intent = champ_name
+        return build_response(
+            success=True,
+            data=formatting.champ(champ_name),
+            status=200
+        )
 
-    # Invalid pick
+    # Invalid ban
     return build_response(
         success=False,
-        statusText=reason,
+        statusText="Invalid ban",
         status=400
     )
 
@@ -314,5 +326,15 @@ def create_lobby():
         )
 
 
+@api.route("/actions/formatname", methods=["POST"])
+@ensure_connection
+def format_name():
+    return build_response(
+        success=True,
+        data=formatting.champ(flask.request.json['champ']),
+        status=200
+    )
+
+
 if __name__ == "__main__":
-    api.run()
+    api.run(port=6969)

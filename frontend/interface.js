@@ -21,10 +21,10 @@ function setUpPickInput() {
             return;
         }
 
-        let success = await setPick(name);
-        if (success) {
+        let response = await setPick(name);
+        if (response['success']) {
             pickInput.value = "";
-            pickDisplay.textContent = capitalize(name);
+            pickDisplay.textContent = response['data'];
         }
     });
 }
@@ -40,10 +40,10 @@ function setUpBanInput() {
             return;
         }
 
-        let success = await setBan(name);
-        if (success) {
+        let response = await setBan(name);
+        if (response['success']) {
             banInput.value = "";
-            banDisplay.textContent = capitalize(name);
+            banDisplay.textContent = response['data'];
         }
     });
 }
@@ -52,19 +52,18 @@ function setUpRuneCheckbox() {
     // Allow the user to enable or disable rune changing
     runeCheckbox.addEventListener("change", async (event) => {
         event.preventDefault();
-
-        // TODO: Log error message here instad of discarding
         void setRunesPreference(event.target.checked);
-
         if (! event.target.checked) {
             return;
         }
+
         // Send runes to the client if we're in champselect
         if (await getGamestate() === "Champselect") {
             let response = await post("actions/sendrunes");
             if (response['success']) {
-                console.log("Successfully set runes!");
+                showUser("Successfully set runes!");
             } else {
+                showUser("Unable to set runes - check the console for errors");
                 console.log(`Unable to set runes due to an error: ${response['statusText']}`);
             }
         }
@@ -79,6 +78,7 @@ function setUpQueueButton() {
         if (response['success']) {
             console.log("Successfully started queue!");
         } else {
+            showUser("Unable to start queue - check the console for errors");
             console.log(`Unable to start queue due to an error: ${response['statusText']}`);
         }
     });
@@ -92,8 +92,16 @@ function setUpLobbyControls() {
         if (response['success']) {
             console.log("Successfully created a lobby!");
         } else {
+            showUser("Unable to create a lobby - check the console for errors");
             console.log(`Unable to create lobby due to an error: ${response['statusText']}`);
         }
+    });
+}
+
+function setUpConsoleButton() {
+    consoleButton.addEventListener("click", async (event) => {
+        event.preventDefault();
+        window.debugging.openConsole();
     });
 }
 
@@ -107,4 +115,41 @@ function setUpDisplay() {
     setUpRuneCheckbox();
     setUpQueueButton();
     setUpLobbyControls();
+    setUpConsoleButton();
+}
+
+
+async function main() {
+    // Set up buttons
+    startButton = document.getElementById("startbutton");
+    pickInput = document.getElementById("pick-intent-input");
+    banInput = document.getElementById("ban-intent-input");
+    runeCheckbox = document.getElementById("setrunes");
+    queueButton = document.getElementById("queuebutton");
+    lobbyDropdown = document.getElementById("lobbyDropdown");
+    lobbyButton = document.getElementById("lobbyButton");
+    consoleButton = document.getElementById("consoleButton");
+
+    // Set up displays
+    pickDisplay = document.getElementById("pick-intent");
+    banDisplay = document.getElementById("ban-intent");
+    gamestateDisplay = document.getElementById("gamestate");
+    statusDisplay = document.getElementById("scriptstatus");
+    roleDisplay = document.getElementById("role");
+    log = document.getElementById("log");
+
+
+    setUpDisplay();
+
+    let scriptCurrentlyRunning;
+
+    await startScript().then( async() => {
+        scriptCurrentlyRunning = await scriptIsRunning();
+        await updateStatus();
+        setInterval(async () => {
+            if (scriptCurrentlyRunning) {
+                await updateStatus();
+            }
+        }, 3000);
+    });
 }
