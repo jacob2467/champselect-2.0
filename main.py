@@ -4,8 +4,8 @@ import sys
 import os
 
 import connect as c
-import userinput
 import main_loop
+import userinput
 
 LOGFILE: str = "output.log"
 

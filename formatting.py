@@ -80,12 +80,12 @@ def clean_string(string: str) -> str:
 
 
 def champ(name: str) -> str:
-    """ Format a champion name for user-facing display. """
+    """ Format a champion name for user-facing display. Does NOT perform input validation. """
     # This method is intended to be used only for display to the user; clean_name is used internally
     # There may be an endpoint provided by the LCU API for this, but this is good enough (for now ?).
     name = capitalize(name)
     match name:
-        case "Belveth" | "Kaisa" | "Reksai" | "Kogmaw", "Velkoz":
+        case "Belveth" | "Kaisa" | "Reksai" | "Kogmaw" | "Velkoz":
             return format_void_champ(name)
 
         case "Nunu":
@@ -141,7 +141,7 @@ def format_void_champ(name: str) -> str:
         - Belveth -> Bel'Veth
         - Kaisa -> Kai'Sa
     """
-    return f"{name[:3]}'{name[3:]}"
+    return f"{name[:3]}'{capitalize(name[3:])}"
 
 
 def capitalize(string: str) -> str:

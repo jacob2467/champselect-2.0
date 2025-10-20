@@ -1,3 +1,21 @@
+let startButton = document.getElementById("startbutton");
+let pickInput = document.getElementById("pick-intent-input");
+let banInput = document.getElementById("ban-intent-input");
+let runeCheckbox = document.getElementById("setrunes");
+let queueButton = document.getElementById("queuebutton");
+let lobbyDropdown = document.getElementById("lobbyDropdown");
+let lobbyButton = document.getElementById("lobbyButton");
+let consoleButton = document.getElementById("consoleButton");
+
+// Set up displays
+let pickDisplay = document.getElementById("pick-intent");
+let banDisplay = document.getElementById("ban-intent");
+let gamestateDisplay = document.getElementById("gamestate");
+let statusDisplay = document.getElementById("scriptstatus");
+let roleDisplay = document.getElementById("role");
+let log = document.getElementById("log");
+let scriptCurrentlyRunning;
+
 /**
  * Set up the start button for the script.
  */
@@ -6,7 +24,7 @@ function setUpStartButton() {
     startButton.addEventListener("click", async (event) => {
         event.preventDefault();
 
-        await startScript();
+        scriptCurrentlyRunning = await startScript();
     });
 }
 
@@ -21,10 +39,13 @@ function setUpPickInput() {
             return;
         }
 
-        let success = await setPick(name);
-        if (success) {
+        let response = await setPick(name);
+        if (response['success']) {
             pickInput.value = "";
-            pickDisplay.textContent = capitalize(name);
+            pickDisplay.textContent = response['data'];
+        } else {
+            showUser("Unable to set pick - check the console for errors");
+            console.log(`Unable to set pick due to an error: ${response['statusText']}`);
         }
     });
 }
@@ -40,10 +61,13 @@ function setUpBanInput() {
             return;
         }
 
-        let success = await setBan(name);
-        if (success) {
+        let response = await setBan(name);
+        if (response['success']) {
             banInput.value = "";
-            banDisplay.textContent = capitalize(name);
+            banDisplay.textContent = response['data'];
+        } else {
+            showUser("Unable to set ban - check the console for errors");
+            console.log(`Unable to set ban due to an error: ${response['statusText']}`);
         }
     });
 }
@@ -52,10 +76,7 @@ function setUpRuneCheckbox() {
     // Allow the user to enable or disable rune changing
     runeCheckbox.addEventListener("change", async (event) => {
         event.preventDefault();
-
-        // TODO: Log error message here instad of discarding
         void setRunesPreference(event.target.checked);
-
         if (! event.target.checked) {
             return;
         }
@@ -63,8 +84,9 @@ function setUpRuneCheckbox() {
         if (await getGamestate() === "Champselect") {
             let response = await post("actions/sendrunes");
             if (response['success']) {
-                console.log("Successfully set runes!");
+                showUser("Successfully set runes!");
             } else {
+                showUser("Unable to set runes - check the console for errors");
                 console.log(`Unable to set runes due to an error: ${response['statusText']}`);
             }
         }
@@ -79,6 +101,7 @@ function setUpQueueButton() {
         if (response['success']) {
             console.log("Successfully started queue!");
         } else {
+            showUser("Unable to start queue - check the console for errors");
             console.log(`Unable to start queue due to an error: ${response['statusText']}`);
         }
     });
@@ -92,8 +115,20 @@ function setUpLobbyControls() {
         if (response['success']) {
             console.log("Successfully created a lobby!");
         } else {
+            showUser("Unable to create a lobby - check the console for errors");
             console.log(`Unable to create lobby due to an error: ${response['statusText']}`);
         }
+    });
+}
+
+function setUpConsoleButton() {
+    consoleButton.addEventListener("click", async (event) => {
+        event.preventDefault();
+        if (! window.debugging) {
+            console.log("Unable to open debug console - window.debugging is null");
+            return;
+        }
+        window.debugging.openConsole();
     });
 }
 
@@ -107,4 +142,21 @@ function setUpDisplay() {
     setUpRuneCheckbox();
     setUpQueueButton();
     setUpLobbyControls();
+    setUpConsoleButton();
+}
+
+
+async function main() {
+    setUpDisplay();
+
+    await startScript().then( async() => {
+        // Only try to start the script automatically once. If that fails, wait for user to start manually
+        scriptCurrentlyRunning = await scriptIsRunning();
+        await updateStatus();
+        setInterval(async () => {
+            if (scriptCurrentlyRunning) {
+                await updateStatus();
+            }
+        }, 3000);
+    });
 }
