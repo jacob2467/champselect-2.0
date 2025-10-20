@@ -3,8 +3,8 @@ import time
 
 from champselect_action import ChampselectAction
 import champselect_exceptions
-import utility as u
 import connect as c
+import utility as u
 import formatting
 
 def ban_or_pick(connection: c.Connection) -> None:
@@ -111,7 +111,8 @@ def _do_champ_inner(connection: c.Connection, action: ChampselectAction) -> None
             # of 500 when you try to hover a champ during the ban phase, causing every champ the script tries to
             # hover to be marked as invalid.
             if action.champid not in connection.invalid_picks:
-                connection.invalid_picks[action.champid] = "banned"
+                champ_name: str = connection.get_champ_name_by_id(action.champid)
+                connection.invalid_picks[action.champid] = f"Invalid pick: {formatting.champ(champ_name)} is banned."
 
 
 def wait_before_locking(connection: c.Connection, action: ChampselectAction) -> None:
@@ -158,35 +159,23 @@ def decide_pick(connection: c.Connection) -> str:
 
     # First check user pick
     pick: str = connection.user_pick
-    is_valid, reason = is_valid_pick(connection, pick)
-    if is_valid:
+    if is_valid_pick(connection, pick):
         return pick
-    else:
-        u.print_and_write(reason)
 
     # Then, check current pick intent
     if pick != connection.pick_intent:
         pick: str = connection.pick_intent
-        is_valid, reason = is_valid_pick(connection, pick)
-        if is_valid:
+        if is_valid_pick(connection, pick):
             return pick
-        else:
-            u.print_and_write(reason)
 
     # If current pick intent isn't valid, loop through user's config to find a champ to pick
     options: list[str] = u.get_backup_config_champs(connection.get_assigned_role())
     for pick in options:
-        is_valid, reason = is_valid_pick(connection, pick)
-        if is_valid:
+        if is_valid_pick(connection, pick):
             return pick
-        else:
-            u.print_and_write(reason)
 
     # Last config option isn't valid
-    if not is_valid:
-        raise champselect_exceptions.NoChampionError("Unable to find a valid champion to pick.")
-
-    return pick
+    raise champselect_exceptions.NoChampionError("Unable to find a valid champion to pick.")
 
 
 def decide_ban(connection: c.Connection) -> str:
@@ -195,28 +184,27 @@ def decide_ban(connection: c.Connection) -> str:
     if connection.is_bryan:
         return "kayn"
 
-    # First check current ban intent
-    ban = connection.ban_intent
-    is_valid, reason = is_valid_ban(connection, ban)
-    if is_valid:
+    # First check user ban
+    ban: str = connection.user_ban
+    if is_valid_ban(connection, ban):
         return ban
-    else:
-        u.print_and_write(reason)
+
+    # Then, check current ban intent
+    ban = connection.ban_intent
+    if is_valid_ban(connection, ban):
+        return ban
 
     # If current ban intent isn't valid, loop through user's config to find a champ to ban
     options: list[str] = u.get_backup_config_champs(connection.get_assigned_role(), False)
     for ban in options:
-        is_valid, reason = is_valid_ban(connection, ban)
-        if is_valid:
+        if is_valid_ban(connection, ban):
             return ban
 
     # Last config option isn't valid
-    is_valid, reason = is_valid_ban(connection, ban)
-    if not is_valid:
-        # Unlike with picking a champ, having no ban doesn't stop user from being able to play, so just
-        # raise a warning instead of an exception
-        warnings.warn("Unable to find a valid champion to ban.", RuntimeWarning)
-    return ban
+    # Unlike with picking a champ, having no ban doesn't stop user from being able to play, so just
+    # raise a warning instead of an exception
+    warnings.warn("Unable to find a valid champion to ban.", RuntimeWarning)
+    return ""
 
 def get_actionid(connection: c.Connection, mode: str) -> int | None:
     """ Get the user's actionid from the current Champselect action. """
@@ -241,45 +229,43 @@ def get_champselect_phase(connection: c.Connection) -> str:
         return "skip"
     return phase
 
-def is_valid_pick(connection: c.Connection, champ_name: str) -> tuple[bool, str]:
+def is_valid_pick(connection: c.Connection, champ_name: str) -> bool:
     """
-    Check if the given champion can be picked.
-    Returns:
-        - a bool indicating whether the champion can be picked
-        - a string explaining why the champion can't be picked (empty string if they can)
+    Check if the given champion can be picked. If they can't, print a message explaining why (once per champion to
+    avoid repitition).
     """
     # Handle empty input - allows user to skip selecting a champion and default to those in the config
     if not champ_name:
-        return False, ""
+        return False
 
     champ_name = formatting.clean_name(connection.all_champs, champ_name)
-    error_msg: str = "Invalid pick: "
-    if champ_name == "invalid":
-        return False, error_msg + "unknown champion."
     champid: int = connection.get_champid(champ_name)
+    error_msg: str = f"Invalid pick ({formatting.champ(champ_name)}) - "
 
     # If champ has already been checked, and was invalid
     if champid in connection.invalid_picks:
-        reason = connection.invalid_picks[champid]
-        return False, reason
+        return False
 
     # If champ is banned
     if is_banned(connection, champid):
-        reason = f"{error_msg}{formatting.champ(champ_name)} is banned."
+        reason = error_msg + "is banned."
         connection.invalid_picks[champid] = reason
-        return False, reason
+        u.print_and_write(reason)
+        return False
 
     # If user doesn't own the champ
     if champ_name not in connection.owned_champs:
-        reason = f"{error_msg}{formatting.champ(champ_name)} is unowned."
+        reason = error_msg + "is unowned."
         connection.invalid_picks[champid] = reason
-        return False, reason
+        u.print_and_write(reason)
+        return False
 
     # If a player has already PICKED the champ (hovering is ok)
     if is_picked(connection, champid):
-        reason = f"{error_msg}{formatting.champ(champ_name)} has already been picked."
+        reason = error_msg + "has already been picked."
         connection.invalid_picks[champid] = reason
-        return False, reason
+        u.print_and_write(reason)
+        return False
 
     # If the user got assigned a role other than the one they queued for, disregard the champ they picked
     # This does nothing when queuing for gamemodes that don't have assigned roles
@@ -291,35 +277,60 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> tuple[bool, str]
             and (connection.user_pick == champ_name and connection.user_pick)):
         reason = error_msg + "user was autofilled"
         connection.invalid_picks[champid] = reason
-        return False, reason
+        u.print_and_write(reason)
+        return False
 
-    return True, ""
+    return True
 
 
-def is_valid_ban(connection: c.Connection, champ: str) -> tuple[bool, str]:
-    """ Check if the specified champion can be banned. """
+def is_valid_ban(connection: c.Connection, champ_name: str) -> bool:
+    """
+    Check if the given champion can be banned.  If they can't, print a message explaining why (once per champion to
+    avoid repitition).
+    """
     # Handle empty input - allows user to skip selecting a champion and default to those in the config
-    if not champ:
-        return False, ""
+    if not champ_name:
+        return False
 
-    champid = connection.get_champid(champ)
-    champ = formatting.clean_name(connection.all_champs, champ)
-    error_msg = "Invalid ban: "
+    champ_name = formatting.clean_name(connection.all_champs, champ_name)
+    champid = connection.get_champid(champ_name)
+    error_msg: str = f"Invalid ban ({formatting.champ(champ_name)}) - "
+
+    # If the champion has already been checked, and was invalid
+    if champid in connection.invalid_bans:
+        return False
 
     # If trying to ban the champ the user wants to play
-    if champ == connection.pick_intent or champ == connection.user_pick:
-        return False, f"{error_msg}user intends to play {champ}"
+    if champ_name in (connection.pick_intent, connection.user_pick):
+        reason = error_msg + "user intends to play this champion."
+        connection.invalid_bans[champid] = reason
+        u.print_and_write(reason)
+        return False
 
     # If champ is already banned
     if is_banned(connection, champid):
-        return False, f"{error_msg}{champ} is already banned"
+        reason = error_msg + "already banned"
+        connection.invalid_bans[champid] = reason
+        u.print_and_write(reason)
+        return False
 
     # If a teammate is hovering the champ
     if teammate_hovering(connection, champid):
-        return False, f"{error_msg}teammate already hovering {champ}"
+        reason = error_msg + "a teammate is hovering this champion"
+        connection.invalid_bans[champid] = reason
+        u.print_and_write(reason)
+        return False
 
-    return True, ""
+    return True
 
+
+def get_invalid_pick_reason(connection: c.Connection, champid: int) -> str:
+    """ Return a string explaining the reason why the specified champion is an invalid pick. """
+    return connection.invalid_picks[champid]
+
+def get_invalid_ban_reason(connection: c.Connection, champid: int) -> str:
+    """ Return a string explaining the reason why the specified champion is an invalid ban. """
+    return connection.invalid_bans[champid]
 
 def is_banned(connection: c.Connection, champid: int) -> bool:
     """ Check if the given champion is banned. """
@@ -419,7 +430,7 @@ def update_champ_intent(connection: c.Connection) -> None:
     ##### Update pick intent #####
     if not connection.has_picked:
         last_intent: str = connection.pick_intent
-        connection.pick_intent = decide_pick(connection)
+        connection.pick_intent = formatting.clean_name(connection.all_champs, decide_pick(connection))
 
         # Only print pick intent if it's different from the last loop iteration
         if last_intent != connection.pick_intent:
@@ -433,7 +444,7 @@ def update_champ_intent(connection: c.Connection) -> None:
     ##### Update ban intent #####
     if not connection.has_banned:
         last_intent: str = connection.ban_intent
-        connection.ban_intent = decide_ban(connection)
+        connection.ban_intent = formatting.clean_name(connection.all_champs, decide_ban(connection))
 
         # Only print ban intent if it's different from the last loop iteration
         if last_intent != connection.ban_intent:

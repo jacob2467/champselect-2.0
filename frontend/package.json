@@ -1,0 +1,64 @@
+{
+  "name": "champselect",
+  "productName": "Champselect",
+  "description": "App to automate League of Legends champselect",
+  "keywords": [],
+  "main": "./main.js",
+  "version": "2.2.0",
+  "author": "jacobmorris",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.10.2",
+    "@electron-forge/maker-deb": "^7.10.2",
+    "@electron-forge/maker-rpm": "^7.10.2",
+    "@electron-forge/maker-squirrel": "^7.10.2",
+    "@electron-forge/maker-zip": "^7.10.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
+    "@electron-forge/plugin-fuses": "^7.10.2",
+    "@electron/fuses": "^1.8.0",
+    "electron": "38.3.0",
+    "electron-builder": "^26.0.0"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1"
+  },
+
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist-mac": "electron-builder --mac --arm64",
+    "dist-mac64": "electron-builder --mac --x64",
+    "dist-win": "electron-builder --windows --x64"
+  },
+
+  "build": {
+    "appId": "jacob2467.champselect-2.0",
+    "mac": {
+      "target": "zip",
+      "category": "jacob2467.champselect-2.0.games",
+      "extraResources": [{
+        "from": "venv-mac",
+        "to": "venv"
+      }]
+    },
+
+    "win": {
+      "target": "zip",
+      "extraResources": [{
+        "from": "venv-win",
+        "to": "venv"
+      }]
+    },
+
+    "extraResources": [{
+        "from": "../",
+        "to": "backend",
+        "filter": ["*.py", "*.ini"]
+    }],
+
+    "files": [
+      "*.js",
+      "*.html"
+    ]
+  },
+  "postinstall": "electron-builder install-app-deps"
+}

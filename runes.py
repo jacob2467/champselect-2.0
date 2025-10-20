@@ -1,6 +1,5 @@
-import champselect
-import utility as u
 import connect as c
+import utility as u
 import formatting
 
 

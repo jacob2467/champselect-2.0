@@ -1,0 +1,2 @@
+- Prettify the Electron UI
+- Make JS code not disgusting. Probably convert it to TypeScript, but definitely needs some cleaning up.
