@@ -3,6 +3,17 @@ import subprocess
 import shutil
 import os
 
+# TODO: Consider optimizing this
+# The project was a lot smaller than it is now when I originally created this update script. Now there are a handful of
+# (relatively) large files in the repo that are only used for development. Feels wasteful to download them and then
+# delete them after. Ideas:
+#
+# - Find an easy way to programatically download specific files rather than the whole repo (or write it myself)
+# - Still download the whole repo, but save time on copying operations by adding useless files to the ignored list
+#
+# I'm also thinking about using this script to update the main script without needing to re-download the entire app
+# bundle (most of it is the bundled Python interpreter, which doesn't need updating). Woudln't be too difficult to do
+# programatically. Could have an "update" button that runs this script from JS, then tells the user to restart the app.
 
 owner: str = "jacob2467"
 repo: str = "champselect-2.0"
@@ -22,10 +33,11 @@ version_url: str = f"https://api.github.com/repos/{owner}/{repo}/commits?sha={br
 
 package_names: list[str] = ["requests", "flask", "flask_cors"]
 
-
+# In addition to ignoring these files, please ignore the fact that I'm hardcoding them
 ignored = {
-    '__pycache__', '.mypy_cache', '.vscode', '.git', '.gitignore', version_file, config, download_script_name,
-    updated_dir_name
+    version_file, config, download_script_name, updated_dir_name, "__pycache__", ".mypy_cache", ".vscode", ".git",
+    ".gitignore", "venv-mac-arm64.zip", "venv-mac-x86-64.zip", "venv-win.zip", "package-lock.json", "package.json",
+    "test.py", "TODO.txt",
 }
 
 
@@ -55,7 +67,7 @@ def get_version():
     response = requests.get(version_url, timeout=10)
 
     if response.status_code == 200:
-        return response.json()[0]['sha']
+        return response.json()[0]["sha"]
     else:
         raise RuntimeError("Unable to find the most recent version of the script.")
 
@@ -70,7 +82,7 @@ def download_update():
         raise RuntimeError("Unable to download the most recent version of the script.")
 
     full_path = os.path.join(outdated_dir, update_zip)
-    with open(full_path, 'wb') as file:
+    with open(full_path, "wb") as file:
         file.write(response.content)
 
 

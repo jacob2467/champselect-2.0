@@ -10,7 +10,7 @@ import userinput
 
 LOGFILE: str = "output.log"
 
-def handle_error(original_err: Exception, err_msg: str = "", exit_code: int = 1):
+def handle_error(original_err: Exception, err_msg: str = ""):
     """
     If this file was run as a script, write the error message to stderr and then clean exit with sys.exit() for
     user-facing errors. No stacktrace, no exception chaining. If this file was *not* run as a script, just raise

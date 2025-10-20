@@ -1,8 +1,4 @@
-import connect
-import lobby
+def x():
+    pass
 
-c = connect.Connection()
-
-c.populate_champ_table()
-
-lobby.create_lobby(c, "draft")
+print(getattr(x, "name"))

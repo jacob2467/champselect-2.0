@@ -153,11 +153,13 @@ def log(*args, **kwargs):
         print(indentation, end="", file=file)
         print(*args, **kwargs, file=file)
 
+
 def custom_formatwarning(message, *_) -> str:
     """ Create and return a custom warning format, containing only the warning message. """
     formatted_msg: str = f"\tWarning: {message}\n"
     log(formatted_msg)  # don't print the error here because it will be printed anyways
     return formatted_msg
+
 
 def setup_autoflushing():
     """
