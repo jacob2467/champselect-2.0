@@ -4,7 +4,7 @@ import warnings
 import sys
 import os
 
-CWD = os.path.split(__file__)[0]
+CWD = os.path.dirname(__file__)
 CONFIG = os.path.join(CWD, "config.ini")
 CONFIG_TEMPLATE = os.path.join(CWD, "config-template.ini")
 LOGFILE = os.path.join(CWD, "output.log")
@@ -172,8 +172,9 @@ def setup_autoflushing():
             self._out.write(text)
             self._out.flush()
 
-        def flush(self):
-            self._out.flush()
+        # Only want to override write - any other method should use default behavior from original
+        def __getattr__(self, attr):
+            return getattr(self._out, attr)
 
     sys.stdout = AutoFlusher(sys.stdout)
     sys.stderr = AutoFlusher(sys.stderr)

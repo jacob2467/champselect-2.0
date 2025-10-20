@@ -1,13 +1,12 @@
 import requests
 import time
-import sys
 
-import utility as u
 import connect as c
+import utility as u
 import champselect
 import formatting
-import runes
 import lobby
+import runes
 
 # Whether or not to print debug info
 SHOULD_PRINT: bool = u.get_config_option_bool("settings", "print_debug_info")

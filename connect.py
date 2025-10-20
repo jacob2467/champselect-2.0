@@ -1,7 +1,7 @@
 from urllib3.exceptions import InsecureRequestWarning
 from base64 import b64encode
-import warnings
 import requests
+import warnings
 
 import champselect_exceptions
 import utility as u

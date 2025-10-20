@@ -82,7 +82,7 @@ def ensure_connection(func):
             return build_response(
                 success=False,
                 statusText="Not connected to League client",
-                status=404,
+                status=503,
             )
 
         return func(*args, **kwargs)
@@ -324,7 +324,6 @@ def create_lobby():
 
 
 @api.route("/actions/formatname", methods=["POST"])
-@ensure_connection
 def format_name():
     return build_response(
         success=True,

@@ -15,7 +15,8 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
     "@electron-forge/plugin-fuses": "^7.10.2",
     "@electron/fuses": "^1.8.0",
-    "electron": "38.3.0"
+    "electron": "38.3.0",
+    "electron-builder": "^26.0.0"
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1"

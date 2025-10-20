@@ -3,8 +3,8 @@ import time
 
 from champselect_action import ChampselectAction
 import champselect_exceptions
-import utility as u
 import connect as c
+import utility as u
 import formatting
 
 def ban_or_pick(connection: c.Connection) -> None:
@@ -430,7 +430,7 @@ def update_champ_intent(connection: c.Connection) -> None:
     ##### Update pick intent #####
     if not connection.has_picked:
         last_intent: str = connection.pick_intent
-        connection.pick_intent = decide_pick(connection)
+        connection.pick_intent = formatting.clean_name(connection.all_champs, decide_pick(connection))
 
         # Only print pick intent if it's different from the last loop iteration
         if last_intent != connection.pick_intent:
@@ -444,7 +444,7 @@ def update_champ_intent(connection: c.Connection) -> None:
     ##### Update ban intent #####
     if not connection.has_banned:
         last_intent: str = connection.ban_intent
-        connection.ban_intent = decide_ban(connection)
+        connection.ban_intent = formatting.clean_name(connection.all_champs, decide_ban(connection))
 
         # Only print ban intent if it's different from the last loop iteration
         if last_intent != connection.ban_intent:

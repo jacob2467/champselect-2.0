@@ -26,7 +26,7 @@ def create_lobby(connection: c.Connection, lobbytype: str) -> None:
             lobbyid = 1700
         case _:
             raise RuntimeError(f"invalid lobby type: {lobbytype}")
-    response = connection.api_post('lobby', {'queueId': lobbyid})
+    connection.api_post('lobby', {'queueId': lobbyid})
 
 def reset_after_dodge(connection: c.Connection) -> None:
     """ Reset class instance variables after someone dodges a lobby. """

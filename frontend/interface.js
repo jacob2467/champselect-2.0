@@ -1,3 +1,21 @@
+let startButton = document.getElementById("startbutton");
+let pickInput = document.getElementById("pick-intent-input");
+let banInput = document.getElementById("ban-intent-input");
+let runeCheckbox = document.getElementById("setrunes");
+let queueButton = document.getElementById("queuebutton");
+let lobbyDropdown = document.getElementById("lobbyDropdown");
+let lobbyButton = document.getElementById("lobbyButton");
+let consoleButton = document.getElementById("consoleButton");
+
+// Set up displays
+let pickDisplay = document.getElementById("pick-intent");
+let banDisplay = document.getElementById("ban-intent");
+let gamestateDisplay = document.getElementById("gamestate");
+let statusDisplay = document.getElementById("scriptstatus");
+let roleDisplay = document.getElementById("role");
+let log = document.getElementById("log");
+let scriptCurrentlyRunning;
+
 /**
  * Set up the start button for the script.
  */
@@ -129,28 +147,7 @@ function setUpDisplay() {
 
 
 async function main() {
-    // Set up buttons
-    startButton = document.getElementById("startbutton");
-    pickInput = document.getElementById("pick-intent-input");
-    banInput = document.getElementById("ban-intent-input");
-    runeCheckbox = document.getElementById("setrunes");
-    queueButton = document.getElementById("queuebutton");
-    lobbyDropdown = document.getElementById("lobbyDropdown");
-    lobbyButton = document.getElementById("lobbyButton");
-    consoleButton = document.getElementById("consoleButton");
-
-    // Set up displays
-    pickDisplay = document.getElementById("pick-intent");
-    banDisplay = document.getElementById("ban-intent");
-    gamestateDisplay = document.getElementById("gamestate");
-    statusDisplay = document.getElementById("scriptstatus");
-    roleDisplay = document.getElementById("role");
-    log = document.getElementById("log");
-
-
     setUpDisplay();
-
-    let scriptCurrentlyRunning;
 
     await startScript().then( async() => {
         // Only try to start the script automatically once. If that fails, wait for user to start manually

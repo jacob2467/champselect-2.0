@@ -76,8 +76,9 @@ app.whenReady().then(async () => {
 
     // Wait for Flask server to start
     setTimeout(() => {
+        // TODO: Repeatedly check if it's started rather than using a timeout
         mainWindow = createWindow();
-    }, 500);
+    }, 1000);
 
     ipcMain.handle("openDevConsole", () => mainWindow.openDevTools());
 });

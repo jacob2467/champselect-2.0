@@ -38,8 +38,8 @@ async function post(endpoint, data) {
  * @param endpoint the endpoint to send the request to
  * @param data (optional) the data to send with the request
  */
-async function get(endpoint, data) {
-    return await apiCall(endpoint, "GET", data)
+async function get(endpoint) {
+    return await apiCall(endpoint, "GET")
 }
 
 
@@ -125,7 +125,7 @@ async function getBan() {
 /**
  * Set the champion ban intent.
  * @param champ the name of the champion to ban
- * @returns the response object fromt he API call
+ * @returns the response object from the API call
  */
 async function setBan(champ) {
     let response = await post("data/ban", {champ: champ});
