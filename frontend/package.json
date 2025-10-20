@@ -26,15 +26,15 @@
     "start": "electron .",
     "pack": "electron-builder --dir",
     "dist-mac": "electron-builder --mac --arm64",
-    "dist-mac64": "electron-builder --mac --x64",
+    "dist-mac-x64": "electron-builder --mac --x64",
     "dist-win": "electron-builder --windows --x64"
   },
 
   "build": {
-    "appId": "jacob2467.champselect-2.0",
+    "appId": "jacob2467.champselect",
     "mac": {
       "target": "zip",
-      "category": "jacob2467.champselect-2.0.games",
+      "category": "jacob2467.champselect.games",
       "extraResources": [{
         "from": "venv-mac",
         "to": "venv"
