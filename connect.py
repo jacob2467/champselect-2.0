@@ -232,7 +232,11 @@ class Connection:
 
     def re_parse_lockfile(self) -> None:
         """ Re-parse the lockfile in case of a failed connection. """
-        lockfile = self.parse_lockfile()
+        try:
+            lockfile = self.parse_lockfile()
+        except champselect_exceptions.ClientConnectionError as e:
+            u.clean_exit(str(e))
+
         self.request_url = self.get_request_url(lockfile)
         self.http_headers = self.get_http_headers(lockfile)
 

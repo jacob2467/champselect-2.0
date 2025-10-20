@@ -4,8 +4,9 @@ import sys
 import os
 
 import connect as c
-import userinput
+import utility as u
 import main_loop
+import userinput
 
 LOGFILE: str = "output.log"
 
@@ -27,8 +28,8 @@ def handle_error(original_err: Exception, err_msg: str = "", exit_code: int = 1)
     if not err_msg:
         err_msg = str(original_err)
 
-    sys.stderr.write(err_msg + "\n")
-    sys.exit(exit_code)
+    u.clean_exit(err_msg)
+
 
 def initialize_connection() -> c.Connection:
     """ Initialize a connection to the League client. """
