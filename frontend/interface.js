@@ -62,7 +62,6 @@ function setUpRuneCheckbox() {
         if (! event.target.checked) {
             return;
         }
-
         // Send runes to the client if we're in champselect
         if (await getGamestate() === "Champselect") {
             let response = await post("actions/sendrunes");
