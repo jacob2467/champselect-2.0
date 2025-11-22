@@ -118,15 +118,21 @@ def start():
 def start_queue():
     """ Start queuing for a match. """
     gamestate: str = formatting.gamestate(state.connection.get_gamestate())
-    if gamestate != "Lobby":
-        return build_response(
-            success=False,
-            statusText="not in lobby",
-            status=400,
-        )
-
-    lobby.start_queue(state.connection)
-    return empty_success_response()
+    match gamestate:
+        case "Lobby":
+            lobby.start_queue(state.connection)
+            return empty_success_response()
+        case "In Queue" | "Ready Check":
+            return build_response(
+                success=False,
+                statusText="already queueing",
+                status=400
+            )
+    return build_response(
+        success=False,
+        statusText="not in lobby",
+        status=400,
+    )
 
 
 @api.route("/status/gamestate", methods=["GET"])
