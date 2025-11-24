@@ -32,7 +32,7 @@ def send_runes_and_summs(connection: c.Connection) -> None:
             "spell2Id": summoner_spells[F]
         }
         connection.api_patch("send_summs", request_body)
-    connection.runes_chosen = True
+    connection.runes_chosen = True  # TODO: Only modify this flag conditionally
 
 def build_runepage_request(connection: c.Connection) -> tuple[dict, list[int]]:
     """

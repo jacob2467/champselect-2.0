@@ -48,3 +48,4 @@ frontend/cpython-3.14.0+20251014-x86_64-apple-darwin-install_only.tar.gz
 /frontend/venv-mac64
 /frontend/venv-win
 frontend/start.bat
+frontend/build.bat
