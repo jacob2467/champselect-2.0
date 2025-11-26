@@ -24,12 +24,12 @@ def handle_lobby(connection: c.Connection) -> None:
     if SHOULD_START_QUEUE and not connection.started_queue:
         lobby.start_queue(connection)
         connection.started_queue = True
-    lobby.reset_after_dodge(connection)
 
 
 def handle_readycheck(connection: c.Connection) -> None:
     connection.update_primary_role()
     lobby.accept_match(connection)
+    lobby.reset_after_dodge(connection)
 
 
 def handle_champselect(connection: c.Connection, champselect_loop_iteration: int) -> None:

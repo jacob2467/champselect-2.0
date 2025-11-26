@@ -149,7 +149,8 @@ class Connection:
         """ Check what role the user is queueing for, update the Connection accordingly, and also return the role. """
         try:
             local_player_data: dict = self.api_get("lobby").json()["localMember"]
-            self.user_role = local_player_data["firstPositionPreference"].strip().lower()
+            queued_role: str = local_player_data["firstPositionPreference"].strip().lower()
+            self.user_role = queued_role if queued_role != "fill" else ""
         except Exception as e:
             warnings.warn(f"Unable to find player's role: {e}", RuntimeWarning)
 
