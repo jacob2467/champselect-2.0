@@ -2,12 +2,12 @@ import connect as c
 import utility as u
 import formatting
 
-
 FLASH: int = 4
 GHOST: int = 1
 CLEANSE: int = 6
 D: int = 0  # index of left summoner spell (bound to D by default)
 F: int = 1  # index of right summoner spell (bound to F by default)
+
 
 def send_runes_and_summs(connection: c.Connection) -> None:
     """ Get the recommended rune page and summoner spells and send them to the client. """
@@ -33,6 +33,7 @@ def send_runes_and_summs(connection: c.Connection) -> None:
         }
         connection.api_patch("send_summs", request_body)
     connection.runes_chosen = True  # TODO: Only modify this flag conditionally
+
 
 def build_runepage_request(connection: c.Connection) -> tuple[dict, list[int]]:
     """
@@ -76,10 +77,11 @@ def build_runepage_request(connection: c.Connection) -> tuple[dict, list[int]]:
         "name": name,
         "primaryStyleId": recommended_runepage["primaryPerkStyleId"],
         "selectedPerkIds": [rune["id"] for rune in runes],
-        "subStyleId": recommended_runepage["secondaryPerkStyleId"]
+        "subStyleId": recommended_runepage["secondaryPerkStyleId"],
     }
 
     return request_body, summoner_spells
+
 
 def pick_from_existing_runepages(connection: c.Connection, champ_name: str) -> tuple[dict, bool]:
     """
@@ -111,7 +113,6 @@ def pick_from_existing_runepages(connection: c.Connection, champ_name: str) -> t
             u.print_and_write(f"Runepage '{page_name}' has '{champ_name}' in it. Using this runepage...")
             return page, False
 
-
     # If we found a page created by this script, return it now
     if to_return is not None:
         # If the runepage is being overwritten
@@ -124,6 +125,7 @@ def pick_from_existing_runepages(connection: c.Connection, champ_name: str) -> t
     # Try to create a new rune page and return it
     return create_new_runepage(connection, all_pages), True
 
+
 def get_recommended_runepage(connection, champid: int, position: str) -> dict:
     """
     Get the recommended runepage from the client.
@@ -133,6 +135,7 @@ def get_recommended_runepage(connection, champid: int, position: str) -> dict:
     """
     endpoint: str = get_rune_recommendation_endpoint(champid, position)
     return connection.api_get(endpoint).json()
+
 
 def get_recommended_spells(is_bryan: bool, summoner_spells: list[int]) -> list[int]:
     """
@@ -153,6 +156,7 @@ def get_recommended_spells(is_bryan: bool, summoner_spells: list[int]) -> list[i
 
     return summoner_spells
 
+
 def get_existing_runepages(connection) -> list[dict]:
     """ Get a list of the runepages the player currently has set. """
     response = connection.api_get("runes")
@@ -160,6 +164,7 @@ def get_existing_runepages(connection) -> list[dict]:
         return response.json()
 
     raise RuntimeError(f"Unable to get rune pages: {response}")
+
 
 def create_new_runepage(connection: c.Connection, all_pages: list[dict]) -> dict:
     """
@@ -192,6 +197,7 @@ def create_new_runepage(connection: c.Connection, all_pages: list[dict]) -> dict
 
     else:
         raise RuntimeError("An unknown error occured while trying to create a runepage.")
+
 
 def get_rune_recommendation_endpoint(champid: int, position: str) -> str:
     """

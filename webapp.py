@@ -13,7 +13,7 @@ import lobby
 import runes
 
 # stolen from here https://stackoverflow.com/questions/14888799/disable-console-messages-in-flask-server
-log = logging.getLogger('werkzeug')
+log = logging.getLogger("werkzeug")
 log.disabled = True
 
 api = flask.Flask(__name__)
@@ -21,10 +21,13 @@ CORS(api)
 
 utility.setup_autoflushing()
 
+
 class BotState:
     def __init__(self):
         self.connection = None
         self.script_thread = None
+
+
 state: BotState = BotState()
 
 
@@ -54,9 +57,9 @@ def build_response(**kwargs):
     # where applicable (error messages, for example). If either of them is not present, set them to an empty string
     # so that they don't show up as undefined in the browser console
     if "statusText" not in kwargs:
-        kwargs['statusText'] = ""
+        kwargs["statusText"] = ""
     if "data" not in kwargs:
-        kwargs['data'] = ""
+        kwargs["data"] = ""
 
     return flask.jsonify(kwargs), status
 
@@ -76,6 +79,7 @@ def ensure_connection(func):
         - the return value of the function, if the client is connected
         - a JSON response with an error message, if the client is not connected
     """
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         if not script_is_running():
@@ -86,6 +90,7 @@ def ensure_connection(func):
             )
 
         return func(*args, **kwargs)
+
     return wrapper
 
 
@@ -202,7 +207,7 @@ def get_champ():
 @api.route("/data/pick", methods=["POST"])
 @ensure_connection
 def set_pick():
-    desired_champ: str = flask.request.json['champ']
+    desired_champ: str = flask.request.json["champ"]
     champ_exists = state.connection.champ_exists(desired_champ)
     if not champ_exists:
         return build_response(
@@ -244,7 +249,7 @@ def get_ban():
 @api.route("/data/ban", methods=["POST"])
 @ensure_connection
 def set_ban():
-    desired_champ: str = flask.request.json['champ']
+    desired_champ: str = flask.request.json["champ"]
     champ_exists = state.connection.champ_exists(desired_champ)
     if not champ_exists:
         return build_response(
@@ -312,11 +317,10 @@ def set_runes():
         )
 
 
-
 @api.route("/actions/createlobby", methods=["POST"])
 @ensure_connection
 def create_lobby():
-    lobbytype = flask.request.json['lobbytype']
+    lobbytype = flask.request.json["lobbytype"]
     try:
         lobby.create_lobby(state.connection, lobbytype)
         return empty_success_response()

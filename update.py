@@ -35,9 +35,21 @@ package_names: list[str] = ["requests", "flask", "flask_cors"]
 
 # In addition to ignoring these files, please ignore the fact that I'm hardcoding them
 ignored = {
-    version_file, config, updated_dir_name, "__pycache__", ".mypy_cache", ".vscode", ".git",
-    ".gitignore", "venv-mac-arm64.zip", "venv-mac-x86-64.zip", "venv-win.zip", "package-lock.json", "package.json",
-    "test.py", "TODO.txt",
+    version_file,
+    config,
+    updated_dir_name,
+    "__pycache__",
+    ".mypy_cache",
+    ".vscode",
+    ".git",
+    ".gitignore",
+    "venv-mac-arm64.zip",
+    "venv-mac-x86-64.zip",
+    "venv-win.zip",
+    "package-lock.json",
+    "package.json",
+    "test.py",
+    "TODO.txt",
 }
 
 
@@ -52,7 +64,7 @@ def check_for_update() -> tuple[bool, str]:
 
     # Look for version.txt
     try:
-        with open(os.path.join(outdated_dir, version_file), 'r') as file:
+        with open(os.path.join(outdated_dir, version_file), "r") as file:
             old_version = file.read()
             should_update: bool = version != old_version
     except FileNotFoundError:
@@ -64,6 +76,7 @@ def check_for_update() -> tuple[bool, str]:
 def get_version():
     """ Check the most recent version of the script. """
     import requests  # lazy import for dependency reasons
+
     response = requests.get(version_url, timeout=10)
 
     if response.status_code == 200:
@@ -75,6 +88,7 @@ def get_version():
 def download_update():
     """ Download the most recent version of the script and store it as a zip file. """
     import requests  # lazy import for dependency reasons
+
     print("Script is out of date. Downloading update...")
     response = requests.get(download_url, timeout=30)
 
@@ -132,7 +146,7 @@ def install_update():
 
 def update_version_info(version: str):
     """ Update the file storing the script's current version. """
-    with open(os.path.join(outdated_dir, version_file), 'w') as file:
+    with open(os.path.join(outdated_dir, version_file), "w") as file:
         file.write(version)
 
 

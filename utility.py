@@ -9,7 +9,7 @@ CONFIG = os.path.join(CWD, "config.ini")
 CONFIG_TEMPLATE = os.path.join(CWD, "config-template.ini")
 LOGFILE = os.path.join(CWD, "output.log")
 
-TAB_CHARACTER = '\t'
+TAB_CHARACTER = "\t"
 
 # TODO: Function to find config dir for electron build
 
@@ -30,6 +30,7 @@ if not config_contents:
 @dataclass
 class Lockfile:
     """ A Class to store information about the Lockfile used to allow access to the LCU API. """
+
     pid: str = ""
     port: str = ""
     password: str = ""
@@ -120,8 +121,10 @@ def get_backup_config_champs(position: str, picking: bool = True) -> list[str]:
     """
     champs: list[str] = []
     if len(position) == 0:
-        warnings.warn(f"Unable to find backup champions - the user wasn't assigned a role",
-                      RuntimeWarning, stacklevel=2)
+        warnings.warn(
+            f"Unable to find backup champions - the user wasn't assigned a role",
+            RuntimeWarning, stacklevel=2
+        )
         return champs
 
     section_name: str = "pick" if picking else "ban"
@@ -166,7 +169,8 @@ def setup_autoflushing():
     Wrap stdout and stderr in a class that manually flushes the output after every write so that it can be sent
     properly to the web app.
     """
-    class AutoFlusher():
+
+    class AutoFlusher:
         def __init__(self, out):
             self._out = out
 

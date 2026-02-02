@@ -1,5 +1,6 @@
 import connect as c
 
+
 class ChampselectAction:
 
     def __init__(self, connection: c.Connection, mode: str, actionid: int | None, champid: int):
@@ -40,7 +41,7 @@ class ChampselectAction:
         if self.banning():
             self.champid = self._connection.get_champid(self._connection.ban_intent)
 
-        else: # we are picking or hovering
+        else:  # we are picking or hovering
             self.champid = self._connection.get_champid(self._connection.pick_intent)
 
         return self.champid != old_id
