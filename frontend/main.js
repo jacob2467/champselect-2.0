@@ -23,7 +23,8 @@ let flaskProcess = startFlask();
 
 
 function startFlask() {
-    return spawn(pyExecutable, [path.join(backendDir, "webapp.py")]);
+    let webappDir = path.join(backendDir, "webapp.py");
+    return spawn(pyExecutable, [webappDir]);
 }
 
 

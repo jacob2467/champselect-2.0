@@ -47,13 +47,13 @@ def empty_success_response():
 
 
 def build_response(**kwargs):
+    print(__file__)
     # Make status code mandatory
-    if "status" in kwargs:
-        status = kwargs.pop("status")
-    else:
+    if "status" not in kwargs:
         raise SyntaxError(f"Function {build_response} called without a status code argument.")
+    status = kwargs.pop("status")
 
-    # 'data' is the data the user requested (ifs present), and 'statusText' is a supplementary/explanatory message
+	# 'data' is the data the user requested (if present), and 'statusText' is a supplementary/explanatory message
     # where applicable (error messages, for example). If either of them is not present, set them to an empty string
     # so that they don't show up as undefined in the browser console
     if "statusText" not in kwargs:
