@@ -14,8 +14,8 @@ TAB_CHARACTER = "\t"
 # TODO: Function to find config dir for electron build
 
 # Read config
-config = configparser.ConfigParser()
-config_contents = config.read(CONFIG)
+cfg_reader = configparser.ConfigParser()
+config_contents = cfg_reader.read(CONFIG)
 
 # Backup config
 config_template = configparser.ConfigParser()
@@ -24,7 +24,7 @@ config_template_contents = config_template.read(CONFIG_TEMPLATE)
 # Check for empty/missing config
 if not config_contents:
     warnings.warn(f"Unable to parse {CONFIG} - does it exist? Falling back to default config", RuntimeWarning)
-    config = config_template
+    cfg_reader = config_template
 
 
 @dataclass
@@ -57,7 +57,7 @@ def get_config_option_bool(section: str, option: str) -> bool:
     return _get_config_option(section, option, True)
 
 
-def _get_config_option(section: str, option: str, is_bool: bool = False, *, config=config) -> str | bool:
+def _get_config_option(section: str, option: str, is_bool: bool = False, *, config=cfg_reader) -> str | bool:
     """
     Get an option from the user's config.
     Args:
@@ -131,7 +131,7 @@ def get_backup_config_champs(position: str, picking: bool = True) -> list[str]:
     section_name += f"_{position}"
 
     option_index: int = 1
-    config_section = config[section_name]
+    config_section = cfg_reader[section_name]
     champ_name: str = config_section.get(str(option_index), "none")
 
     while champ_name != "none":

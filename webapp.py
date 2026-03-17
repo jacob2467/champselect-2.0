@@ -21,7 +21,6 @@ CORS(api)
 
 utility.setup_autoflushing()
 
-
 class BotState:
     def __init__(self):
         self.connection = None
@@ -47,7 +46,6 @@ def empty_success_response():
 
 
 def build_response(**kwargs):
-    print(__file__)
     # Make status code mandatory
     if "status" not in kwargs:
         raise SyntaxError(f"Function {build_response} called without a status code argument.")
