@@ -45,8 +45,10 @@ function createWindow() {
 function displayToUser(content, shouldPrint = true) {
     try {
         mainWindow.webContents.send("log", content.toString(), shouldPrint);
-    } catch (error) {
         console.log(content.toString());
+    } catch (error) {
+        // TODO: Undo this ^
+        // console.log(content.toString());
     }
 }
 

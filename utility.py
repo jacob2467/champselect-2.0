@@ -15,8 +15,6 @@ TAB_CHARACTER = "\t"
 cfg_reader = configparser.ConfigParser()
 config_contents = cfg_reader.read(CFG_PATH)
 
-cfg_reader.update()
-
 # Backup config
 config_template = configparser.ConfigParser()
 config_template_contents = config_template.read(CONFIG_TEMPLATE_PATH)
@@ -192,3 +190,13 @@ def clean_exit(err_msg: str = "", exit_code: int = 1):
     if err_msg:
         sys.stderr.write(f"{err_msg}\n")
     sys.exit(exit_code)
+
+
+# TODO: Consider the possibility that this is poor information hiding... BEFORE using it everywhere
+# ...absolutely not
+# ^ the two wolves inside of me
+def get_cfg_reader():
+    return cfg_reader
+
+def get_cfg_path():
+    return CFG_PATH

@@ -40,12 +40,12 @@ function setUpPickInput() {
         }
 
         let response = await setPick(name);
-        if (response['success']) {
+        if (response["success"]) {
             pickInput.value = "";
-            pickDisplay.textContent = response['data'];
+            pickDisplay.textContent = response["data"];
         } else {
             showUser("Unable to set pick - check the console for errors");
-            console.log(`Unable to set pick due to an error: ${response['statusText']}`);
+            console.log(`Unable to set pick due to an error: ${response["statusText"]}`);
         }
     });
 }
@@ -62,12 +62,12 @@ function setUpBanInput() {
         }
 
         let response = await setBan(name);
-        if (response['success']) {
+        if (response["success"]) {
             banInput.value = "";
-            banDisplay.textContent = response['data'];
+            banDisplay.textContent = response["data"];
         } else {
             showUser("Unable to set ban - check the console for errors");
-            console.log(`Unable to set ban due to an error: ${response['statusText']}`);
+            console.log(`Unable to set ban due to an error: ${response["statusText"]}`);
         }
     });
 }
@@ -83,11 +83,11 @@ function setUpRuneCheckbox() {
         // Send runes to the client if we're in champselect
         if (await getGamestate() === "Champselect") {
             let response = await post("actions/sendrunes");
-            if (response['success']) {
+            if (response["success"]) {
                 showUser("Successfully set runes!");
             } else {
                 showUser("Unable to set runes - check the console for errors");
-                console.log(`Unable to set runes due to an error: ${response['statusText']}`);
+                console.log(`Unable to set runes due to an error: ${response["statusText"]}`);
             }
         }
     });
@@ -98,11 +98,11 @@ function setUpQueueButton() {
         event.preventDefault();
 
         let response = await post("actions/queue");
-        if (response['success']) {
+        if (response["success"]) {
             console.log("Successfully started queue!");
         } else {
             showUser("Unable to start queue - check the console for errors");
-            console.log(`Unable to start queue due to an error: ${response['statusText']}`);
+            console.log(`Unable to start queue due to an error: ${response["statusText"]}`);
         }
     });
 }
@@ -112,11 +112,11 @@ function setUpLobbyControls() {
         event.preventDefault();
 
         let response = await post("actions/createlobby", {lobbytype: lobbyDropdown.value});
-        if (response['success']) {
+        if (response["success"]) {
             console.log("Successfully created a lobby!");
         } else {
             showUser("Unable to create a lobby - check the console for errors");
-            console.log(`Unable to create lobby due to an error: ${response['statusText']}`);
+            console.log(`Unable to create lobby due to an error: ${response["statusText"]}`);
         }
     });
 }
