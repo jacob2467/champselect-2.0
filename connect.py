@@ -14,7 +14,7 @@ warnings.simplefilter("ignore", InsecureRequestWarning)
 
 MSG_CLIENT_CONNECTION_ERR: str = (
     "Unable to connect to the League of Legends client. If it's open, try updating your "
-    f"game directory in the config file ({u.CONFIG}), and then restart the program."
+    f"game directory in the config file ({u.CFG_PATH}), and then restart the program."
 )
 
 

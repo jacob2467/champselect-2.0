@@ -4,33 +4,30 @@ import warnings
 import sys
 import os
 
-CWD = os.path.dirname(__file__)
-CONFIG = os.path.join(CWD, "config.ini")
-CONFIG_TEMPLATE = os.path.join(CWD, "config-template.ini")
-LOGFILE = os.path.join(CWD, "output.log")
+BASE_DIR = os.path.dirname(__file__)
+CFG_PATH = os.path.join(BASE_DIR, "config.ini")
+CONFIG_TEMPLATE_PATH = os.path.join(BASE_DIR, "config-template.ini")
+LOGFILE_PATH = os.path.join(BASE_DIR, "output.log")
 
 TAB_CHARACTER = "\t"
 
-# TODO: Function to find config dir for electron build
-
 # Read config
 cfg_reader = configparser.ConfigParser()
-config_contents = cfg_reader.read(CONFIG)
+config_contents = cfg_reader.read(CFG_PATH)
 
 # Backup config
 config_template = configparser.ConfigParser()
-config_template_contents = config_template.read(CONFIG_TEMPLATE)
+config_template_contents = config_template.read(CONFIG_TEMPLATE_PATH)
 
 # Check for empty/missing config
 if not config_contents:
-    warnings.warn(f"Unable to parse {CONFIG} - does it exist? Falling back to default config", RuntimeWarning)
+    warnings.warn(f"Unable to parse {CFG_PATH} - does it exist? Falling back to default config", RuntimeWarning)
     cfg_reader = config_template
 
 
 @dataclass
 class Lockfile:
     """ A Class to store information about the Lockfile used to allow access to the LCU API. """
-
     pid: str = ""
     port: str = ""
     password: str = ""
@@ -57,14 +54,14 @@ def get_config_option_bool(section: str, option: str) -> bool:
     return _get_config_option(section, option, True)
 
 
-def _get_config_option(section: str, option: str, is_bool: bool = False, *, config=cfg_reader) -> str | bool:
+def _get_config_option(section: str, option: str, is_bool: bool = False, config=cfg_reader) -> str | bool:
     """
     Get an option from the user's config.
     Args:
         section: the config section to read from
         option: the config option to read from
-        is_bool: flag indicating whether or not to interpret the config option as a bool
-        config: (optional) the config to read from
+        is_bool (False): flag indicating whether or not to interpret the config option as a bool
+        config (cfg_reader): the config to read from
     """
     try:
         if is_bool:
@@ -86,7 +83,7 @@ def _get_config_option(section: str, option: str, is_bool: bool = False, *, conf
             raise e
 
     except Exception as e:
-        raise type(e)(f"An error occurred while reading {CONFIG}: {e}")
+        raise type(e)(f"An error occurred while reading {CFG_PATH}: {e}")
 
 
 def get_lockfile_path() -> str:
@@ -117,7 +114,9 @@ def get_backup_config_champs(position: str, picking: bool = True) -> list[str]:
     Parse the user's config for backup champs and return it as a list.
     Args:
         position: the position the user is playing
-        picking: (optional) a flag indicating whether the user is picking (True) or banning (False)
+        picking (True): a flag indicating whether the user is picking (True) or banning (False)
+    Returns:
+        a list of champion names in order of preference
     """
     champs: list[str] = []
     if len(position) == 0:
@@ -127,8 +126,8 @@ def get_backup_config_champs(position: str, picking: bool = True) -> list[str]:
         )
         return champs
 
-    section_name: str = "pick" if picking else "ban"
-    section_name += f"_{position}"
+    section_name: str = "pick_" if picking else "ban_"
+    section_name += position
 
     option_index: int = 1
     config_section = cfg_reader[section_name]
@@ -151,7 +150,7 @@ def print_and_write(*args, **kwargs) -> None:
 
 def log(*args, **kwargs):
     """ Write the input to the log file. """
-    with open(LOGFILE, "a") as file:
+    with open(LOGFILE_PATH, "a") as file:
         indentation: str = TAB_CHARACTER * kwargs.pop("indentation", 0)
         print(indentation, end="", file=file)
         print(*args, **kwargs, file=file)
