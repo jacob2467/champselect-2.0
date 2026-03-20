@@ -13,13 +13,10 @@ async function settingsInterface() {
     configSections.textContent = sectionsString;
     // console.log(configSections);
     let toSet = {
-        "balls": {
-            "1": "cum"
-        },
         "pick_top": {
             "1": "Leona",
             "2": "Sivir",
         }
     }
-    console.log(await apiCall("settings/sections", "POST", toSet));
+    await apiCall("settings/sections", "POST", toSet);
 }

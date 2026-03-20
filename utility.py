@@ -200,3 +200,6 @@ def get_cfg_reader():
 
 def get_cfg_path():
     return CFG_PATH
+
+# TODO: Implement a function that re-writes a config while preserving comments
+# For some inexplicable reason, configparser strips comments when writing a config file...

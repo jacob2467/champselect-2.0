@@ -353,9 +353,9 @@ def get_cfg_sections():
 @api.route("/settings/sections", methods=["POST"])
 def set_cfg_sections():
 	""" Set config sections in the config file. """
-	config_data: dict = flask.request.json
+	new_cfg_data: dict = flask.request.json
 	cfg_reader = utility.get_cfg_reader()
-	missing_sections = [section for section in config_data if section not in cfg_reader.sections()]
+	missing_sections = [section for section in new_cfg_data if section not in cfg_reader.sections()]
 	if missing_sections:
 		return build_response(
 			success=False,
@@ -364,14 +364,16 @@ def set_cfg_sections():
 		)
 
 	cfg_path = utility.get_cfg_path()
-	for section, value in config_data.items():
-		# value = config_data[section]
-		# cfg_reader.set(section, value)
-		cfg_reader._write_section(cfg_path, section, value, "")
+	print(f"{new_cfg_data=}")
+	for section, options in new_cfg_data.items():
+		print(type(section), type(options))
+		for option, value in options.items():
+			cfg_reader.set(section, option, value=value)
+	cfg_reader.write(open(cfg_path, "w"))
 
 	return build_response(
 		success=True,
-		data=f"It works! config section read: {item}={config_data[item]}",
+		data=f"It works! config section read: {item}={new_cfg_data[item]}",
 		status=200
 	)
 
