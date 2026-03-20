@@ -15,6 +15,8 @@ TAB_CHARACTER = "\t"
 cfg_reader = configparser.ConfigParser()
 config_contents = cfg_reader.read(CFG_PATH)
 
+cfg_reader.update()
+
 # Backup config
 config_template = configparser.ConfigParser()
 config_template_contents = config_template.read(CONFIG_TEMPLATE_PATH)
