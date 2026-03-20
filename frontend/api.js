@@ -5,7 +5,7 @@
  * @param data (optional) the data to send with the HTTP request
  */
 async function apiCall(endpoint, method, data) {
-    let fullEndpoint = "http://127.0.0.1:6969/" + endpoint;
+    let fullEndpoint = "http://127.0.0.1:42069/" + endpoint;
     let response = await fetch(fullEndpoint, {
         method: method,
         headers: {"Content-Type": "application/json"},

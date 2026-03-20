@@ -339,6 +339,15 @@ def format_name():
         status=200
     )
 
+@api.route("/settings/sections", methods=["GET"])
+def cfg_sections():
+    """ Get a list of sections from the config file. """
+    return build_response(
+        success=True,
+        data=utility.cfg_reader.sections(),
+        status=200
+    )
+
 
 if __name__ == "__main__":
-    api.run(port=6969)
+    api.run(port=42069)
