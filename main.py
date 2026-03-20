@@ -10,6 +10,7 @@ import userinput
 
 LOGFILE: str = "output.log"
 
+
 def handle_error(original_err: Exception, err_msg: str = ""):
     """
     If this file was run as a script, write the error message to stderr and then clean exit with sys.exit() for

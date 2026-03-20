@@ -13,7 +13,7 @@ import lobby
 import runes
 
 # stolen from here https://stackoverflow.com/questions/14888799/disable-console-messages-in-flask-server
-log = logging.getLogger('werkzeug')
+log = logging.getLogger("werkzeug")
 log.disabled = True
 
 api = flask.Flask(__name__)
@@ -25,6 +25,8 @@ class BotState:
     def __init__(self):
         self.connection = None
         self.script_thread = None
+
+
 state: BotState = BotState()
 
 
@@ -45,18 +47,17 @@ def empty_success_response():
 
 def build_response(**kwargs):
     # Make status code mandatory
-    if "status" in kwargs:
-        status = kwargs.pop("status")
-    else:
+    if "status" not in kwargs:
         raise SyntaxError(f"Function {build_response} called without a status code argument.")
+    status = kwargs.pop("status")
 
-    # 'data' is the data the user requested (ifs present), and 'statusText' is a supplementary/explanatory message
+	# 'data' is the data the user requested (if present), and 'statusText' is a supplementary/explanatory message
     # where applicable (error messages, for example). If either of them is not present, set them to an empty string
     # so that they don't show up as undefined in the browser console
     if "statusText" not in kwargs:
-        kwargs['statusText'] = ""
+        kwargs["statusText"] = ""
     if "data" not in kwargs:
-        kwargs['data'] = ""
+        kwargs["data"] = ""
 
     return flask.jsonify(kwargs), status
 
@@ -76,6 +77,7 @@ def ensure_connection(func):
         - the return value of the function, if the client is connected
         - a JSON response with an error message, if the client is not connected
     """
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         if not script_is_running():
@@ -86,6 +88,7 @@ def ensure_connection(func):
             )
 
         return func(*args, **kwargs)
+
     return wrapper
 
 
@@ -118,15 +121,21 @@ def start():
 def start_queue():
     """ Start queuing for a match. """
     gamestate: str = formatting.gamestate(state.connection.get_gamestate())
-    if gamestate != "Lobby":
-        return build_response(
-            success=False,
-            statusText="not in lobby",
-            status=400,
-        )
-
-    lobby.start_queue(state.connection)
-    return empty_success_response()
+    match gamestate:
+        case "Lobby":
+            lobby.start_queue(state.connection)
+            return empty_success_response()
+        case "In Queue" | "Ready Check":
+            return build_response(
+                success=False,
+                statusText="already queueing",
+                status=400
+            )
+    return build_response(
+        success=False,
+        statusText="not in lobby",
+        status=400,
+    )
 
 
 @api.route("/status/gamestate", methods=["GET"])
@@ -196,7 +205,7 @@ def get_champ():
 @api.route("/data/pick", methods=["POST"])
 @ensure_connection
 def set_pick():
-    desired_champ: str = flask.request.json['champ']
+    desired_champ: str = flask.request.json["champ"]
     champ_exists = state.connection.champ_exists(desired_champ)
     if not champ_exists:
         return build_response(
@@ -238,7 +247,7 @@ def get_ban():
 @api.route("/data/ban", methods=["POST"])
 @ensure_connection
 def set_ban():
-    desired_champ: str = flask.request.json['champ']
+    desired_champ: str = flask.request.json["champ"]
     champ_exists = state.connection.champ_exists(desired_champ)
     if not champ_exists:
         return build_response(
@@ -306,11 +315,10 @@ def set_runes():
         )
 
 
-
 @api.route("/actions/createlobby", methods=["POST"])
 @ensure_connection
 def create_lobby():
-    lobbytype = flask.request.json['lobbytype']
+    lobbytype = flask.request.json["lobbytype"]
     try:
         lobby.create_lobby(state.connection, lobbytype)
         return empty_success_response()

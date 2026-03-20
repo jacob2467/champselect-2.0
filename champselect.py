@@ -7,6 +7,7 @@ import connect as c
 import utility as u
 import formatting
 
+
 def ban_or_pick(connection: c.Connection) -> None:
     """ Decide whether to pick or ban based on gamestate, then call the corresponding method. """
     # User's turn to pick
@@ -37,6 +38,7 @@ def hover_champ(connection: c.Connection, champid: int | None = None) -> None:
 
     do_champ(connection, mode="hover", champid=champid)
 
+
 def ban_champ(connection: c.Connection, champid: int | None = None) -> None:
     """
     Ban a champion in champselect.
@@ -60,6 +62,7 @@ def lock_champ(connection: c.Connection, champid: int | None = None) -> None:
 
     do_champ(connection, mode="pick", champid=champid)
 
+
 def do_champ(connection: c.Connection, champid: int = 0, mode: str = "pick", actionid: int | None = None):
     """
     Pick or ban a champ in champselect.
@@ -70,6 +73,7 @@ def do_champ(connection: c.Connection, champid: int = 0, mode: str = "pick", act
     """
     action = ChampselectAction(connection, mode, actionid, champid)
     _do_champ_inner(connection, action)
+
 
 def _do_champ_inner(connection: c.Connection, action: ChampselectAction) -> None:
     # Skip redundant API calls
@@ -92,7 +96,6 @@ def _do_champ_inner(connection: c.Connection, action: ChampselectAction) -> None
 
         # Make sure we're still locking/banning the correct champ, in case that data was changed by the web API
         data["championId"] = action.champid
-
 
     # Lock in the champ and print info
     response = connection.api_patch(endpoint, data=data)
@@ -142,8 +145,12 @@ def wait_before_locking(connection: c.Connection, action: ChampselectAction) -> 
                 _do_champ_inner(connection, action)
 
         # Check if user manually completed the action
-        if (action.banning() and connection.ban_action["completed"]
-                or action.picking() and connection.pick_action["completed"]):
+        if (
+            action.banning()
+            and connection.ban_action["completed"]
+            or action.picking()
+            and connection.pick_action["completed"]
+        ):
             still_waiting = False
 
         # Check if someone dodged the lobby
@@ -206,6 +213,7 @@ def decide_ban(connection: c.Connection) -> str:
     warnings.warn("Unable to find a valid champion to ban.", RuntimeWarning)
     return ""
 
+
 def get_actionid(connection: c.Connection, mode: str) -> int | None:
     """ Get the user's actionid from the current Champselect action. """
     try:
@@ -228,6 +236,7 @@ def get_champselect_phase(connection: c.Connection) -> str:
         u.print_and_write("Champselect phase is 'None' - did someone dodge?")
         return "skip"
     return phase
+
 
 def is_valid_pick(connection: c.Connection, champ_name: str) -> bool:
     """
@@ -270,11 +279,13 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> bool:
     # If the user got assigned a role other than the one they queued for, disregard the champ they picked
     # This does nothing when queuing for gamemodes that don't have assigned roles
     assigned_role = connection.get_assigned_role()
-    if (len(assigned_role) != 0  # assigned role exists (so we're not in a gamemode that doesn't have assigned roles)
-            # and role user queued for doesn't match
-            and (connection.user_role != assigned_role and connection.user_role)
-            # and champ user picked is the pick in question
-            and (connection.user_pick == champ_name and connection.user_pick)):
+    if (
+        len(assigned_role) != 0  # assigned role exists (so we're not in a gamemode that doesn't have assigned roles)
+        # and role user queued for doesn't match
+        and (connection.user_role != assigned_role and connection.user_role)
+        # and champ user picked is the pick in question
+        and (connection.user_pick == champ_name and connection.user_pick)
+    ):
         reason = error_msg + "user was autofilled"
         connection.invalid_picks[champid] = reason
         u.print_and_write(reason)
@@ -328,9 +339,11 @@ def get_invalid_pick_reason(connection: c.Connection, champid: int) -> str:
     """ Return a string explaining the reason why the specified champion is an invalid pick. """
     return connection.invalid_picks[champid]
 
+
 def get_invalid_ban_reason(connection: c.Connection, champid: int) -> str:
     """ Return a string explaining the reason why the specified champion is an invalid ban. """
     return connection.invalid_bans[champid]
+
 
 def is_banned(connection: c.Connection, champid: int) -> bool:
     """ Check if the given champion is banned. """
