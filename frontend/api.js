@@ -1,3 +1,5 @@
+let startButton = document.getElementById("startbutton");
+
 /**
  * Make an API call.
  * @param endpoint the endpoint to send the HTTP request to
@@ -36,7 +38,6 @@ async function post(endpoint, data) {
 /**
  * Send an HTTP GET request.
  * @param endpoint the endpoint to send the request to
- * @param data (optional) the data to send with the request
  */
 async function get(endpoint) {
     return await apiCall(endpoint, "GET")
@@ -160,14 +161,13 @@ async function setRunesPreference(preference) {
 
 
 /**
- * Get the current gamestate. If unable to, return an empty string instead.
+ * Get the current gamestate as a string. If unable to, return an empty string instead.
  */
 async function getGamestate() {
     let response = await get('status/gamestate');
     if (response["success"]) {
         return response["data"];
     }
-
     return "";
 }
 

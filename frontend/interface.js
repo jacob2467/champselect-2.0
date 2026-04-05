@@ -1,12 +1,3 @@
-let startButton = document.getElementById("startbutton");
-let pickInput = document.getElementById("pick-intent-input");
-let banInput = document.getElementById("ban-intent-input");
-let runeCheckbox = document.getElementById("setrunes");
-let queueButton = document.getElementById("queuebutton");
-let lobbyDropdown = document.getElementById("lobbyDropdown");
-let lobbyButton = document.getElementById("lobbyButton");
-let consoleButton = document.getElementById("consoleButton");
-
 // Set up displays
 let pickDisplay = document.getElementById("pick-intent");
 let banDisplay = document.getElementById("ban-intent");
@@ -21,6 +12,7 @@ let scriptCurrentlyRunning;
  */
 function setUpStartButton() {
     // Start script when button is clicked
+    let startButton = document.getElementById("startbutton");
     startButton.addEventListener("click", async (event) => {
         event.preventDefault();
 
@@ -30,6 +22,7 @@ function setUpStartButton() {
 
 function setUpPickInput() {
     // Take input for the desired pick
+    let pickInput = document.getElementById("pick-intent-input");
     pickInput.addEventListener("blur", async (event) => {
         event.preventDefault();
 
@@ -52,6 +45,7 @@ function setUpPickInput() {
 
 function setUpBanInput() {
     // Take input for the desired ban
+    let banInput = document.getElementById("ban-intent-input");
     banInput.addEventListener("blur", async (event) => {
         event.preventDefault();
 
@@ -74,6 +68,7 @@ function setUpBanInput() {
 
 function setUpRuneCheckbox() {
     // Allow the user to enable or disable rune changing
+    let runeCheckbox = document.getElementById("setrunes");
     runeCheckbox.addEventListener("change", async (event) => {
         event.preventDefault();
         void setRunesPreference(event.target.checked);
@@ -94,6 +89,7 @@ function setUpRuneCheckbox() {
 }
 
 function setUpQueueButton() {
+    let queueButton = document.getElementById("queuebutton");
     queueButton.addEventListener("click", async (event) => {
         event.preventDefault();
 
@@ -108,6 +104,8 @@ function setUpQueueButton() {
 }
 
 function setUpLobbyControls() {
+    let lobbyButton = document.getElementById("lobbyButton");
+    let lobbyDropdown = document.getElementById("lobbyDropdown");
     lobbyButton.addEventListener("click", async (event) => {
         event.preventDefault();
 
@@ -122,6 +120,7 @@ function setUpLobbyControls() {
 }
 
 function setUpConsoleButton() {
+    let consoleButton = document.getElementById("consoleButton");
     consoleButton.addEventListener("click", async (event) => {
         event.preventDefault();
         if (! window.debugging) {

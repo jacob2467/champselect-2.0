@@ -344,9 +344,10 @@ def format_name():
 @api.route("/settings/sections", methods=["GET"])
 def get_cfg_sections():
 	""" Get a list of sections from the config file. """
+	sections = utility.get_cfg_reader().sections()
 	return build_response(
 		success=True,
-		data=utility.cfg_reader.sections(),
+		data=sections,
 		status=200
 	)
 
@@ -364,9 +365,14 @@ def set_cfg_sections():
 		)
 
 	cfg_path = utility.get_cfg_path()
-	print(f"{new_cfg_data=}")
 	for section, options in new_cfg_data.items():
-		print(type(section), type(options))
+		missing_options = [option for option in new_cfg_data if option not in cfg_reader.options(section)]
+		if missing_options:
+			return build_response(
+				success=False,
+				statusText=f"Options missing in cfg reader (section '{section}': {",".join(missing_options)}",
+				status=400
+			)
 		for option, value in options.items():
 			cfg_reader.set(section, option, value=value)
 	cfg_reader.write(open(cfg_path, "w"))
