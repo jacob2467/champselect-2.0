@@ -256,7 +256,7 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> bool:
         return False
 
     # If champ is banned
-    if is_banned(connection, champid):
+    if champ_is_banned(connection, champid):
         reason = error_msg + "is banned."
         connection.invalid_picks[champid] = reason
         u.print_and_write(reason)
@@ -270,7 +270,7 @@ def is_valid_pick(connection: c.Connection, champ_name: str) -> bool:
         return False
 
     # If a player has already PICKED the champ (hovering is ok)
-    if is_picked(connection, champid):
+    if champ_is_picked(connection, champid):
         reason = error_msg + "has already been picked."
         connection.invalid_picks[champid] = reason
         u.print_and_write(reason)
@@ -319,7 +319,7 @@ def is_valid_ban(connection: c.Connection, champ_name: str) -> bool:
         return False
 
     # If champ is already banned
-    if is_banned(connection, champid):
+    if champ_is_banned(connection, champid):
         reason = error_msg + "already banned"
         connection.invalid_bans[champid] = reason
         u.print_and_write(reason)
@@ -345,7 +345,7 @@ def get_invalid_ban_reason(connection: c.Connection, champid: int) -> str:
     return connection.invalid_bans[champid]
 
 
-def is_banned(connection: c.Connection, champid: int) -> bool:
+def champ_is_banned(connection: c.Connection, champid: int) -> bool:
     """ Check if the given champion is banned. """
     try:
         return champid in get_banned_champids(connection)
@@ -353,7 +353,7 @@ def is_banned(connection: c.Connection, champid: int) -> bool:
         return False
 
 
-def is_picked(connection: c.Connection, champid: int) -> bool:
+def champ_is_picked(connection: c.Connection, champid: int) -> bool:
     """ Check if the given champion has been picked already. """
     return champid in get_champ_pickids(connection)
 
@@ -473,9 +473,6 @@ def update_champselect(connection: c.Connection) -> None:
     """ Update all champselect session data. """
     connection.session = connection.get_session()
     try:
-        if get_champselect_phase(connection) == "FINALIZATION":  # skip unnecessary API calls
-            return
-
         connection.all_actions = connection.session["actions"]
         # Look at each action, and return the one with the corresponding cellid
         for action_group in connection.all_actions:

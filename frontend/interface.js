@@ -72,20 +72,7 @@ function setUpRuneCheckbox() {
     runeCheckbox.addEventListener("change", async (event) => {
         event.preventDefault();
         void setRunesPreference(event.target.checked);
-        if (! event.target.checked) {
-            return;
-        }
-        // Send runes to the client if we're in champselect
-        if (await getGamestate() === "Champselect") {
-            let response = await post("actions/sendrunes");
-            if (response["success"]) {
-                showUser("Successfully set runes!");
-            } else {
-                showUser("Unable to set runes - check the console for errors");
-                console.log(`Unable to set runes due to an error: ${response["statusText"]}`);
-            }
-        }
-    });
+   });
 }
 
 function setUpQueueButton() {
