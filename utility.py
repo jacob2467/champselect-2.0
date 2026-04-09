@@ -193,22 +193,25 @@ def clean_exit(err_msg: str = "", exit_code: int = 1):
 
 
 def cfg_as_json():
-    result = {
+    return {
         key: dict(value)
         for key, value in cfg_reader.items()
     }
-    return result
 
 
 def write_cfg_from_json(new_config: dict):
     error_prefix: str = "Error writing config: section"
     for section in new_config:
+        # Verify each section
         if section not in cfg_reader.sections():
             raise RuntimeError(f"{error_prefix} '{section}' doesn't exist.")
+
         for option, value in new_config[section].items():
+            # Verify each option
             if option not in cfg_reader.options(section):
                 raise RuntimeError(f"{error_prefix} '{section}' has no option '{option}'.")
-            cfg_reader.set(section, option, value)
+            # Write the new value
+            cfg_reader.set(section, option, str(value))
     cfg_reader.write(open(CFG_PATH, "w"))
 
 

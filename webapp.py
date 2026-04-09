@@ -355,16 +355,25 @@ def get_cfg_as_json():
 	except Exception as e:
 		return build_response(
 			success=False,
-			data=f"An error occured while parsing the config: {e}",
+			statusText=f"An error occured while parsing the config: {e}",
 			status=400
 		)
 
 @api.route("/settings/sections", methods=["POST"])
-def set_cfg_sections():
-	""" Set config sections in the config file. """
+def write_config():
+	""" Write the updated config back to the config file. """
 	new_cfg_data: dict = flask.request.json
-	utility.write_cfg_from_json(new_cfg_data)
-	return empty_success_response()
+	try:
+		utility.write_cfg_from_json(new_cfg_data)
+		return empty_success_response()
+
+	except Exception as e:
+		raise
+		return build_response(
+			success=False,
+			statusText=f"An error occured while saving the config: {e}",
+			status=400
+		)
 
 if __name__ == "__main__":
 	api.run(port=42069)
