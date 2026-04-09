@@ -1,25 +1,39 @@
 let saveButton = document.getElementById("saveButton");
+let cfg;
 
-// TODO: Better function name
-async function settingsInterface() {
-    let configSections = document.getElementById("config-sections");
-    let sections = await apiCall("settings/sections", "GET");
-    let sectionsString = "";
-    for (let data of sections.data) {
-        // console.log(`data=${data}`);
-        sectionsString += data + "\n";
-        // console.log(sections.data[i]);
+async function setUpSettingsPage() {
+    let result = await apiCall("settings/sections", "GET");
+    if (result["success"]) {
+        cfg = result["data"];
     }
-    configSections.textContent = sectionsString;
-    // console.log(configSections);
+    console.log(cfg);
+    await setUpMainSettings();
     await setUpSaveButton();
 }
+
+
+async function setUpMainSettings() {
+    let mainSettings = cfg["settings"];
+    console.log(mainSettings);
+
+    let directory = document.getElementById("cfg_directory");
+    directory.placeholder = mainSettings["directory"];
+
+   let lockInDelay = document.getElementById("cfg_lock-in-delay");
+    lockInDelay.placeholder = mainSettings["lock_in_delay"];
+
+    let autoStartQueue = document.getElementById("cfg_auto-start-queue");
+    autoStartQueue.checked = mainSettings["auto_start_queue"] === "True";
+
+    let updateInterval = document.getElementById("cfg_update-interval");
+    updateInterval.placeholder = mainSettings["update_interval"];
+}
+
 
 /**
  * Set up the button to save settings to the config file.
  */
 async function setUpSaveButton() {
-    // Start script when button is clicked
     let toSet = {
         "pick_top": {
             "1": "Leona",

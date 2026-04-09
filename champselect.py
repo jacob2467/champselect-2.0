@@ -156,6 +156,8 @@ def wait_before_locking(connection: c.Connection, action: ChampselectAction) -> 
         # Check if someone dodged the lobby
         if action.skipping():
             still_waiting = False
+    champ_name = formatting.champ(connection.pick_intent)
+    u.print_and_write(f"Done waiting! {formatting.capitalize(display_mode)} {champ_name}...")
 
 
 def decide_pick(connection: c.Connection) -> str:

@@ -1,17 +1,46 @@
 <!DOCTYPE html>
 <html>
+<link rel="stylesheet" href="styles.css">
     <body style="background-color: #CCCCCC; padding-left: 15px; padding-top: 15px">
         <div class="container" style="display: flex">
-            <!-- Link back to index -->
-            <a href="index.html" title="Main script page">
-                <span>Main script page</span>
-            </a>
+            <div class="chunk"><form>
+                <!-- Link back to index -->
+                <a href="index.html" title="Go back to main script page">
+                    <span>Main script page</span>
+                </a>
+                <div class="spacer"> </div>
 
-            <label for="config-sections"> Config sections:&nbsp </label>
-            <span id="config-sections"> </span>
-            <div style="padding-bottom: 8px"> </div>
+                <!-- Picks/bans page -->
+                <a href="picks-bans.html">
+                    <span>Change backup picks/bans</span>
+                </a>
+                <div class="spacer"> </div>
 
-            <button id="saveButton"> Push Settings </button>
+                <!-- Set up elements to change for main settngs -->
+                <div class="chunk"><form>
+                    <!-- Game Directory -->
+                    <span> Game Directory:&nbsp </span>
+                    <input id="cfg_directory" placeholder=""> <br>
+                    <div class="spacer"> </div>
+
+                    <!-- Lock-in Delay -->
+                    <span> Delay in seconds before picking/banning:&nbsp </span>
+                    <input id="cfg_lock-in-delay" placeholder=""> <br>
+                    <div class="spacer"> </div>
+
+                    <!-- Auto-start Queue -->
+                    <label for="cfg_auto-start-queue"> Start Queue Automatically:&nbsp </label>
+                    <input type="checkbox" id="cfg_auto-start-queue"> <br>
+                    <div class="spacer"> </div>
+
+                    <!-- Update Interval -->
+                    <span> Update interval in seconds:&nbsp </span>
+                    <input id="cfg_update-interval" placeholder=""> <br>
+                    <div class="spacer"> </div>
+
+                </form> </div>
+                <button id="saveButton"> Save Settings </button>
+            </form> </div>
         </div>
     </body>
     <script src="settings.js"></script>
@@ -19,6 +48,6 @@
     <script src="interface.js"></script>
     <script src="renderer.js"></script>
     <script>
-        settingsInterface();
+        setUpSettingsPage();
     </script>
 </html>

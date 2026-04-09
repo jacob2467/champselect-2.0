@@ -342,25 +342,35 @@ def format_name():
 	)
 
 @api.route("/settings/sections", methods=["GET"])
-def get_cfg_sections():
-	""" Get a list of sections from the config file. """
-	sections = utility.get_cfg_reader().sections()
-	return build_response(
-		success=True,
-		data=sections,
-		status=200
-	)
+def get_cfg_as_json():
+	""" Get the config file in JSON format. """
+	try:
+		cfg = utility.cfg_as_json()
+		return build_response(
+			success=True,
+			data=cfg,
+			status=200
+		)
+
+	except Exception as e:
+		return build_response(
+			success=False,
+			data=f"An error occured while parsing the config: {e}",
+			status=400
+		)
 
 @api.route("/settings/sections", methods=["POST"])
 def set_cfg_sections():
 	""" Set config sections in the config file. """
+	print("NOT IMPLEMENTED YET...")
+	return empty_success_response()
 	new_cfg_data: dict = flask.request.json
 	cfg_reader = utility.get_cfg_reader()
 	missing_sections = [section for section in new_cfg_data if section not in cfg_reader.sections()]
 	if missing_sections:
 		return build_response(
 			success=False,
-			statusText=f"Sections missing in cfg reader: {",".join(missing_sections)}",
+			statusText=f"Sections missing in cfg reader: {", ".join(missing_sections)}",
 			status=400
 		)
 
@@ -370,7 +380,7 @@ def set_cfg_sections():
 		if missing_options:
 			return build_response(
 				success=False,
-				statusText=f"Options missing in cfg reader (section '{section}': {",".join(missing_options)}",
+				statusText=f"Options missing in cfg reader (section '{section}': {", ".join(missing_options)}",
 				status=400
 			)
 		for option, value in options.items():

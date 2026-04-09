@@ -192,11 +192,12 @@ def clean_exit(err_msg: str = "", exit_code: int = 1):
     sys.exit(exit_code)
 
 
-# TODO: Consider the possibility that this is poor information hiding... BEFORE using it everywhere
-# ...absolutely not
-# ^ the two wolves inside of me
-def get_cfg_reader():
-    return cfg_reader
+def cfg_as_json():
+    return {
+        key: dict(value)
+        for key, value in cfg_reader.items()
+    }
+
 
 def get_cfg_path():
     return CFG_PATH

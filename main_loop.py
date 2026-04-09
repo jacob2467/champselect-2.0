@@ -12,7 +12,7 @@ import runes
 SHOULD_PRINT: bool = u.get_config_option_bool("settings", "print_debug_info")
 
 # Whether or not to automatically start the queue
-SHOULD_START_QUEUE: bool = u.get_config_option_bool("settings", "start_queue")
+SHOULD_START_QUEUE: bool = u.get_config_option_bool("settings", "auto_start_queue")
 
 # How many seconds to wait before re-running the main loop
 UPDATE_INTERVAL: float = float(u.get_config_option_str("settings", "update_interval"))
@@ -57,11 +57,10 @@ def handle_champselect(connection: c.Connection, champselect_loop_iteration: int
 
 
 def main_loop(connection: c.Connection) -> None:
-    in_game: bool = False
     last_gamestate: str = ""  # Store last gamestate - used to skip redundant API calls and print statements
     champselect_loop_iteration: int = 0  # Keep track of how many loops run during champselect
 
-    while not in_game:
+    while True:
         time.sleep(UPDATE_INTERVAL)
         # Wrap the loop in a try block to catch errors when the client closes
         try:
@@ -87,9 +86,9 @@ def main_loop(connection: c.Connection) -> None:
                     champselect_loop_iteration += 1
                     handle_champselect(connection, champselect_loop_iteration)
 
-                # End loop if a game starts
+                # Reduce polling rate if in-game
                 case "InProgress":
-                    in_game = True
+                    time.sleep(30)
 
         except requests.exceptions.ConnectionError:
             connection.re_parse_lockfile()

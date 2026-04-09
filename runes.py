@@ -73,7 +73,7 @@ def build_runepage_request(connection: c.Connection) -> tuple[dict, list[int]]:
 	# Set the name for the rune page
 	if role_name == "utility":
 		role_name = "support"
-	name = f"{connection.RUNEPAGE_PREFIX} {formatting.champ(champ_name)} {formatting.capitalize(role_name)} Runes"
+	name = f"{connection.RUNEPAGE_PREFIX} {formatting.champ(champ_name)} {formatting.capitalize(role_name)}"
 	runes = recommended_runepage["perks"]
 	request_body: dict = {
 		"current": True,
