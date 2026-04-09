@@ -58,8 +58,9 @@ async function setUpPickBanSettings() {
 async function setUpSaveButton() {
     let toSet = {
         "pick_top": {
-            "1": "Leona",
-            "2": "Sivir",
+            "1": "Rammus",
+            "2": "Kayn",
+            "3": "Samira"
         }
     }
     saveButton.addEventListener("click", async (event) => {

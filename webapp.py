@@ -362,36 +362,9 @@ def get_cfg_as_json():
 @api.route("/settings/sections", methods=["POST"])
 def set_cfg_sections():
 	""" Set config sections in the config file. """
-	print("NOT IMPLEMENTED YET...")
-	return empty_success_response()
 	new_cfg_data: dict = flask.request.json
-	cfg_reader = utility.get_cfg_reader()
-	missing_sections = [section for section in new_cfg_data if section not in cfg_reader.sections()]
-	if missing_sections:
-		return build_response(
-			success=False,
-			statusText=f"Sections missing in cfg reader: {", ".join(missing_sections)}",
-			status=400
-		)
-
-	cfg_path = utility.get_cfg_path()
-	for section, options in new_cfg_data.items():
-		missing_options = [option for option in new_cfg_data if option not in cfg_reader.options(section)]
-		if missing_options:
-			return build_response(
-				success=False,
-				statusText=f"Options missing in cfg reader (section '{section}': {", ".join(missing_options)}",
-				status=400
-			)
-		for option, value in options.items():
-			cfg_reader.set(section, option, value=value)
-	cfg_reader.write(open(cfg_path, "w"))
-
-	return build_response(
-		success=True,
-		data=f"It works! config section read: {item}={new_cfg_data[item]}",
-		status=200
-	)
+	utility.write_cfg_from_json(new_cfg_data)
+	return empty_success_response()
 
 if __name__ == "__main__":
 	api.run(port=42069)
