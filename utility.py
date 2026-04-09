@@ -201,13 +201,13 @@ def cfg_as_json():
 
 
 def write_cfg_from_json(new_config: dict):
-    for section in new_config.keys():
+    error_prefix: str = "Error writing config: section"
+    for section in new_config:
         if section not in cfg_reader.sections():
-            raise RuntimeError(f"Section {section} not in config")
+            raise RuntimeError(f"{error_prefix} '{section}' doesn't exist.")
         for option, value in new_config[section].items():
             if option not in cfg_reader.options(section):
-                raise RuntimeError(f"Section {section} contains no option {option}")
-            print(f"{section=}, {option=}, {value=}")
+                raise RuntimeError(f"{error_prefix} '{section}' has no option '{option}'.")
             cfg_reader.set(section, option, value)
     cfg_reader.write(open(CFG_PATH, "w"))
 
