@@ -69,7 +69,7 @@ async function startScript() {
     try {
         response = await post("start");
             if (! response["success"]) {
-                console.log(response["statusText"]);
+                console.log(`Unable to start script: ${response["statusText"]}`);
                 isRunning = await scriptIsRunning();  /* if the reason the attempt failed was because the script was
                                                 already running, then return true - it's running, doesn't matter why */
             } else {

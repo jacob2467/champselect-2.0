@@ -30,6 +30,28 @@ async function setUpMainSettings() {
 }
 
 
+async function setUpPickBanSettings() {
+    let result = await apiCall("settings/sections", "GET");
+    if (result["success"]) {
+        cfg = result["data"];
+    }
+
+    let roles = ["top", "jungle", "middle", "bottom", "utility"];
+    let actionTypes = ["pick", "ban"];
+    for (let actionType of actionTypes) {
+         for (let role of roles) {
+            let key = `${actionType}_${role}`
+            for (let i = 1; i <= 3; i++) {
+                let champ = cfg[key][i];
+                let htmelement = document.getElementById(`cfg_${role}-${actionType}-${i}`);
+                htmelement.placeholder = champ;
+            }
+        }
+    }
+   console.log(cfg);
+}
+
+
 /**
  * Set up the button to save settings to the config file.
  */

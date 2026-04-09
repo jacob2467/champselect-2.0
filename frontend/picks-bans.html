@@ -3,17 +3,90 @@
 <link rel="stylesheet" href="styles.css">
     <body style="background-color: #CCCCCC; padding-left: 15px; padding-top: 15px">
         <div class="container" style="display: flex">
-            <div class="chunk"><form>
+            <!-- Champs to pick -->
+            <div class="chunk champsection"><form>
+                <div class="bot_pad3"></div>
                 <!-- Link back to main settings page -->
                 <a href="settings.html" title="Go back to main settings page">
-                    <span>Back</span>
+                    <div class="bot_pad">Back</div>
                 </a>
-                <div class="spacer"> </div>
+                <h3 class="bot_pad">Picks:</h3>
+
+                <div class="bot_pad">Top:</div>
+                <input id="cfg_top-pick-1"> <br>
+                <input id="cfg_top-pick-2"> <br>
+                <input id="cfg_top-pick-3"> <br>
+                <div class="bot_pad"> </div>
+
+
+                <div class="bot_pad">Jungle:</div>
+                <input id="cfg_jungle-pick-1"> <br>
+                <input id="cfg_jungle-pick-2"> <br>
+                <input id="cfg_jungle-pick-3"> <br>
+                <div class="bot_pad"> </div>
+
+                <div class="bot_pad">Mid:</div>
+                <input id="cfg_middle-pick-1"> <br>
+                <input id="cfg_middle-pick-2"> <br>
+                <input id="cfg_middle-pick-3"> <br>
+                <div class="bot_pad"> </div>
+
+                <div class="bot_pad">ADC:</div>
+                <input id="cfg_bottom-pick-1"> <br>
+                <input id="cfg_bottom-pick-2"> <br>
+                <input id="cfg_bottom-pick-3"> <br>
+                <div class="bot_pad"> </div>
+
+                <div class="bot_pad">Support:</div>
+                <input id="cfg_utility-pick-1"> <br>
+                <input id="cfg_utility-pick-2"> <br>
+                <input id="cfg_utility-pick-3"> <br>
+                <div class="bot_pad"> </div>
+            </form> </div>
+
+             <!-- Champs to ban -->
+            <div class="chunk champsection"><form>
+                <div class="bot_pad3"> </div>
+                <!-- Add a blank space so champ options are lined up -->
+                <div class="bot_pad">&nbsp</div>
+                <h3 class="bot_pad">Bans:</h3>
+
+                <div class="bot_pad">Top:</div>
+                <input id="cfg_top-ban-1"> <br>
+                <input id="cfg_top-ban-2"> <br>
+                <input id="cfg_top-ban-3"> <br>
+                <div class="bot_pad"> </div>
+
+
+                <div class="bot_pad">Jungle:</div>
+                <input id="cfg_jungle-ban-1"> <br>
+                <input id="cfg_jungle-ban-2"> <br>
+                <input id="cfg_jungle-ban-3"> <br>
+                <div class="bot_pad"> </div>
+
+                <div class="bot_pad">Mid:</div>
+                <input id="cfg_middle-ban-1"> <br>
+                <input id="cfg_middle-ban-2"> <br>
+                <input id="cfg_middle-ban-3"> <br>
+                <div class="bot_pad"> </div>
+
+                <div class="bot_pad">ADC:</div>
+                <input id="cfg_bottom-ban-1"> <br>
+                <input id="cfg_bottom-ban-2"> <br>
+                <input id="cfg_bottom-ban-3"> <br>
+                <div class="bot_pad"> </div>
+
+                <div class="bot_pad">Support:</div>
+                <input id="cfg_utility-ban-1"> <br>
+                <input id="cfg_utility-ban-2"> <br>
+                <input id="cfg_utility-ban-3"> <br>
+                <div class="bot_pad"> </div>
             </form> </div>
         </div>
     </body>
     <script src="settings.js"></script>
     <script src="api.js"></script>
-    <script src="interface.js"></script>
-    <script src="renderer.js"></script>
+    <script>
+        setUpPickBanSettings();
+    </script>
 </html>

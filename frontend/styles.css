@@ -1,11 +1,19 @@
-.spacer {
+.bot_pad {
     padding-bottom: 8px
 }
 
-.chunk {
-    padding-bottom: 20px
+.bot_pad3 {
+    padding-bottom: 24px
 }
 
+.chunk {
+    padding-bottom: 20px;
+    padding-right: 20px
+}
+
+.role {
+    padding-left: 24px
+}
 
 .log {
     height: 400px;
@@ -13,4 +21,8 @@
     overflow-y: auto;
     border: 1px solid #000;
     padding: 10px
+}
+
+.champsection {
+    width: 400px;
 }
