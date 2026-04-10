@@ -44,7 +44,10 @@ async function setUpPickBanSettings() {
             // Set up placeholder text
             for (let i = 1; i <= 3; i++) {
                 let champ = cfg[key][i];
-                let htmelement = document.getElementById(`cfg_${role}-${actionType}-${i}`);
+                let name = `cfg_${actionType}_${role}-${i}`;
+                console.log("name");
+                console.log(name);
+                let htmelement = document.getElementById(name);
                 htmelement.placeholder = champ;
             }
         }
@@ -67,12 +70,13 @@ async function setUpSaveButton() {
         for (let actionType of actionTypes) { for (let role of roles) {
             for (let i = 1; i <= 3; i++) {
                 let cfgSectionName = `${actionType}_${role}`
-                let htmelement = document.getElementById(`cfg_${cfgSectionName}-${i}`);
+                let htmelement = document.getElementById(`cfg_${cfgSectionName}`);
+                console.log(htmelement);
                 // If the text content is null, do nothing
                 try {
                     console.log(cfgSectionName);
                     newConfig[cfgSectionName][`${i}`] = htmelement.textContent;
-                    console.log(newConfig[cfgSectionName][`${i}`]);
+                    console.log(newConfig);
                 } catch (e) {}
             }
         }}
