@@ -24,7 +24,11 @@ let flaskProcess = startFlask();
 
 function startFlask() {
     let webappDir = path.join(backendDir, "webapp.py");
-    return spawn(pyExecutable, [webappDir]);
+    try {
+        return spawn(pyExecutable, [webappDir]);
+    } catch (error) {
+        console.log(`Error spawning flask process: ${error}`);
+    }
 }
 
 

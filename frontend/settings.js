@@ -1,6 +1,5 @@
 let saveButton = document.getElementById("saveButton");
 let cfg;
-let newCfg = {};
 
 async function setUpSettingsPage() {
     let result = await apiCall("settings/sections", "GET");
@@ -9,7 +8,9 @@ async function setUpSettingsPage() {
     }
     console.log(cfg);
     await setUpMainSettings();
+    await setUpPickBanSettings();
     await setUpSaveButton();
+
 }
 
 
@@ -58,10 +59,11 @@ async function setUpPickBanSettings() {
  */
 async function setUpSaveButton() {
    saveButton.addEventListener("click", async (event) => {
+        let newCfg = {};
+        console.log(newCfg);
         event.preventDefault();
         let roles = ["top", "jungle", "middle", "bottom", "utility"];
         let actionTypes = ["pick", "ban"];
-        console.log("type xi");
         // behold
         for (let actionType of actionTypes) { for (let role of roles) {
             for (let i = 1; i <= 3; i++) {
@@ -83,21 +85,16 @@ async function setUpSaveButton() {
         newCfg["settings"] = {};
         for (let option of options) {
             try {
-                let value = document.getElementById(`cfg_${option}`).value;
-                if (! value) {
-                    continue;
-                }
+                let htmelement = document.getElementById(`cfg_${option}`);
                 if (option === "auto_start_queue") {
-                    if (value === "on") {
-                        value = "True";
-                    } else {
-                        value = "False";
-                    }
+                    value = htmelement.checked
+                } else {
+                    value = htmelement.value;
+                    if (! value) { continue; }
                 }
                 newCfg["settings"][option] = value;
             } catch (e) {}
         }
-        console.log(newCfg);
         let result = await apiCall("settings/sections", "POST", newCfg);
         console.log("Result of sending settings...");
         console.log(result);

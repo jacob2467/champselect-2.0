@@ -193,7 +193,9 @@ def clean_exit(err_msg: str = "", exit_code: int = 1):
 
 
 def cfg_as_json():
-    return {
+	cfg_reader = configparser.ConfigParser()
+	config_contents = cfg_reader.read(CFG_PATH)
+	return {
         key: dict(value)
         for key, value in cfg_reader.items()
     }
@@ -217,6 +219,3 @@ def write_cfg_from_json(new_config: dict):
 
 def get_cfg_path():
     return CFG_PATH
-
-# TODO: Implement a function that re-writes a config while preserving comments
-# For some inexplicable reason, configparser strips comments when writing a config file...

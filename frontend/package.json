@@ -57,7 +57,8 @@
 
     "files": [
       "*.js",
-      "*.html"
+      "*.html",
+	  "*.css"
     ]
   },
   "postinstall": "electron-builder install-app-deps"
