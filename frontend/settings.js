@@ -1,5 +1,6 @@
 let saveButton = document.getElementById("saveButton");
 let cfg;
+let newCfg = {};
 
 async function setUpSettingsPage() {
     let result = await apiCall("settings/sections", "GET");
@@ -14,7 +15,6 @@ async function setUpSettingsPage() {
 
 async function setUpMainSettings() {
     let mainSettings = cfg["settings"];
-    console.log(mainSettings);
 
     let directory = document.getElementById("cfg_directory");
     directory.placeholder = mainSettings["directory"];
@@ -45,14 +45,11 @@ async function setUpPickBanSettings() {
             for (let i = 1; i <= 3; i++) {
                 let champ = cfg[key][i];
                 let name = `cfg_${actionType}_${role}-${i}`;
-                console.log("name");
-                console.log(name);
                 let htmelement = document.getElementById(name);
                 htmelement.placeholder = champ;
             }
         }
     }
-   console.log(cfg);
 }
 
 
@@ -62,7 +59,6 @@ async function setUpPickBanSettings() {
 async function setUpSaveButton() {
    saveButton.addEventListener("click", async (event) => {
         event.preventDefault();
-        let newConfig = {};
         let roles = ["top", "jungle", "middle", "bottom", "utility"];
         let actionTypes = ["pick", "ban"];
         console.log("type xi");
@@ -70,26 +66,39 @@ async function setUpSaveButton() {
         for (let actionType of actionTypes) { for (let role of roles) {
             for (let i = 1; i <= 3; i++) {
                 let cfgSectionName = `${actionType}_${role}`
-                let htmelement = document.getElementById(`cfg_${cfgSectionName}`);
-                console.log(htmelement);
-                // If the text content is null, do nothing
-                try {
-                    console.log(cfgSectionName);
-                    newConfig[cfgSectionName][`${i}`] = htmelement.textContent;
-                    console.log(newConfig);
-                } catch (e) {}
+                let htmelement = document.getElementById(`cfg_${cfgSectionName}-${i}`);
+                // Do nothing if the value hasn't been changed
+                let name = htmelement.value;
+                if (! name) {
+                    continue;
+                }
+                if (! newCfg[cfgSectionName]) {
+                    newCfg[cfgSectionName] = {};
+                }
+                newCfg[cfgSectionName][i] = name;
             }
         }}
 
-        let sections = ["directory", "update_interval", "lock_in_delay", "auto_start_queue"];
-        for (let section of sections) {
+        let options = ["directory", "update_interval", "lock_in_delay", "auto_start_queue"];
+        newCfg["settings"] = {};
+        for (let option of options) {
             try {
-                let htmelement = document.getElementById("cfg_directory");
-                newConfig["settings"][section] = htmelement.textContent;
+                let value = document.getElementById(`cfg_${option}`).value;
+                if (! value) {
+                    continue;
+                }
+                if (option === "auto_start_queue") {
+                    if (value === "on") {
+                        value = "True";
+                    } else {
+                        value = "False";
+                    }
+                }
+                newCfg["settings"][option] = value;
             } catch (e) {}
         }
-        console.log(newConfig);
-        let result = await apiCall("settings/sections", "POST", newConfig);
+        console.log(newCfg);
+        let result = await apiCall("settings/sections", "POST", newCfg);
         console.log("Result of sending settings...");
         console.log(result);
     });
