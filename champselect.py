@@ -132,6 +132,7 @@ def wait_before_locking(connection: c.Connection, action: ChampselectAction) -> 
     while still_waiting:
         # TODO: Check # of seconds left on timer, lock in/ban if timer is ending soon
         time.sleep(1)
+        hover_champ(connection)
 
         # Check if enough time elapsed
         if time.time() > start_time + connection.lock_in_delay - 1:

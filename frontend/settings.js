@@ -81,12 +81,13 @@ async function setUpSaveButton() {
             }
         }}
 
-        let options = ["directory", "update_interval", "lock_in_delay", "auto_start_queue"];
+        let options = ["directory", "update_interval", "lock_in_delay", "auto_start_queue", "auto_send_runes"];
         newCfg["settings"] = {};
         for (let option of options) {
             try {
+                let value;
                 let htmelement = document.getElementById(`cfg_${option}`);
-                if (option === "auto_start_queue") {
+                if (option.startsWith("auto_")) {  // use checkbox for bool options
                     value = htmelement.checked
                 } else {
                     value = htmelement.value;

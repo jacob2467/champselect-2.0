@@ -37,7 +37,7 @@ class Connection:
         self.has_picked: bool = False
         self.role_checked: bool = False
         self.runes_chosen: bool = False
-        self.should_modify_runes: bool = False
+        self.should_modify_runes: bool = u.get_config_option_bool("settings", "auto_send_runes")
         self.has_printed_pick: bool = False
         self.has_printed_ban: bool = False
 
@@ -304,3 +304,8 @@ class Connection:
         if should_print:  # debug print
             u.print_and_write(f"\tResult: {result}\n")
         return result
+
+    def refresh_config(self):
+        """ Reload settings from the configuration file. """
+        self.lock_in_delay: int = int(u.get_config_option_str("settings", "lock_in_delay"))
+        self.should_modify_runes: bool = u.get_config_option_bool("settings", "auto_send_runes")

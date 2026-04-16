@@ -365,6 +365,7 @@ def write_config():
 	new_cfg_data: dict = flask.request.json
 	try:
 		utility.write_cfg_from_json(new_cfg_data)
+		state.connection.refresh_config()
 		return empty_success_response()
 
 	except Exception as e:

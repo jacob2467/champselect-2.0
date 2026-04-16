@@ -8,20 +8,22 @@ import formatting
 import lobby
 import runes
 
-# Whether or not to print debug info
-SHOULD_PRINT: bool = u.get_config_option_bool("settings", "print_debug_info")
-
-# Whether or not to automatically start the queue
-SHOULD_START_QUEUE: bool = u.get_config_option_bool("settings", "auto_start_queue")
-
-# How many seconds to wait before re-running the main loop
-UPDATE_INTERVAL: float = float(u.get_config_option_str("settings", "update_interval"))
-
 MSG_ATTEMPT_RECONNECT: str = "Unable to connect to the League of Legends client. Retrying..."
+
+def update_interval():
+    """ Read the update interval from the config file. """
+    # This needs to be done lazily now that the config can be changed while the app is running
+    return float(u.get_config_option_str("settings", "update_interval"))
+
+
+def should_start_queue():
+    """ Read the config file to find out if the queue should be started automatically or not. """
+    # This needs to be done lazily now that the config can be changed while the app is running
+    return u.get_config_option_bool("settings", "auto_start_queue")
 
 
 def handle_lobby(connection: c.Connection) -> None:
-    if SHOULD_START_QUEUE and not connection.started_queue:
+    if should_start_queue() and not connection.started_queue:
         lobby.start_queue(connection)
         connection.started_queue = True
 
@@ -40,9 +42,8 @@ def handle_champselect(connection: c.Connection, champselect_loop_iteration: int
     except KeyError:
         phase = "skip"
 
-    if SHOULD_PRINT:
-        u.print_and_write(f"\nChampselect loop #{champselect_loop_iteration}:")
-        u.print_and_write("\tChampselect phase:", formatting.phase(phase))
+    u.print_and_write(f"\nChampselect loop #{champselect_loop_iteration}:")
+    u.print_and_write("\tChampselect phase:", formatting.phase(phase))
 
     # Handle each champ select phase separately
     match phase:
@@ -61,7 +62,7 @@ def main_loop(connection: c.Connection) -> None:
     champselect_loop_iteration: int = 0  # Keep track of how many loops run during champselect
 
     while True:
-        time.sleep(UPDATE_INTERVAL)
+        time.sleep(update_interval())
         # Wrap the loop in a try block to catch errors when the client closes
         try:
             gamestate: str = connection.get_gamestate()
