@@ -72,7 +72,8 @@ class Connection:
         self.populate_champ_table()
 
         # Bryan check
-        self.is_bryan: bool = self.get_summoner_id() == self.BRYAN_SUMMONERID
+        # self.is_bryan: bool = self.get_summoner_id() == self.BRYAN_SUMMONERID
+        self.is_bryan: bool = False
 
     # ----------------
     # Connection Setup

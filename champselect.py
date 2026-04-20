@@ -120,26 +120,35 @@ def _do_champ_inner(connection: c.Connection, action: ChampselectAction) -> None
 
 def wait_before_locking(connection: c.Connection, action: ChampselectAction) -> None:
     """ Wait to lock in or ban a champ if the user specified a lock-in delay in their config. """
-    if connection.lock_in_delay == 0:
+    if connection.lock_in_delay <= 0:
         return
 
-    display_mode: str = "banning" if action.banning() else "picking"
+    if action.banning():
+        champ_name: str = formatting.champ(connection.ban_intent)
+        display_mode: str = "banning"
+    else:
+        champ_name = formatting.champ(connection.pick_intent)
+        display_mode = "picking"
+
     u.print_and_write(f"\nWaiting {connection.lock_in_delay} seconds before {display_mode}...\n")
 
     start_time: float = time.time()
     still_waiting: bool = True
+    latest_possible_lock_in_time: float = start_time + min(
+        connection.lock_in_delay,
+        seconds_remaining(connection)
+    ) - 1
 
     while still_waiting:
-        # TODO: Check # of seconds left on timer, lock in/ban if timer is ending soon
         time.sleep(1)
+        update_champselect(connection)
         hover_champ(connection)
 
         # Check if enough time elapsed
-        if time.time() > start_time + connection.lock_in_delay - 1:
+        if time.time() >= latest_possible_lock_in_time:
             still_waiting = False
 
         # Make sure we update the hover if champ is changed by web API
-        update_champselect(connection)
         should_rehover = action.update_champid()
         if should_rehover:
             with action:
@@ -147,18 +156,28 @@ def wait_before_locking(connection: c.Connection, action: ChampselectAction) -> 
 
         # Check if user manually completed the action
         if (
-            action.banning()
-            and connection.ban_action["completed"]
-            or action.picking()
-            and connection.pick_action["completed"]
+            action.banning() and connection.ban_action["completed"]
+            or
+            action.picking() and connection.pick_action["completed"]
         ):
             still_waiting = False
 
         # Check if someone dodged the lobby
         if action.skipping():
             still_waiting = False
-    champ_name = formatting.champ(connection.pick_intent)
+    # TODO: Only print this if champ was actually picked
     u.print_and_write(f"Done waiting! {formatting.capitalize(display_mode)} {champ_name}...")
+
+
+def seconds_remaining(connection: c.Connection) -> int:
+    """ Get the number of seconds remaining in the current champselect action. """
+    try:
+        return int(connection.get_session()["timer"]["adjustedTimeLeftInPhase"]) // 1000
+    except KeyError:
+        return 0
+    except Exception as e:
+        u.print_and_write(f"Unable to get remaining champselect action time due to an error: {e}")
+        return 0
 
 
 def decide_pick(connection: c.Connection) -> str:
@@ -454,7 +473,7 @@ def update_champ_intent(connection: c.Connection) -> None:
 
         if not connection.has_printed_pick:
             indent = connection.indentation
-            u.print_and_write(f"Pick intent: {formatting.champ(connection.pick_intent)}", indentation=indent)
+            # u.print_and_write(f"Pick intent: {formatting.champ(connection.pick_intent)}", indentation=indent)
             connection.has_printed_pick = True
 
     ##### Update ban intent #####
@@ -468,7 +487,7 @@ def update_champ_intent(connection: c.Connection) -> None:
 
         if not connection.has_printed_ban:
             indent = connection.indentation
-            u.print_and_write(f"Ban intent: {formatting.champ(connection.ban_intent)}", indentation=indent)
+            # u.print_and_write(f"Ban intent: {formatting.champ(connection.ban_intent)}", indentation=indent)
             connection.has_printed_ban = True
 
 

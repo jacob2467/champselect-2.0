@@ -42,8 +42,8 @@ def handle_champselect(connection: c.Connection, champselect_loop_iteration: int
     except KeyError:
         phase = "skip"
 
-    u.print_and_write(f"\nChampselect loop #{champselect_loop_iteration}:")
-    u.print_and_write("\tChampselect phase:", formatting.phase(phase))
+    # u.print_and_write(f"\nChampselect loop #{champselect_loop_iteration}:")
+    # u.print_and_write("\tChampselect phase:", formatting.phase(phase))
 
     # Handle each champ select phase separately
     match phase:
@@ -70,7 +70,7 @@ def main_loop(connection: c.Connection) -> None:
 
             # Print current gamestate if it's different from the last one
             if gamestate_has_changed:
-                u.print_and_write(f"\nCurrent gamestate: {formatting.gamestate(gamestate)}")
+                # u.print_and_write(f"\nCurrent gamestate: {formatting.gamestate(gamestate)}")
                 last_gamestate = gamestate
 
             match gamestate:

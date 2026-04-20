@@ -27,7 +27,8 @@
     "pack": "electron-builder --dir",
     "dist-mac": "electron-builder --mac --arm64",
     "dist-mac-x64": "electron-builder --mac --x64",
-    "dist-win": "electron-builder --windows --x64"
+    "dist-win": "electron-builder --windows --x64",
+	"dist": "rm -rf dist && electron-builder --mac --arm64 && electron-builder --windows --x64"
   },
 
   "build": {
