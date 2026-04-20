@@ -26,6 +26,9 @@ async function setUpMainSettings() {
     let autoStartQueue = document.getElementById("cfg_auto_start_queue");
     autoStartQueue.checked = mainSettings["auto_start_queue"] === "True";
 
+    let autoSendRunes = document.getElementById("cfg_auto_send_runes");
+    autoSendRunes.checked = mainSettings["auto_send_runes"] === "True";
+
     let updateInterval = document.getElementById("cfg_update_interval");
     updateInterval.placeholder = mainSettings["update_interval"];
 }

@@ -66,9 +66,14 @@ function setUpBanInput() {
     });
 }
 
-function setUpRuneCheckbox() {
+async function setUpRuneCheckbox() {
     // Allow the user to enable or disable rune changing
     let runeCheckbox = document.getElementById("setrunes");
+    let cfg = await apiCall("settings/sections", "GET");
+    if (cfg["success"]) {
+        cfg = cfg["data"];
+    }
+    runeCheckbox.checked = cfg["settings"]["auto_send_runes"] === "True";
     runeCheckbox.addEventListener("change", async (event) => {
         event.preventDefault();
         void setRunesPreference(event.target.checked);
@@ -121,7 +126,7 @@ function setUpConsoleButton() {
 /**
  * Set up elements for the HTML display.
  */
-function setUpDisplay() {
+async function setUpDisplay() {
     setUpStartButton();
     setUpPickInput();
     setUpBanInput();
