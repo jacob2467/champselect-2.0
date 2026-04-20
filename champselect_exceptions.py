@@ -2,8 +2,8 @@
 
 
 class ClientConnectionError(Exception):
-    pass
+	pass
 
 
 class NoChampionError(Exception):
-    pass
+	pass

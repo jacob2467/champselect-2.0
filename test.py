@@ -1,5 +1,5 @@
 def x():
-    pass
+	pass
 
 
 print(getattr(x, "name"))

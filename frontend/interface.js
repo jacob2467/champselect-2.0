@@ -11,143 +11,143 @@ let scriptCurrentlyRunning;
  * Set up the start button for the script.
  */
 function setUpStartButton() {
-    // Start script when button is clicked
-    let startButton = document.getElementById("startbutton");
-    startButton.addEventListener("click", async (event) => {
-        event.preventDefault();
+	// Start script when button is clicked
+	let startButton = document.getElementById("startbutton");
+	startButton.addEventListener("click", async (event) => {
+		event.preventDefault();
 
-        scriptCurrentlyRunning = await startScript();
-    });
+		scriptCurrentlyRunning = await startScript();
+	});
 }
 
 function setUpPickInput() {
-    // Take input for the desired pick
-    let pickInput = document.getElementById("pick-intent-input");
-    pickInput.addEventListener("blur", async (event) => {
-        event.preventDefault();
+	// Take input for the desired pick
+	let pickInput = document.getElementById("pick-intent-input");
+	pickInput.addEventListener("blur", async (event) => {
+		event.preventDefault();
 
-        // Do nothing if the user leaves the text box blank
-        let name = event.target.value;
-        if (name === "") {
-            return;
-        }
+		// Do nothing if the user leaves the text box blank
+		let name = event.target.value;
+		if (name === "") {
+			return;
+		}
 
-        let response = await setPick(name);
-        if (response["success"]) {
-            pickInput.value = "";
-            pickDisplay.textContent = response["data"];
-        } else {
-            showUser("Unable to set pick - check the console for errors");
-            console.log(`Unable to set pick due to an error: ${response["statusText"]}`);
-        }
-    });
+		let response = await setPick(name);
+		if (response["success"]) {
+			pickInput.value = "";
+			pickDisplay.textContent = response["data"];
+		} else {
+			showUser("Unable to set pick - check the console for errors");
+			console.log(`Unable to set pick due to an error: ${response["statusText"]}`);
+		}
+	});
 }
 
 function setUpBanInput() {
-    // Take input for the desired ban
-    let banInput = document.getElementById("ban-intent-input");
-    banInput.addEventListener("blur", async (event) => {
-        event.preventDefault();
+	// Take input for the desired ban
+	let banInput = document.getElementById("ban-intent-input");
+	banInput.addEventListener("blur", async (event) => {
+		event.preventDefault();
 
-        // Do nothing if the user leaves the text box blank
-        let name = event.target.value;
-        if (name === "") {
-            return;
-        }
+		// Do nothing if the user leaves the text box blank
+		let name = event.target.value;
+		if (name === "") {
+			return;
+		}
 
-        let response = await setBan(name);
-        if (response["success"]) {
-            banInput.value = "";
-            banDisplay.textContent = response["data"];
-        } else {
-            showUser("Unable to set ban - check the console for errors");
-            console.log(`Unable to set ban due to an error: ${response["statusText"]}`);
-        }
-    });
+		let response = await setBan(name);
+		if (response["success"]) {
+			banInput.value = "";
+			banDisplay.textContent = response["data"];
+		} else {
+			showUser("Unable to set ban - check the console for errors");
+			console.log(`Unable to set ban due to an error: ${response["statusText"]}`);
+		}
+	});
 }
 
 async function setUpRuneCheckbox() {
-    // Allow the user to enable or disable rune changing
-    let runeCheckbox = document.getElementById("setrunes");
-    let cfg = await apiCall("settings/sections", "GET");
-    if (cfg["success"]) {
-        cfg = cfg["data"];
-    }
-    runeCheckbox.checked = cfg["settings"]["auto_send_runes"] === "True";
-    runeCheckbox.addEventListener("change", async (event) => {
-        event.preventDefault();
-        void setRunesPreference(event.target.checked);
+	// Allow the user to enable or disable rune changing
+	let runeCheckbox = document.getElementById("setrunes");
+	let cfg = await apiCall("settings/sections", "GET");
+	if (cfg["success"]) {
+		cfg = cfg["data"];
+	}
+	runeCheckbox.checked = cfg["settings"]["auto_send_runes"] === "True";
+	runeCheckbox.addEventListener("change", async (event) => {
+		event.preventDefault();
+		void setRunesPreference(event.target.checked);
    });
 }
 
 function setUpQueueButton() {
-    let queueButton = document.getElementById("queuebutton");
-    queueButton.addEventListener("click", async (event) => {
-        event.preventDefault();
+	let queueButton = document.getElementById("queuebutton");
+	queueButton.addEventListener("click", async (event) => {
+		event.preventDefault();
 
-        let response = await post("actions/queue");
-        if (response["success"]) {
-            console.log("Successfully started queue!");
-        } else {
-            showUser("Unable to start queue - check the console for errors");
-            console.log(`Unable to start queue due to an error: ${response["statusText"]}`);
-        }
-    });
+		let response = await post("actions/queue");
+		if (response["success"]) {
+			console.log("Successfully started queue!");
+		} else {
+			showUser("Unable to start queue - check the console for errors");
+			console.log(`Unable to start queue due to an error: ${response["statusText"]}`);
+		}
+	});
 }
 
 function setUpLobbyControls() {
-    let lobbyButton = document.getElementById("lobbyButton");
-    let lobbyDropdown = document.getElementById("lobbyDropdown");
-    lobbyButton.addEventListener("click", async (event) => {
-        event.preventDefault();
+	let lobbyButton = document.getElementById("lobbyButton");
+	let lobbyDropdown = document.getElementById("lobbyDropdown");
+	lobbyButton.addEventListener("click", async (event) => {
+		event.preventDefault();
 
-        let response = await post("actions/createlobby", {lobbytype: lobbyDropdown.value});
-        if (response["success"]) {
-            console.log("Successfully created a lobby!");
-        } else {
-            showUser("Unable to create a lobby - check the console for errors");
-            console.log(`Unable to create lobby due to an error: ${response["statusText"]}`);
-        }
-    });
+		let response = await post("actions/createlobby", {lobbytype: lobbyDropdown.value});
+		if (response["success"]) {
+			console.log("Successfully created a lobby!");
+		} else {
+			showUser("Unable to create a lobby - check the console for errors");
+			console.log(`Unable to create lobby due to an error: ${response["statusText"]}`);
+		}
+	});
 }
 
 function setUpConsoleButton() {
-    let consoleButton = document.getElementById("consoleButton");
-    consoleButton.addEventListener("click", async (event) => {
-        event.preventDefault();
-        if (! window.debugging) {
-            console.log("Unable to open debug console - window.debugging is null");
-            return;
-        }
-        window.debugging.openConsole();
-    });
+	let consoleButton = document.getElementById("consoleButton");
+	consoleButton.addEventListener("click", async (event) => {
+		event.preventDefault();
+		if (! window.debugging) {
+			console.log("Unable to open debug console - window.debugging is null");
+			return;
+		}
+		window.debugging.openConsole();
+	});
 }
 
 /**
  * Set up elements for the HTML display.
  */
 async function setUpDisplay() {
-    setUpStartButton();
-    setUpPickInput();
-    setUpBanInput();
-    setUpRuneCheckbox();
-    setUpQueueButton();
-    setUpLobbyControls();
-    setUpConsoleButton();
+	setUpStartButton();
+	setUpPickInput();
+	setUpBanInput();
+	setUpRuneCheckbox();
+	setUpQueueButton();
+	setUpLobbyControls();
+	setUpConsoleButton();
 }
 
 
 async function main() {
-    setUpDisplay();
+	setUpDisplay();
 
-    await startScript().then( async() => {
-        // Only try to start the script automatically once. If that fails, wait for user to start manually
-        scriptCurrentlyRunning = await scriptIsRunning();
-        await updateStatus();
-        setInterval(async () => {
-            if (scriptCurrentlyRunning) {
-                await updateStatus();
-            }
-        }, 3000);
-    });
+	await startScript().then( async() => {
+		// Only try to start the script automatically once. If that fails, wait for user to start manually
+		scriptCurrentlyRunning = await scriptIsRunning();
+		await updateStatus();
+		setInterval(async () => {
+			if (scriptCurrentlyRunning) {
+				await updateStatus();
+			}
+		}, 3000);
+	});
 }
