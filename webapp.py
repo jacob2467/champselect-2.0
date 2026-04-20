@@ -369,7 +369,6 @@ def write_config():
 		return empty_success_response()
 
 	except Exception as e:
-		raise
 		return build_response(
 			success=False,
 			statusText=f"An error occured while saving the config: {e}",
