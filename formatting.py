@@ -7,7 +7,7 @@ def gamestate(gamestate: str) -> str:
             return "In Queue"
         case "ReadyCheck":
             return "Ready Check"
-        case "ChampSelect" | "FINALIZATION":
+        case "ChampSelect":
             return "Champselect"
         case _:
             return gamestate

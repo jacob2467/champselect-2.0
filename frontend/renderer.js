@@ -10,6 +10,7 @@ function showUser(text, shouldPrint = false) {
         return;
     }
     let timestamp = `${formatter.format(new Date().getTime()).slice(0, -3)}: `
+    let log = document.getElementById("log");
     log.innerHTML += `${timestamp}${text}<br><br>`;
     log.scrollTop = log.scrollHeight;
     if (shouldPrint) {

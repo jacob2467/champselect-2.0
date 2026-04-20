@@ -1,12 +1,3 @@
-let startButton = document.getElementById("startbutton");
-let pickInput = document.getElementById("pick-intent-input");
-let banInput = document.getElementById("ban-intent-input");
-let runeCheckbox = document.getElementById("setrunes");
-let queueButton = document.getElementById("queuebutton");
-let lobbyDropdown = document.getElementById("lobbyDropdown");
-let lobbyButton = document.getElementById("lobbyButton");
-let consoleButton = document.getElementById("consoleButton");
-
 // Set up displays
 let pickDisplay = document.getElementById("pick-intent");
 let banDisplay = document.getElementById("ban-intent");
@@ -21,6 +12,7 @@ let scriptCurrentlyRunning;
  */
 function setUpStartButton() {
     // Start script when button is clicked
+    let startButton = document.getElementById("startbutton");
     startButton.addEventListener("click", async (event) => {
         event.preventDefault();
 
@@ -30,6 +22,7 @@ function setUpStartButton() {
 
 function setUpPickInput() {
     // Take input for the desired pick
+    let pickInput = document.getElementById("pick-intent-input");
     pickInput.addEventListener("blur", async (event) => {
         event.preventDefault();
 
@@ -40,18 +33,19 @@ function setUpPickInput() {
         }
 
         let response = await setPick(name);
-        if (response['success']) {
+        if (response["success"]) {
             pickInput.value = "";
-            pickDisplay.textContent = response['data'];
+            pickDisplay.textContent = response["data"];
         } else {
             showUser("Unable to set pick - check the console for errors");
-            console.log(`Unable to set pick due to an error: ${response['statusText']}`);
+            console.log(`Unable to set pick due to an error: ${response["statusText"]}`);
         }
     });
 }
 
 function setUpBanInput() {
     // Take input for the desired ban
+    let banInput = document.getElementById("ban-intent-input");
     banInput.addEventListener("blur", async (event) => {
         event.preventDefault();
 
@@ -62,66 +56,63 @@ function setUpBanInput() {
         }
 
         let response = await setBan(name);
-        if (response['success']) {
+        if (response["success"]) {
             banInput.value = "";
-            banDisplay.textContent = response['data'];
+            banDisplay.textContent = response["data"];
         } else {
             showUser("Unable to set ban - check the console for errors");
-            console.log(`Unable to set ban due to an error: ${response['statusText']}`);
+            console.log(`Unable to set ban due to an error: ${response["statusText"]}`);
         }
     });
 }
 
-function setUpRuneCheckbox() {
+async function setUpRuneCheckbox() {
     // Allow the user to enable or disable rune changing
+    let runeCheckbox = document.getElementById("setrunes");
+    let cfg = await apiCall("settings/sections", "GET");
+    if (cfg["success"]) {
+        cfg = cfg["data"];
+    }
+    runeCheckbox.checked = cfg["settings"]["auto_send_runes"] === "True";
     runeCheckbox.addEventListener("change", async (event) => {
         event.preventDefault();
         void setRunesPreference(event.target.checked);
-        if (! event.target.checked) {
-            return;
-        }
-        // Send runes to the client if we're in champselect
-        if (await getGamestate() === "Champselect") {
-            let response = await post("actions/sendrunes");
-            if (response['success']) {
-                showUser("Successfully set runes!");
-            } else {
-                showUser("Unable to set runes - check the console for errors");
-                console.log(`Unable to set runes due to an error: ${response['statusText']}`);
-            }
-        }
-    });
+   });
 }
 
 function setUpQueueButton() {
+    let queueButton = document.getElementById("queuebutton");
     queueButton.addEventListener("click", async (event) => {
         event.preventDefault();
 
         let response = await post("actions/queue");
-        if (response['success']) {
+        if (response["success"]) {
             console.log("Successfully started queue!");
         } else {
             showUser("Unable to start queue - check the console for errors");
-            console.log(`Unable to start queue due to an error: ${response['statusText']}`);
+            console.log(`Unable to start queue due to an error: ${response["statusText"]}`);
         }
     });
 }
 
 function setUpLobbyControls() {
+    let lobbyButton = document.getElementById("lobbyButton");
+    let lobbyDropdown = document.getElementById("lobbyDropdown");
     lobbyButton.addEventListener("click", async (event) => {
         event.preventDefault();
 
         let response = await post("actions/createlobby", {lobbytype: lobbyDropdown.value});
-        if (response['success']) {
+        if (response["success"]) {
             console.log("Successfully created a lobby!");
         } else {
             showUser("Unable to create a lobby - check the console for errors");
-            console.log(`Unable to create lobby due to an error: ${response['statusText']}`);
+            console.log(`Unable to create lobby due to an error: ${response["statusText"]}`);
         }
     });
 }
 
 function setUpConsoleButton() {
+    let consoleButton = document.getElementById("consoleButton");
     consoleButton.addEventListener("click", async (event) => {
         event.preventDefault();
         if (! window.debugging) {
@@ -135,7 +126,7 @@ function setUpConsoleButton() {
 /**
  * Set up elements for the HTML display.
  */
-function setUpDisplay() {
+async function setUpDisplay() {
     setUpStartButton();
     setUpPickInput();
     setUpBanInput();

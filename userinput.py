@@ -21,7 +21,9 @@ def get_first_choices(connection: c.Connection) -> None:
 
     # Choose whether or not the script should handle runes and summoner spells
     connection.should_modify_runes = get_bool_input(
-        "Would you like the script to handle runes and " "summoner spells automatically? y/n:  ", True
+        "Would you like the script to handle runes and "
+        "summoner spells automatically? y/n:  ",
+        True
     )
 
     # Set intent to user input (intent can change later if first choice is banned, etc.)
