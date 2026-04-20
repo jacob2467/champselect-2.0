@@ -35,25 +35,18 @@ async function setUpMainSettings() {
 
 
 async function setUpPickBanSettings() {
-    let result = await apiCall("settings/sections", "GET");
-    if (result["success"]) {
-        cfg = result["data"];
-    }
-
     let roles = ["top", "jungle", "middle", "bottom", "utility"];
     let actionTypes = ["pick", "ban"];
-    for (let actionType of actionTypes) {
-         for (let role of roles) {
-            let key = `${actionType}_${role}`
-            // Set up placeholder text
-            for (let i = 1; i <= 3; i++) {
-                let champ = cfg[key][i];
-                let name = `cfg_${actionType}_${role}-${i}`;
-                let htmelement = document.getElementById(name);
-                htmelement.placeholder = champ;
-            }
+    for (let actionType of actionTypes) { for (let role of roles) {
+        let key = `${actionType}_${role}`
+        // Set up placeholder text
+        for (let i = 1; i <= 3; i++) {
+            let champ = cfg[key][i];
+            let name = `cfg_${actionType}_${role}-${i}`;
+            let htmelement = document.getElementById(name);
+            htmelement.placeholder = champ;
         }
-    }
+    }}
 }
 
 
