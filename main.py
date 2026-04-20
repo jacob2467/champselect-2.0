@@ -10,6 +10,7 @@ import userinput
 
 LOGFILE: str = "output.log"
 
+
 def handle_error(original_err: Exception, err_msg: str = ""):
     """
     If this file was run as a script, write the error message to stderr and then clean exit with sys.exit() for
@@ -49,6 +50,7 @@ def initialize_connection() -> c.Connection:
         # If the connection isn't successful or the lockfile doesn't exist, the client isn't open yet
         except (requests.exceptions.ConnectionError, KeyError) as e:
             handle_error(e, c.MSG_CLIENT_CONNECTION_ERR)
+
 
 if __name__ == "__main__":
     try:

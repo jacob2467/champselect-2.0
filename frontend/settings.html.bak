@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<link rel="stylesheet" href="styles.css">
+    <body style="background-color: #CCCCCC; padding-left: 15px; padding-top: 15px">
+        <div class="container" style="display: flex">
+            <div class="chunk"><form>
+                <!-- Link back to index -->
+                <a href="index.html" title="Go back to main script page">
+                    <div class="bot_pad">Main script page</div>
+                </a>
+
+                <!-- Picks/bans page -->
+                <a href="picks-bans.html" title="Change fallback champions to pick or ban">
+                    <div class="bot_pad">Backup picks/bans</div>
+                </a>
+
+                <!-- Set up elements to change for main settngs -->
+                <div class="chunk"><form>
+                    <!-- Game Directory -->
+                    <span> Game Directory:&nbsp </span>
+                    <input id="cfg_directory"> <br>
+                    <div class="bot_pad"> </div>
+
+                    <!-- Lock-in Delay -->
+                    <span class="bot_pad"> Delay in seconds before picking/banning:&nbsp </span>
+                    <input id="cfg_lock_in_delay"> <br>
+
+                    <!-- Auto-start Queue -->
+                    <label for="cfg_auto_start_queue"> Start Queue Automatically:&nbsp </label>
+                    <input type="checkbox" id="cfg_auto_start_queue"> <br>
+                    <div class="bot_pad"> </div>
+
+                    <!-- Update Interval -->
+                    <span> Update interval in seconds:&nbsp </span>
+                    <input id="cfg_update_interval" placeholder=""> <br>
+
+                </form> </div>
+                <button id="saveButton"> Save Settings </button>
+            </form> </div>
+        </div>
+    </body>
+    <script src="settings.js"></script>
+    <script src="api.js"></script>
+    <script>
+        setUpSettingsPage();
+    </script>
+</html>

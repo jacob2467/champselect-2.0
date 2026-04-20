@@ -9,17 +9,21 @@ import formatting
 
 # Configure warnings
 warnings.formatwarning = u.custom_formatwarning
-warnings.simplefilter('ignore', InsecureRequestWarning)
+warnings.simplefilter("ignore", InsecureRequestWarning)
 
 
-MSG_CLIENT_CONNECTION_ERR: str = ("Unable to connect to the League of Legends client. If it's open, try updating your "
-f"game directory in the config file ({u.CONFIG}), and then restart the program.")
+MSG_CLIENT_CONNECTION_ERR: str = (
+    "Unable to connect to the League of Legends client. If it's open, try updating your "
+    f"game directory in the config file ({u.CFG_PATH}), and then restart the program."
+)
+
 
 class Connection:
     """
     A Class to manage a connection to the Leauge client. Contains instance variables to keep track of the state
     of the connection, and methods used to make API calls.
     """
+
     RUNEPAGE_PREFIX: str = "Blitz:"  # Prefix for the name of rune pages created by this script
     BRYAN_SUMMONERID: int = 2742039436911744
 
@@ -33,7 +37,7 @@ class Connection:
         self.has_picked: bool = False
         self.role_checked: bool = False
         self.runes_chosen: bool = False
-        self.should_modify_runes: bool = False
+        self.should_modify_runes: bool = u.get_config_option_bool("settings", "auto_send_runes")
         self.has_printed_pick: bool = False
         self.has_printed_ban: bool = False
 
@@ -60,7 +64,7 @@ class Connection:
 
         # Setup
         self.endpoints: dict = {}  # dictionary to store commonly used endpoints
-        self.indentation = indentation # amount of tab characters used for certain print statements
+        self.indentation = indentation  # amount of tab characters used for certain print statements
         self.request_url: str
         self.http_headers: dict[str, str]
         self.request_url, self.http_headers = self.setup_http_requests()
@@ -68,7 +72,8 @@ class Connection:
         self.populate_champ_table()
 
         # Bryan check
-        self.is_bryan: bool = self.get_summoner_id() == self.BRYAN_SUMMONERID
+        # self.is_bryan: bool = self.get_summoner_id() == self.BRYAN_SUMMONERID
+        self.is_bryan: bool = False
 
     # ----------------
     # Connection Setup
@@ -90,7 +95,6 @@ class Connection:
 
         return lockfile
 
-
     def setup_endpoints(self) -> None:
         """ Set up a dictionary containing aliases tovarious API endpoints. """
         self.endpoints = {
@@ -101,24 +105,22 @@ class Connection:
             "accept_match": "/lol-matchmaking/v1/ready-check/accept",  # POST
             "champselect_session": "/lol-champ-select/v1/session",  # GET
             "owned_champs": "/lol-champions/v1/owned-champions-minimal",  # GET
-            "current_champ": "/lol-champ-select/v1/current-champion", # GET
+            "current_champ": "/lol-champ-select/v1/current-champion",  # GET
             "current_summoner": "/lol-summoner/v1/current-summoner",  # GET
             "pickable_champs": "/lol-champ-select/v1/pickable-champions",  # GET
             "bannable_champs": "/lol-champ-select/v1/bannable-champion-ids",  # GET
             "runes": "/lol-perks/v1/pages",  # GET / POST
             "send_summs": "/lol-champ-select/v1/session/my-selection",  # PATCH
-
             # These endpoints need additional parameters added to the end of them
             "send_runes": "/lol-perks/v1/pages/",  # PUT (+runepageid)
             "summoner_info_byid": "/lol-summoner/v1/summoners/",  # GET (+summonerid)
-            "champselect_action": "/lol-champ-select/v1/session/actions/"  # PATCH (+actionid)
+            "champselect_action": "/lol-champ-select/v1/session/actions/",  # PATCH (+actionid)
         }
         # This endpoint requires the player's summoner id, which requires the current_summoner endpoint
         # to be initialized already, so initialize it separately
         self.endpoints.update(
             {"all_champs": f"/lol-champions/v1/inventories/{self.get_summoner_id()}/champions-minimal"}  # GET
         )
-
 
     def populate_champ_table(self) -> None:
         """ Load all champion data into dictionaries. """
@@ -144,12 +146,12 @@ class Connection:
             champ_name = formatting.clean_name(self.all_champs, champ["alias"], should_filter=False)
             self.owned_champs[champ_name] = champ["id"]
 
-
     def update_primary_role(self) -> str:
         """ Check what role the user is queueing for, update the Connection accordingly, and also return the role. """
         try:
             local_player_data: dict = self.api_get("lobby").json()["localMember"]
-            self.user_role = local_player_data["firstPositionPreference"].strip().lower()
+            queued_role: str = local_player_data["firstPositionPreference"].strip().lower()
+            self.user_role = queued_role if queued_role != "fill" else ""
         except Exception as e:
             warnings.warn(f"Unable to find player's role: {e}", RuntimeWarning)
 
@@ -185,11 +187,9 @@ class Connection:
         self.role_checked = True
         return role
 
-
     def get_session(self) -> dict:
         """ Get the current champselect session info. """
         return self.api_get("champselect_session").json()
-
 
     def get_champid(self, champ: str) -> int:
         """ Get the id number of a champion.
@@ -197,21 +197,17 @@ class Connection:
         """
         return self.all_champs[champ]
 
-
     def get_gamestate(self) -> str:
         """ Get the current state of the game (Lobby, ChampSelect, etc.) """
         return self.api_get("gamestate").json()
-
 
     def get_localcellid(self) -> int:
         """ Get the champselect cell id of the user. """
         return self.session["localPlayerCellId"]
 
-
     def get_summoner_id(self) -> int:
         """ Get the summoner id of the user. """
         return self.api_get("current_summoner").json()["accountId"]
-
 
     def get_champ_name_by_id(self, target_id: int) -> str:
         """ Find the champion with the specified id number and return their name as a string. """
@@ -221,13 +217,11 @@ class Connection:
         warnings.warn(f"Unable to find champion name with id {target_id}")
         return "unknown"
 
-
     def champ_exists(self, name: str) -> bool:
         """
         Check whether or not the champion with the specified name exists.
         """
         return formatting.clean_name(self.all_champs, name) != "invalid"
-
 
     def re_parse_lockfile(self) -> None:
         """ Re-parse the lockfile in case of a failed connection. """
@@ -239,7 +233,6 @@ class Connection:
         self.request_url = self.get_request_url(lockfile)
         self.http_headers = self.get_http_headers(lockfile)
 
-
     def setup_http_requests(self) -> tuple[str, dict[str, str]]:
         """ Set up the request URL and HTTP header data for API calls. """
         lockfile = self.parse_lockfile()
@@ -249,7 +242,6 @@ class Connection:
     def get_request_url(lockfile: u.Lockfile) -> str:
         """ Get the url to send http requests to. """
         return f"{lockfile.protocol}://127.0.0.1:{lockfile.port}"
-
 
     @staticmethod
     def get_http_headers(lockfile: u.Lockfile) -> dict[str, str]:
@@ -267,21 +259,17 @@ class Connection:
         """ Send an HTTP GET request. """
         return self.api_call(endpoint, "get", None, should_print)
 
-
     def api_post(self, endpoint: str, data: dict | None = None, should_print: bool = False) -> requests.Response:
         """ Send an HTTP POST request. """
         return self.api_call(endpoint, "post", data, should_print)
-
 
     def api_put(self, endpoint: str, data: dict | None = None, should_print: bool = False) -> requests.Response:
         """ Send an HTTP PUT request. """
         return self.api_call(endpoint, "put", data, should_print)
 
-
     def api_patch(self, endpoint: str, data: dict | None = None, should_print: bool = False) -> requests.Response:
         """ Send an HTTP PATCH request. """
         return self.api_call(endpoint, "patch", data, should_print)
-
 
     def api_call(self, endpoint: str, method: str, data: dict | None, should_print: bool) -> requests.Response:
         """
@@ -317,3 +305,8 @@ class Connection:
         if should_print:  # debug print
             u.print_and_write(f"\tResult: {result}\n")
         return result
+
+    def refresh_config(self):
+        """ Reload settings from the configuration file. """
+        self.lock_in_delay: int = int(u.get_config_option_str("settings", "lock_in_delay"))
+        self.should_modify_runes: bool = u.get_config_option_bool("settings", "auto_send_runes")

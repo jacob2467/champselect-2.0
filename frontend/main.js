@@ -23,7 +23,12 @@ let flaskProcess = startFlask();
 
 
 function startFlask() {
-    return spawn(pyExecutable, [path.join(backendDir, "webapp.py")]);
+    let webappDir = path.join(backendDir, "webapp.py");
+    try {
+        return spawn(pyExecutable, [webappDir]);
+    } catch (error) {
+        console.log(`Error spawning flask process: ${error}`);
+    }
 }
 
 
@@ -44,8 +49,10 @@ function createWindow() {
 function displayToUser(content, shouldPrint = true) {
     try {
         mainWindow.webContents.send("log", content.toString(), shouldPrint);
-    } catch (error) {
         console.log(content.toString());
+    } catch (error) {
+        // TODO: Undo this ^
+        // console.log(content.toString());
     }
 }
 

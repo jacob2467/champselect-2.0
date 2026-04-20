@@ -7,7 +7,7 @@ def gamestate(gamestate: str) -> str:
             return "In Queue"
         case "ReadyCheck":
             return "Ready Check"
-        case "ChampSelect" | "FINALIZATION":
+        case "ChampSelect":
             return "Champselect"
         case _:
             return gamestate
@@ -59,7 +59,7 @@ def clean_name(all_champs: dict[str, int], name: str, should_filter: bool = True
     # Handle edge cases (Nunu and Willump -> nunu and Wukong -> monkeyking)
     if "nunu" in name:
         return "nunu"
-    elif name == "wukong":
+    if name == "wukong":
         return "monkeyking"
 
     if not should_filter:
