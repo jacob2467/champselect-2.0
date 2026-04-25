@@ -1,18 +1,19 @@
-.bot_pad {
-	padding-bottom: 8px
+#main-container {
+	display: flex;
 }
 
-.bot_pad3 {
-	padding-bottom: 24px
+#control-panel {
+	padding-right: 20px;
+}
+
+.bot_pad {
+	padding-bottom: 8px;
+	display: block;
 }
 
 .chunk {
 	padding-bottom: 20px;
 	padding-right: 20px
-}
-
-.role {
-	padding-left: 24px
 }
 
 .log {
@@ -25,4 +26,41 @@
 
 .champsection {
 	width: 200px;
+}
+
+body {
+	background-color: #cccccc;
+	padding-left: 15px;
+	padding-top: 15px
+}
+
+a {
+	text-decoration: none;
+	color: inherit;
+}
+
+div.component {
+	display: block;
+	padding-bottom: 6px;
+}
+
+p {
+	margin-bottom: 8px;
+}
+
+input {
+	margin: 0;
+	background-color: #bbbbbb;
+	border-color: inherit;
+}
+
+select {
+	margin: 0;
+	background-color: #bbbbbb;
+	border-color: #bbbbbb;
+}
+
+button {
+	background-color: #bbbbbb;
+	border-color: inherit;
 }

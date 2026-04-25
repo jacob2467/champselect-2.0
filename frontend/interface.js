@@ -71,9 +71,10 @@ async function setUpRuneCheckbox() {
 	let runeCheckbox = document.getElementById("setrunes");
 	let cfg = await apiCall("settings/sections", "GET");
 	if (cfg["success"]) {
-		cfg = cfg["data"];
+		runeCheckbox.checked = cfg["data"]["settings"]["auto_send_runes"] === "True";
+	} else {
+		runeCheckbox.checked = false;
 	}
-	runeCheckbox.checked = cfg["settings"]["auto_send_runes"] === "True";
 	runeCheckbox.addEventListener("change", async (event) => {
 		event.preventDefault();
 		void setRunesPreference(event.target.checked);

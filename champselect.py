@@ -170,7 +170,10 @@ def wait_before_locking(connection: c.Connection, action: ChampselectAction) -> 
 
 
 def seconds_remaining(connection: c.Connection) -> int:
-	""" Get the number of seconds remaining in the current champselect action. """
+	"""
+	Returns the number of seconds remaining in the current champselect action. If an error occurs during this check,
+	returns 0 instead.
+	"""
 	try:
 		return int(connection.get_session()["timer"]["adjustedTimeLeftInPhase"]) // 1000
 	except KeyError:

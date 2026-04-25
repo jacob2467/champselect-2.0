@@ -309,4 +309,5 @@ class Connection:
 	def refresh_config(self):
 		""" Reload settings from the configuration file. """
 		self.lock_in_delay = int(u.get_config_option_str("settings", "lock_in_delay"))
+		# Overwrite changes made to the checkbox on the main interface - this is intentional, but may change
 		self.should_modify_runes = u.get_config_option_bool("settings", "auto_send_runes")
